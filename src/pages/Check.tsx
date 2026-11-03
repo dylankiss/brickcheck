@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
-import { ErrorBanner, Header, ProgressBar } from "../components/ui";
+import { ErrorBanner, Header, PeopleIcon, ProgressBar } from "../components/ui";
 import { useCheckContext } from "../hooks/useCheckContext";
 import {
   filterParts,
@@ -77,9 +77,7 @@ export default function Check() {
             {others.length ? (
               <OnlineAvatars people={others} />
             ) : (
-              <span className="text-xl" aria-hidden>
-                👥
-              </span>
+              <PeopleIcon className="size-6 text-neutral-500" />
             )}
           </Link>
           <ProgressBar found={found} needed={needed} className="flex-1" />

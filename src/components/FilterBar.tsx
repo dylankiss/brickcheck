@@ -23,7 +23,8 @@ export function FilterBar({
           type="search"
           value={filter.query}
           onChange={(e) => onFilterChange({ ...filter, query: e.target.value })}
-          placeholder="Search part, number or color"
+          placeholder="Search parts"
+          aria-label="Search parts by name, number or color"
           className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
         />
         <select

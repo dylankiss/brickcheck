@@ -45,7 +45,9 @@ export default function Checks() {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{check.title}</p>
               <p className="truncate text-sm text-neutral-500">
-                {check.set_num} · {check.set_name}
+                {check.title === check.set_name
+                  ? check.set_num
+                  : `${check.set_num} · ${check.set_name}`}
                 {check.my_role !== "owner" && " · shared with you"}
               </p>
               <div className="mt-2 flex items-center gap-2">

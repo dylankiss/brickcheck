@@ -14,7 +14,7 @@ export const PartCard = memo(
     const allFound = isAllFound(part);
     return (
       <div
-        className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_14rem] [content-visibility:auto] dark:bg-neutral-900 ${
+        className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_16rem] [content-visibility:auto] dark:bg-neutral-900 ${
           allFound
             ? "opacity-50 ring-green-600"
             : "ring-neutral-200 dark:ring-neutral-800"
@@ -27,21 +27,38 @@ export const PartCard = memo(
           className="flex flex-1 flex-col items-stretch p-2 text-left active:scale-[0.97] disabled:active:scale-100"
           aria-label={`${part.part_name}, ${part.color_name}: ${part.found} of ${part.needed} found. Tap to add one.`}
         >
+          {/* Renders are drawn for a light background; dark mode only dims it. */}
           <PartImage
             src={part.img_url}
             alt=""
-            className="aspect-square w-full rounded-xl bg-white p-1"
+            className="aspect-square w-full rounded-xl bg-white p-1 dark:bg-neutral-200"
           />
-          <div className="mt-1 flex items-center gap-1.5">
-            <ColorSwatch rgb={part.color_rgb} trans={part.is_trans} />
-            <span className="truncate text-xs text-neutral-500">
-              {part.color_name}
-            </span>
-          </div>
-          <span className="truncate text-xs font-medium" title={part.part_name}>
+          <span
+            className="mt-2 truncate text-sm font-medium"
+            title={part.part_name}
+          >
             {part.part_name}
           </span>
-          <span className="mt-1 text-xl font-bold tabular-nums">
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500">
+            <ColorSwatch
+              rgb={part.color_rgb}
+              trans={part.is_trans}
+              className="size-3"
+            />
+            <span className="truncate">{part.color_name}</span>
+            {part.has_minifig_lines && (
+              <span className="shrink-0 rounded bg-yellow-300 px-1 text-[10px] font-semibold text-yellow-950 uppercase">
+                minifig
+              </span>
+            )}
+            {part.has_spare_lines && (
+              <span className="shrink-0 rounded bg-sky-200 px-1 text-[10px] font-semibold text-sky-950 uppercase">
+                spare
+              </span>
+            )}
+          </div>
+          {/* As tall as the "−" button, which sits at its right end, so nothing above is covered. */}
+          <span className="mt-1 flex min-h-11 items-center pr-12 text-xl font-bold tabular-nums">
             {allFound ? "✓ " : ""}
             {part.found}
             <span className="text-sm font-normal text-neutral-500">
@@ -54,25 +71,11 @@ export const PartCard = memo(
           <button
             type="button"
             onClick={() => onTap(part, -1)}
-            className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full bg-neutral-100/90 text-xl font-bold opacity-100 dark:bg-neutral-800/90"
+            className="absolute right-2 bottom-2 flex size-11 items-center justify-center rounded-full bg-neutral-100 text-xl font-bold ring-1 ring-neutral-300 active:bg-neutral-200 dark:bg-neutral-800 dark:ring-neutral-600 dark:active:bg-neutral-700"
             aria-label={`Remove one ${part.part_name}`}
           >
             −
           </button>
-        )}
-        {(part.has_minifig_lines || part.has_spare_lines) && (
-          <div className="absolute top-2 left-2 flex gap-1 text-[10px] font-semibold uppercase">
-            {part.has_minifig_lines && (
-              <span className="rounded bg-yellow-300 px-1 text-yellow-950">
-                minifig
-              </span>
-            )}
-            {part.has_spare_lines && (
-              <span className="rounded bg-sky-200 px-1 text-sky-950">
-                spare
-              </span>
-            )}
-          </div>
         )}
       </div>
     );
