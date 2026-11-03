@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router";
 
 export function ProgressBar({
@@ -137,11 +137,14 @@ export function PartImage({
   alt: string;
   className?: string;
 }) {
-  return src ? (
+  // Rebrickable has no render for some parts; show the placeholder instead of a broken image.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  return src && src !== failedSrc ? (
     <img
       src={src}
       alt={alt}
       loading="lazy"
+      onError={() => setFailedSrc(src)}
       className={`object-contain ${className}`}
     />
   ) : (
