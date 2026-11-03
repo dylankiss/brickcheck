@@ -38,7 +38,8 @@ export function FilterBar({
           <option value="missing">Most missing</option>
         </select>
       </div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-sm">
+      {/* Vertical padding keeps the chips' outlines inside the scroll area, which clips them. */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 text-sm">
         <button
           type="button"
           onClick={() =>

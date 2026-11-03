@@ -58,12 +58,14 @@ export const PartCard = memo(
             )}
           </div>
           {/* As tall as the "−" button, which sits at its right end, so nothing above is covered. */}
-          <span className="mt-1 flex min-h-11 items-center pr-12 text-xl font-bold tabular-nums">
-            {allFound ? "✓ " : ""}
-            {part.found}
-            <span className="text-sm font-normal text-neutral-500">
-              {" "}
-              / {part.needed}
+          <span className="mt-1 flex min-h-11 items-center pr-12">
+            <span className="text-xl font-bold tabular-nums">
+              {allFound ? "✓ " : ""}
+              {part.found}
+              <span className="text-sm font-normal text-neutral-500">
+                {" "}
+                / {part.needed}
+              </span>
             </span>
           </span>
         </button>

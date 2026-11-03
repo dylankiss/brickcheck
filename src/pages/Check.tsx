@@ -86,7 +86,7 @@ export default function Check() {
           </span>
           <Link
             to={`/checks/${checkId}/missing`}
-            className="min-h-9 rounded-full px-3 py-1.5 text-sm font-semibold text-brick ring-1 ring-brick"
+            className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-brick ring-1 ring-brick"
           >
             Missing {needed - found}
           </Link>
