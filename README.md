@@ -7,6 +7,13 @@ See `ARCHITECTURE.md` for how it fits together and `CLAUDE.md` for commands.
 
 ## Local setup
 
+You need Node 22 and Docker.
+
+Claude works in this repo inside Claude Code's sandbox (`.claude/settings.json`).
+Docker isn't available to it, so run `npx supabase start`,
+`npx supabase db reset`, `npm run test:db`, `npx supabase functions serve` and
+the browser tests yourself.
+
 1. `npm install`
 2. Copy `.env.example` → `.env.local` and `supabase/.env.example` → `supabase/.env`,
    fill in a Rebrickable API key (https://rebrickable.com/api/).

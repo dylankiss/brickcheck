@@ -20,6 +20,9 @@ deliberately departs from it, update this document in the same commit.
 
 There is no custom server. The browser talks to Supabase only.
 
+Claude works in Claude Code's sandbox, set up in `.claude/settings.json`: no
+Docker, so the Supabase CLI and browser tests run outside it.
+
 ## Data flow
 
 ```
