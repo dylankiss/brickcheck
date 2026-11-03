@@ -22,7 +22,15 @@
       "allowRead": ["."]
     },
     "network": {
-      "allowedDomains": ["registry.npmjs.org", "rebrickable.com", "cdn.rebrickable.com", "localhost", "127.0.0.1"],
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "registry.npmjs.org",
+        "rebrickable.com",
+        "cdn.rebrickable.com",
+        "localhost",
+        "127.0.0.1"
+      ],
       "allowLocalBinding": true
     }
   }
