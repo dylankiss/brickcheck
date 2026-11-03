@@ -9,7 +9,8 @@ const OUT = process.argv[2] ?? "e2e/screenshots";
 mkdirSync(OUT, { recursive: true });
 const APP = process.env.APP_URL ?? "http://localhost:5173";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
-if (!/^http:\/\/(127\.0\.0\.1|localhost)/.test(SUPABASE_URL))
+const { protocol, hostname } = new globalThis.URL(SUPABASE_URL);
+if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
   throw new Error("Refusing to run against a non-local stack");
 if (!process.env.SUPABASE_SECRET_KEY)
   throw new Error("Set SUPABASE_SECRET_KEY");

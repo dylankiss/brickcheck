@@ -8,7 +8,8 @@ const PUB = process.env.SUPABASE_PUBLISHABLE_KEY;
 const SECRET = process.env.SUPABASE_SECRET_KEY;
 if (!PUB || !SECRET)
   throw new Error("Set SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY");
-if (!/^http:\/\/(127\.0\.0\.1|localhost)/.test(URL))
+const { protocol, hostname } = new globalThis.URL(URL);
+if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
   throw new Error("Refusing to run against a non-local stack");
 const SET = `smoke-${Date.now()}`;
 const admin = createClient(URL, SECRET, { auth: { persistSession: false } });
