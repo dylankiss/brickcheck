@@ -245,14 +245,14 @@ try {
     .locator('[title="Bob Builder"]')
     .waitFor({ timeout: 10000 });
   ok(true, "Bob's avatar shows as online on Alice's check");
-  await b.getByRole("button", { name: /Minifig Head, Yellow/ }).click();
-  await b.getByRole("button", { name: /Minifig Head, Yellow/ }).click();
+  await b.getByRole("button", { name: /^Minifig Head, Yellow:/ }).click();
+  await b.getByRole("button", { name: /^Minifig Head, Yellow:/ }).click();
   await a.getByText("4/11").waitFor({ timeout: 10000 });
   ok(true, "Bob's taps appear on Alice's screen in real time");
 
   // Fill everything gray from Alice and check filters
   const gray = a.getByRole("button", {
-    name: /Brick 1 x 2, Light Bluish Gray/,
+    name: /^Brick 1 x 2, Light Bluish Gray:/,
   });
   for (let i = 0; i < 3; i++) await gray.click();
   await a.getByText("7/11").waitFor();
