@@ -245,6 +245,17 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Login emails carry both a link and a 6-digit code: the code is needed by the
+# installed iOS app, where the link would open Safari instead. Paste the same
+# template into the hosted project's dashboard (Auth > Emails).
+[auth.email.template.magic_link]
+subject = "Your BrickCheck login"
+content_path = "./supabase/templates/login.html"
+
+[auth.email.template.confirmation]
+subject = "Your BrickCheck login"
+content_path = "./supabase/templates/login.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

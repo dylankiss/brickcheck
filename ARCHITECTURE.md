@@ -40,8 +40,9 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 2. **Set import**: `fetch-set` only accepts sets that are in the catalog (404
    otherwise, without calling Rebrickable). It returns at once if the inventory
    is cached (`lego_sets.parts_fetched_at` set). Before calling Rebrickable it
-   calls `claim_import`, which atomically applies the per-user hourly limit and
-   refuses a second import of the same set within 3 minutes. Each Rebrickable
+   calls `claim_import`. That function atomically applies the per-user hourly
+   limit and a global cap of 200 imports per hour, and refuses a second import
+   of the same set within 3 minutes. Each Rebrickable
    request has a 10 s timeout, and the whole import has a 110 s budget (free
    Edge Functions stop at 150 s). Otherwise it reads everything from the API
    first: the set, its parts, its minifigs, and each minifig's parts. Then it
@@ -65,7 +66,10 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 4. **Live sync**: a trigger on `check_progress` sends a `progress` broadcast
    (`{set_part_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
    `check:<id>`. RLS policies on `realtime.messages` let only members of the
-   check receive broadcasts and send presence there. There is **one channel per
+   check receive broadcasts and send presence there. A `changed` broadcast
+   (from triggers on `checks` and `check_members`) tells open pages to refresh
+   the summary. A removed member's page then finds no check and shows "not
+   found". There is **one channel per
    check** in the client: `CheckLayout` (the `/checks/:id` layout route) calls
    `useCheck` once and shares it with its child pages through `CheckContext`.
    The inventory (`check_lines`) is loaded once per visit. Phones drop sockets

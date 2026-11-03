@@ -95,6 +95,11 @@ serve(async (req) => {
       409,
       "This set is being imported right now, try again in a minute",
     );
+  if (claim === "busy")
+    throw new HttpError(
+      503,
+      "Many new sets are being added right now, try again later",
+    );
 
   // Read everything first, then write once (import_set is atomic).
   const rb = Rebrickable.fromEnv();
