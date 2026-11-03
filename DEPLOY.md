@@ -53,7 +53,7 @@ Everything below runs on free tiers. Expect about an hour the first time.
    - `VITE_SUPABASE_URL` = `https://<project-ref>.supabase.co`
    - `VITE_SUPABASE_PUBLISHABLE_KEY` = `sb_publishable_...`
    - `VITE_PUBLIC_URL` = `https://<your-domain>` (so invite links from previews point at production)
-   - `NODE_VERSION` = `22`
+   - Don't set `NODE_VERSION` (delete it if present): Pages reads the version from `.nvmrc`.
 4. Optional: add a custom domain (about €10/yr). Otherwise use `<project>.pages.dev`.
 
 Pages serves `index.html` for unknown paths (there is no `404.html`), so client-side

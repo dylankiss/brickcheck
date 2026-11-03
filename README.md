@@ -7,7 +7,7 @@ See `ARCHITECTURE.md` for how it fits together and `CLAUDE.md` for commands.
 
 ## Local setup
 
-You need Node 22 and Docker.
+You need Node 26 (see `.nvmrc`) and Docker.
 
 Claude works in this repo inside Claude Code's sandbox (`.claude/settings.json`).
 Docker isn't available to it, so run `npx supabase start`,
