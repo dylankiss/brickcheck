@@ -1,10 +1,10 @@
-import type { SortMode, PartFilter } from "../lib/parts";
-import { ColorSwatch } from "./ui";
+import type { PartColor, SortMode, PartFilter } from "../lib/parts";
+import { Chip, ColorChips } from "./ColorChips";
 
 interface Props {
   filter: PartFilter;
   sort: SortMode;
-  colors: { id: number; name: string; rgb: string | null }[];
+  colors: PartColor[];
   onFilterChange: (filter: PartFilter) => void;
   onSortChange: (sort: SortMode) => void;
 }
@@ -38,44 +38,20 @@ export function FilterBar({
           <option value="missing">Most missing</option>
         </select>
       </div>
-      {/* Vertical padding keeps the chips' outlines inside the scroll area, which clips them. */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 text-sm">
-        <button
-          type="button"
+      <ColorChips
+        colors={colors}
+        colorId={filter.colorId}
+        onColorChange={(colorId) => onFilterChange({ ...filter, colorId })}
+      >
+        <Chip
+          active={filter.hideFound}
           onClick={() =>
             onFilterChange({ ...filter, hideFound: !filter.hideFound })
           }
-          className={`min-h-9 shrink-0 rounded-full px-3 ring-1 ${
-            filter.hideFound
-              ? "bg-neutral-900 text-white ring-neutral-900 dark:bg-white dark:text-neutral-900"
-              : "ring-neutral-300 dark:ring-neutral-700"
-          }`}
-          aria-pressed={filter.hideFound}
         >
           Hide found
-        </button>
-        {colors.map((color) => {
-          const active = filter.colorId === color.id;
-          return (
-            <button
-              key={color.id}
-              type="button"
-              onClick={() =>
-                onFilterChange({ ...filter, colorId: active ? null : color.id })
-              }
-              className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 ring-1 ${
-                active
-                  ? "bg-neutral-900 text-white ring-neutral-900 dark:bg-white dark:text-neutral-900"
-                  : "ring-neutral-300 dark:ring-neutral-700"
-              }`}
-              aria-pressed={active}
-            >
-              <ColorSwatch rgb={color.rgb} className="size-3.5" />
-              {color.name}
-            </button>
-          );
-        })}
-      </div>
+        </Chip>
+      </ColorChips>
     </div>
   );
 }

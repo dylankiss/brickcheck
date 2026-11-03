@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { EnlargeableThumbnail, EnlargedPart } from "../components/EnlargedPart";
+import { ColorChips } from "../components/ColorChips";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useMissingAcrossChecks } from "../hooks/useMissingAcrossChecks";
 import {
+  partColors,
   partLabel,
   searchMissingAcross,
   type MissingAcross,
@@ -15,21 +17,31 @@ export default function MissingAcrossChecks() {
   const { missing, error, clearError, isBusy, tickOff } =
     useMissingAcrossChecks();
   const [query, setQuery] = useState("");
+  const [colorId, setColorId] = useState<number | null>(null);
   const [enlarged, setEnlarged] = useState<string | null>(null);
 
   const all = useMemo(
-    () => missing && searchMissingAcross(missing, ""),
+    () => missing && searchMissingAcross(missing, { query: "", colorId: null }),
     [missing],
   );
+  const colors = useMemo(
+    () => partColors(missing?.map((m) => m.part) ?? []),
+    [missing],
+  );
+  // Ticking off the last part of the chosen color removes its chip: stop filtering on it.
+  const activeColor = colors.some((c) => c.id === colorId) ? colorId : null;
   const shown = useMemo(
-    () => (missing ? searchMissingAcross(missing, query).parts : []),
-    [missing, query],
+    () =>
+      missing
+        ? searchMissingAcross(missing, { query, colorId: activeColor }).parts
+        : [],
+    [missing, query, activeColor],
   );
 
   return (
     <>
       <Header title="Missing in all checks" back="/">
-        <div className="pb-3">
+        <div className="flex flex-col gap-2 pb-3">
           <input
             type="search"
             value={query}
@@ -38,6 +50,13 @@ export default function MissingAcrossChecks() {
             aria-label="Search parts by name, number or color"
             className="min-h-11 w-full rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
+          {colors.length > 0 && (
+            <ColorChips
+              colors={colors}
+              colorId={activeColor}
+              onColorChange={setColorId}
+            />
+          )}
         </div>
       </Header>
       {error && <ErrorBanner message={error} onClose={clearError} />}

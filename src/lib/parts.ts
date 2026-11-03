@@ -177,14 +177,16 @@ export function sortParts(parts: Part[], mode: SortMode): Part[] {
   );
 }
 
+/** A color as the filter chips show it. */
+export interface PartColor {
+  id: number;
+  name: string;
+  rgb: string | null;
+}
+
 /** Distinct colors present in the parts, for the color filter. */
-export function partColors(
-  parts: Part[],
-): { id: number; name: string; rgb: string | null }[] {
-  const colors = new Map<
-    number,
-    { id: number; name: string; rgb: string | null }
-  >();
+export function partColors(parts: Part[]): PartColor[] {
+  const colors = new Map<number, PartColor>();
   for (const p of parts)
     colors.set(p.color_id, {
       id: p.color_id,
@@ -289,15 +291,15 @@ const startDate = new Intl.DateTimeFormat("en-GB", {
   month: "short",
 });
 
-/** The missing Parts matching a search (name, number or color), with totals over them. */
+/** The missing Parts matching a search (name, number or color) and color filter, with totals over them. */
 export function searchMissingAcross(
   missing: MissingAcross[],
-  query: string,
+  { query, colorId }: Pick<PartFilter, "query" | "colorId">,
 ): { parts: MissingAcross[]; pieces: number; checks: number } {
   const keys = new Set(
     filterParts(
       missing.map((m) => m.part),
-      { query, colorId: null, hideFound: false },
+      { query, colorId, hideFound: false },
     ).map((p) => p.key),
   );
   const parts = missing.filter((m) => keys.has(m.part.key));

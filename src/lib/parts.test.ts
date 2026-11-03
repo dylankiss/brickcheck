@@ -289,18 +289,28 @@ describe("missingAcrossChecks", () => {
         }),
       ],
     );
-    expect(searchMissingAcross(missing, "red")).toMatchObject({
+    expect(
+      searchMissingAcross(missing, { query: "red", colorId: null }),
+    ).toMatchObject({
       parts: [{ part: { part_num: "3001" } }],
       pieces: 3,
       checks: 2,
     });
-    expect(searchMissingAcross(missing, "")).toMatchObject({
-      pieces: 6,
-      checks: 2,
-    });
     expect(
-      searchMissingAcross(missing, "3004").parts.map((m) => m.part.part_name),
+      searchMissingAcross(missing, { query: "", colorId: null }),
+    ).toMatchObject({ pieces: 6, checks: 2 });
+    expect(
+      searchMissingAcross(missing, { query: "3004", colorId: null }).parts.map(
+        (m) => m.part.part_name,
+      ),
     ).toEqual(["Brick 1 x 2"]);
+    expect(
+      searchMissingAcross(missing, { query: "", colorId: 1 }),
+    ).toMatchObject({
+      parts: [{ part: { color_name: "Blue" } }],
+      pieces: 3,
+      checks: 1,
+    });
   });
 
   it("applies a tick-off to its own Check only, though Checks of one Set share line ids", () => {
