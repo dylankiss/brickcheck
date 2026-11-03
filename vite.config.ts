@@ -4,4 +4,6 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Listen on the LAN so the app can be tested on a phone.
+  server: { host: true },
 });

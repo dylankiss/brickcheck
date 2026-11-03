@@ -25,6 +25,8 @@ dist-ssr
 
 # Env and local tool state
 .env
-.env.local
+.env.*
+!.env.example
 supabase/.env
+supabase/functions/.env
 .claude/settings.local.json
