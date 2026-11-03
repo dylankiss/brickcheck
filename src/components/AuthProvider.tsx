@@ -1,18 +1,39 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { AuthContext, type AuthState } from "../hooks/useAuth";
-import { getSession, onAuthChange } from "../lib/api";
+import type { Session } from "@supabase/supabase-js";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { AuthContext } from "../hooks/useAuth";
+import { getMyProfile, getSession, onAuthChange } from "../lib/api";
+import type { Profile } from "../lib/types";
 
 /** App-level auth state (the one component that uses lib/api, see ARCHITECTURE.md). */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    session: null,
-    loading: true,
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const userId = session?.user.id;
 
   useEffect(() => {
-    getSession().then((session) => setState({ session, loading: false }));
-    return onAuthChange((session) => setState({ session, loading: false }));
+    getSession().then((s) => {
+      setSession(s);
+      setLoading(false);
+    });
+    return onAuthChange((s) => {
+      setSession(s);
+      setLoading(false);
+    });
   }, []);
 
-  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
+  const refreshProfile = useCallback(async () => {
+    setProfile(userId ? await getMyProfile(userId) : null);
+  }, [userId]);
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- refreshProfile only sets state after awaiting the fetch
+    refreshProfile().catch(() => setProfile(null));
+  }, [refreshProfile]);
+
+  return (
+    <AuthContext.Provider value={{ session, profile, loading, refreshProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

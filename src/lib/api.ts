@@ -3,14 +3,22 @@ import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type {
   CheckLine,
+  CheckRole,
   CheckSummary,
+  Invite,
+  InvitePreview,
   LegoSet,
   LineProgress,
+  Member,
   NewCheck,
+  OnlineMember,
+  Profile,
 } from "./types";
 
 // Rows requested per page; the server may return fewer (its max_rows).
 const PAGE_SIZE = 1000;
+// Mobile connections stall; a tap that hangs longer fails and is refetched.
+const TAP_TIMEOUT_MS = 10_000;
 
 export class ApiError extends Error {}
 
@@ -66,6 +74,19 @@ export async function signInWithEmail(
   if (error) fail(error);
 }
 
+/** Logs in with the 6-digit code from the login email (needed in the installed iOS app). */
+export async function verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<void> {
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token: code,
+    type: "email",
+  });
+  if (error) fail(error);
+}
+
 export async function signInWithGoogle(redirectTo: string): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -76,6 +97,31 @@ export async function signInWithGoogle(redirectTo: string): Promise<void> {
 
 export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut();
+  if (error) fail(error);
+}
+
+// ---------------------------------------------------------------------------
+// Profile
+// ---------------------------------------------------------------------------
+
+export async function getMyProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) fail(error);
+  return data;
+}
+
+export async function updateMyName(
+  userId: string,
+  displayName: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName })
+    .eq("id", userId);
   if (error) fail(error);
 }
 
@@ -121,13 +167,15 @@ export async function fetchSet(setNum: string): Promise<LegoSet> {
 // Checks
 // ---------------------------------------------------------------------------
 
-export async function listChecks(): Promise<CheckSummary[]> {
-  const { data, error } = await supabase
-    .from("check_summaries")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) fail(error);
-  return data;
+export function listChecks(): Promise<CheckSummary[]> {
+  return fetchAll((from, to) =>
+    supabase
+      .from("check_summaries")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
 }
 
 export async function getCheck(checkId: string): Promise<CheckSummary | null> {
@@ -197,11 +245,126 @@ export async function adjustPart(
   colorId: number,
   delta: number,
 ): Promise<LineProgress[]> {
-  const { data, error } = await supabase.rpc("adjust_part", {
-    p_check_id: checkId,
-    p_part_num: partNum,
-    p_color_id: colorId,
-    p_delta: delta,
+  const { data, error } = await supabase
+    .rpc("adjust_part", {
+      p_check_id: checkId,
+      p_part_num: partNum,
+      p_color_id: colorId,
+      p_delta: delta,
+    })
+    .abortSignal(AbortSignal.timeout(TAP_TIMEOUT_MS));
+  if (error)
+    fail(
+      error.name === "AbortError"
+        ? { message: "The connection is slow; that tap was not saved" }
+        : error,
+    );
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Members and invites
+// ---------------------------------------------------------------------------
+
+export async function listMembers(checkId: string): Promise<Member[]> {
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("check_members")
+      .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
+      .eq("check_id", checkId)
+      .order("joined_at")
+      .order("user_id")
+      .range(from, to),
+  );
+  return data.map(({ profiles, ...member }) => {
+    const profile = (Array.isArray(profiles) ? profiles[0] : profiles) as Pick<
+      Profile,
+      "display_name" | "avatar_url"
+    > | null;
+    return {
+      ...member,
+      role: member.role as CheckRole,
+      display_name: profile?.display_name ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+    };
+  });
+}
+
+export async function setMemberRole(
+  checkId: string,
+  userId: string,
+  role: Exclude<CheckRole, "owner">,
+): Promise<void> {
+  const { error } = await supabase
+    .from("check_members")
+    .update({ role })
+    .eq("check_id", checkId)
+    .eq("user_id", userId);
+  if (error) fail(error);
+}
+
+/** Removes a member; with your own id this is "leave the check". */
+export async function removeMember(
+  checkId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("check_members")
+    .delete()
+    .eq("check_id", checkId)
+    .eq("user_id", userId);
+  if (error) fail(error);
+}
+
+export async function listInvites(checkId: string): Promise<Invite[]> {
+  const { data, error } = await supabase
+    .from("check_invites")
+    .select("token, role, expires_at")
+    .eq("check_id", checkId)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at");
+  if (error) fail(error);
+  return data;
+}
+
+export async function createInvite(
+  checkId: string,
+  role: Invite["role"],
+): Promise<Invite> {
+  const { data, error } = await supabase
+    .from("check_invites")
+    .insert({ check_id: checkId, role })
+    .select("token, role, expires_at")
+    .single();
+  if (error) fail(error);
+  return data;
+}
+
+export async function deleteInvite(token: string): Promise<void> {
+  const { error } = await supabase
+    .from("check_invites")
+    .delete()
+    .eq("token", token);
+  if (error) fail(error);
+}
+
+export const inviteUrl = (token: string) =>
+  `${window.location.origin}/join/${token}`;
+
+export async function getInvitePreview(
+  token: string,
+): Promise<InvitePreview | null> {
+  const { data, error } = await supabase.rpc("invite_preview", {
+    p_token: token,
+  });
+  if (error) fail(error);
+  return (data as InvitePreview[])[0] ?? null;
+}
+
+/** Joins the invite's check; returns its id. */
+export async function acceptInvite(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc("accept_invite", {
+    p_token: token,
   });
   if (error) fail(error);
   return data;
@@ -213,32 +376,72 @@ export async function adjustPart(
 
 export interface CheckChannelHandlers {
   onProgress: (progress: LineProgress) => void;
+  /** The check or its members changed (rename, join, leave, role change). */
+  onChanged: () => void;
   /** Called on every (re)subscribe, so callers can refetch what they missed. */
   onSubscribed: () => void;
+  onPresence: (online: OnlineMember[]) => void;
 }
 
-/** Subscribes to the check's private channel; returns an unsubscribe function. */
+// Channels still leaving, by topic. supabase.channel() would hand back a
+// leaving channel with the same topic, which then never subscribes.
+const leaving = new Map<string, Promise<unknown>>();
+
+/**
+ * Subscribes to the check's private channel and announces `me` there;
+ * returns an unsubscribe function. One channel per check (ARCHITECTURE.md).
+ */
 export function subscribeToCheck(
   checkId: string,
+  me: OnlineMember,
   handlers: CheckChannelHandlers,
 ): () => void {
-  const channel = supabase.channel(`check:${checkId}`, {
-    config: { private: true },
-  });
-  channel.on("broadcast", { event: "progress" }, ({ payload }) =>
-    handlers.onProgress(payload as LineProgress),
-  );
-
+  const topic = `check:${checkId}`;
+  let channel: ReturnType<typeof supabase.channel> | null = null;
   let cancelled = false;
-  supabase.realtime.setAuth().then(() => {
+
+  Promise.all([leaving.get(topic), supabase.realtime.setAuth()]).then(() => {
     if (cancelled) return;
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") handlers.onSubscribed();
-    });
+    channel = openCheckChannel(topic, me, handlers);
   });
 
   return () => {
     cancelled = true;
-    supabase.removeChannel(channel);
+    if (!channel) return;
+    const removal = supabase.removeChannel(channel).finally(() => {
+      if (leaving.get(topic) === removal) leaving.delete(topic);
+    });
+    leaving.set(topic, removal);
   };
+}
+
+function openCheckChannel(
+  topic: string,
+  me: OnlineMember,
+  handlers: CheckChannelHandlers,
+) {
+  const channel = supabase.channel(topic, {
+    config: { private: true, presence: { key: me.user_id } },
+  });
+  channel
+    .on("broadcast", { event: "progress" }, ({ payload }) =>
+      handlers.onProgress(payload as LineProgress),
+    )
+    .on("broadcast", { event: "changed" }, () => handlers.onChanged())
+    .on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState<{ name: string | null }>();
+      handlers.onPresence(
+        Object.entries(state).map(([user_id, metas]) => ({
+          user_id,
+          name: metas[0]?.name ?? null,
+        })),
+      );
+    });
+
+  channel.subscribe((status) => {
+    if (status !== "SUBSCRIBED") return;
+    channel.track({ name: me.name });
+    handlers.onSubscribed();
+  });
+  return channel;
 }

@@ -14,7 +14,7 @@ import {
   type LineMap,
   type Tile,
 } from "../lib/tiles";
-import type { CheckSummary, LineProgress } from "../lib/types";
+import type { CheckSummary, LineProgress, OnlineMember } from "../lib/types";
 
 export type CheckStatus = "loading" | "ready" | "not-found" | "error";
 
@@ -23,14 +23,14 @@ export type CheckStatus = "loading" | "ready" | "not-found" | "error";
  * through CheckContext, so there is a single realtime channel per check.
  *
  * - The inventory is loaded once; reconnects and visibility changes refetch
- *   only the progress numbers.
+ *   only the progress numbers (or redo the full load if it had failed).
  * - Taps on a tile are sent one request at a time; taps made while a request
  *   is in flight are summed into the next one, so they apply in order.
  * - While a tile has a request in flight, server values for it (broadcasts,
  *   refetches) are held back and applied together with the request's result,
  *   so the optimistic delta is never counted twice.
  */
-export function useCheck(checkId: string) {
+export function useCheck(checkId: string, me: OnlineMember) {
   const [summary, setSummary] = useState<CheckSummary | null>(null);
   const [lines, setLines] = useState<LineMap>(() => new Map());
   const [pending, setPending] = useState<ReadonlyMap<string, number>>(
@@ -38,14 +38,20 @@ export function useCheck(checkId: string) {
   );
   const [status, setStatus] = useState<CheckStatus>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [online, setOnline] = useState<OnlineMember[]>([]);
+  // Bumped when the check or its members change, so dependent views refetch.
+  const [version, setVersion] = useState(0);
 
-  // Tap bookkeeping; refs because it is read and written outside render.
+  // Bookkeeping read and written outside render.
   const tileOfLine = useRef(new Map<number, string>());
   const queued = useRef(new Map<string, number>());
   const inFlight = useRef(new Set<string>());
   const heldBack = useRef(new Map<string, LineProgress[]>());
-  const loaded = useRef<Promise<void> | null>(null);
+  const loaded = useRef<Promise<boolean> | null>(null);
   const refreshing = useRef<Promise<void> | null>(null);
+  const refreshAgain = useRef(false);
+  // Bumped on every (un)mount; async work only applies results of its own generation.
+  const generation = useRef(0);
 
   /** Applies server values, holding back those for tiles with a request in flight. */
   const receive = useCallback((updates: LineProgress[]) => {
@@ -64,66 +70,107 @@ export function useCheck(checkId: string) {
     if (now.length) setLines((held) => applyProgress(held, now));
   }, []);
 
-  const refreshProgress = useCallback(() => {
-    refreshing.current ??= (async () => {
-      try {
-        await loaded.current;
-        const [check, progress] = await Promise.all([
-          getCheck(checkId),
-          getCheckProgress(checkId),
-        ]);
-        if (!check) {
-          setStatus("not-found");
-          return;
-        }
-        setSummary(check);
-        receive(progress);
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        refreshing.current = null;
+  /** Loads summary and inventory; resolves to whether it succeeded. */
+  const load = useCallback(async () => {
+    const gen = generation.current;
+    try {
+      const [check, fetched] = await Promise.all([
+        getCheck(checkId),
+        getCheckLines(checkId),
+      ]);
+      if (gen !== generation.current) return false;
+      if (!check) {
+        setStatus("not-found");
+        return false;
       }
-    })();
-    return refreshing.current;
-  }, [checkId, receive]);
-
-  useEffect(() => {
-    loaded.current = (async () => {
-      try {
-        const [check, fetched] = await Promise.all([
-          getCheck(checkId),
-          getCheckLines(checkId),
-        ]);
-        if (!check) {
-          setStatus("not-found");
-          return;
-        }
-        tileOfLine.current = new Map(
-          fetched.map((l) => [l.set_part_id, tileKey(l.part_num, l.color_id)]),
-        );
-        setSummary(check);
-        setLines(toLineMap(fetched));
-        setStatus("ready");
-      } catch (e) {
+      tileOfLine.current = new Map(
+        fetched.map((l) => [l.set_part_id, tileKey(l.part_num, l.color_id)]),
+      );
+      setSummary(check);
+      setLines(toLineMap(fetched));
+      setStatus("ready");
+      setError(null);
+      return true;
+    } catch (e) {
+      if (gen === generation.current) {
         setError((e as Error).message);
         setStatus("error");
       }
-    })();
+      return false;
+    }
+  }, [checkId]);
 
-    const unsubscribe = subscribeToCheck(checkId, {
+  /**
+   * Catches up with the server. Requests made while one runs schedule exactly
+   * one more run afterwards, so nothing committed in between is missed.
+   * Errors are not shown: this runs in the background, often before the
+   * network is back after unlocking the phone.
+   */
+  const refresh = useCallback(() => {
+    if (refreshing.current) {
+      refreshAgain.current = true;
+      return refreshing.current;
+    }
+    const gen = generation.current;
+    refreshing.current = (async () => {
+      do {
+        refreshAgain.current = false;
+        try {
+          if (!(await loaded.current)) {
+            // The first load failed (e.g. offline): redo it in full.
+            loaded.current = load();
+            await loaded.current;
+            continue;
+          }
+          const [check, progress] = await Promise.all([
+            getCheck(checkId),
+            getCheckProgress(checkId),
+          ]);
+          if (gen !== generation.current) return;
+          if (!check) {
+            setStatus("not-found");
+            return;
+          }
+          setSummary(check);
+          receive(progress);
+        } catch (e) {
+          console.warn("Background refresh failed", e);
+        }
+      } while (refreshAgain.current && gen === generation.current);
+    })().finally(() => {
+      refreshing.current = null;
+    });
+    return refreshing.current;
+  }, [checkId, load, receive]);
+
+  useEffect(() => {
+    generation.current++;
+    loaded.current = load();
+
+    const unsubscribe = subscribeToCheck(checkId, me, {
       onProgress: (progress) => receive([progress]),
+      onChanged: () => {
+        setVersion((v) => v + 1);
+        refresh();
+      },
       // Catches up on anything missed between loading and (re)subscribing.
-      onSubscribed: () => void refreshProgress(),
+      onSubscribed: () => void refresh(),
+      onPresence: setOnline,
     });
     const onVisibility = () => {
-      if (document.visibilityState === "visible") refreshProgress();
+      if (document.visibilityState === "visible") refresh();
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      // A counter, not a DOM ref: invalidating in-flight work is the point.
+      // oxlint-disable-next-line react-hooks/exhaustive-deps
+      generation.current++;
       unsubscribe();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [checkId, receive, refreshProgress]);
+    // `me` is announced once per subscription; a renamed user shows up on the next visit.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkId, load, receive, refresh]);
 
   const tiles = useMemo(() => buildTiles(lines, pending), [lines, pending]);
 
@@ -167,12 +214,12 @@ export function useCheck(checkId: string) {
           setLines((lines) => applyProgress(lines, held));
           settle(key, delta);
           setError(e.message);
-          refreshProgress();
+          refresh();
           flushTile(key, partNum, colorId);
         },
       );
     },
-    [checkId, settle, refreshProgress],
+    [checkId, settle, refresh],
   );
 
   const tap = useCallback(
@@ -191,6 +238,11 @@ export function useCheck(checkId: string) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  const others = useMemo(
+    () => online.filter((o) => o.user_id !== me.user_id),
+    [online, me.user_id],
+  );
+
   return {
     checkId,
     summary,
@@ -200,7 +252,9 @@ export function useCheck(checkId: string) {
     clearError,
     canEdit,
     tap,
-    refreshProgress,
+    online,
+    others,
+    version,
   };
 }
 

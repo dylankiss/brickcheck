@@ -67,3 +67,41 @@ export interface NewCheck {
   include_spares: boolean;
   include_minifigs: boolean;
 }
+
+export interface Profile {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface Member {
+  user_id: string;
+  role: CheckRole;
+  joined_at: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface Invite {
+  token: string;
+  role: Exclude<CheckRole, "owner">;
+  expires_at: string;
+}
+
+/** What an invite link leads to (invite_preview RPC). */
+export interface InvitePreview {
+  check_id: string;
+  check_title: string;
+  set_num: string;
+  set_name: string;
+  set_img_url: string | null;
+  role: Exclude<CheckRole, "owner">;
+  invited_by: string | null;
+  already_member: boolean;
+}
+
+/** Someone with the check open right now (Realtime presence). */
+export interface OnlineMember {
+  user_id: string;
+  name: string | null;
+}

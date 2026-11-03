@@ -88,23 +88,50 @@ await admin.rpc("import_set", {
   ],
 });
 
-async function loginPage(browser, email) {
-  await admin.auth.admin.createUser({ email, email_confirm: true });
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-    options: { redirectTo: `${APP}/` },
-  });
-  if (error) throw error;
+async function newPage(browser) {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
   });
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: APP,
+  });
+  // Headless Chrome has no share sheet; take the copy-to-clipboard path instead.
+  await ctx.addInitScript(() => delete Navigator.prototype.share);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => console.log("PAGE ERROR", e.message));
-  await page.goto(data.properties.action_link);
+  return page;
+}
+
+/** Logs in via the magic link, or by typing the 6-digit code when `viaCode`. */
+async function loginPage(browser, email, { viaCode = false } = {}) {
+  await admin.auth.admin.createUser({ email, email_confirm: true });
+  const page = await newPage(browser);
+  if (viaCode) {
+    await page.goto(`${APP}/login`);
+    await page.getByPlaceholder("you@example.com").fill(email);
+    await page.getByText("Email me a login link").click();
+    await page.getByLabel("Login code").waitFor();
+    // Read a fresh code instead of the email (auth allows one request per second).
+    await page.waitForTimeout(1500);
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+    });
+    if (error) throw error;
+    await page.getByLabel("Login code").fill(data.properties.email_otp);
+    await page.getByText("Log in with code").click();
+  } else {
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo: `${APP}/` },
+    });
+    if (error) throw error;
+    await page.goto(data.properties.action_link);
+  }
   await page.waitForURL(`${APP}/**`);
   await page.getByText("My checks").waitFor();
   return page;
@@ -168,17 +195,37 @@ try {
   await a.getByText("2/11").waitFor();
   ok(true, "a +1/−1 burst is applied in order and persisted");
 
-  // Second user joins as helper and taps; Alice should see it live
-  const bobEmail = `bob${Date.now()}@example.com`;
-  const b = await loginPage(browser, bobEmail);
-  const { data: users } = await admin.auth.admin.listUsers();
-  const bobId = users.users.find((u) => u.email === bobEmail).id;
-  await admin
-    .from("check_members")
-    .insert({ check_id: checkId, user_id: bobId, role: "helper" });
-  await b.goto(`${APP}/checks/${checkId}`);
+  // Bob logs in with the code from the email and picks a name
+  const b = await loginPage(browser, `bob${Date.now()}@example.com`, {
+    viaCode: true,
+  });
+  ok(true, "logging in with the 6-digit code works");
+  await b.getByPlaceholder("Your name").fill("Bob Builder");
+  await b.getByRole("button", { name: "Save" }).click();
+  await b.getByPlaceholder("Your name").waitFor({ state: "detached" });
+  ok(true, "email users are asked for a display name once");
+
+  // Alice invites helpers; Bob joins through the link
+  await a.getByRole("link", { name: "People" }).click();
+  await a.getByRole("button", { name: "Invite helpers" }).click();
+  await a.getByText("Copied!").waitFor();
+  const link = await a.evaluate(() => navigator.clipboard.readText());
+  ok(/\/join\/[0-9a-f-]{36}$/.test(link), `invite link copied: ${link}`);
+  await b.goto(link);
+  await b.getByText(/invited you to tick off parts/).waitFor();
+  await b.screenshot({ path: `${OUT}/7-join.png` });
+  await b.getByRole("button", { name: "Join" }).click();
   await b.getByText("2/11").waitFor();
-  ok(true, "second member sees the same progress");
+  ok(true, "the invitee joins and sees the same progress");
+  await a.getByText("Bob Builder").waitFor();
+  await a.screenshot({ path: `${OUT}/8-people.png` });
+  ok(true, "the owner sees the new member appear live");
+  await a.getByRole("link", { name: "Back" }).click();
+  await a
+    .getByRole("link", { name: "People" })
+    .locator('[title="Bob Builder"]')
+    .waitFor({ timeout: 10000 });
+  ok(true, "Bob's avatar shows as online on Alice's check");
   await b.getByRole("button", { name: /Minifig Head, Yellow/ }).click();
   await b.getByRole("button", { name: /Minifig Head, Yellow/ }).click();
   await a.getByText("4/11").waitFor({ timeout: 10000 });
@@ -226,18 +273,23 @@ try {
     .waitFor({ timeout: 10000 });
   ok(true, "the missing list updates live");
 
-  // Viewer cannot tap
-  await admin
-    .from("check_members")
-    .update({ role: "viewer" })
-    .eq("check_id", checkId)
-    .eq("user_id", bobId);
-  await b.reload();
-  await b.getByText("You can view this check but not change it.").waitFor();
+  // Alice makes Bob a viewer; his page switches to read-only without reloading
+  await b.goto(`${APP}/checks/${checkId}`);
+  await a.goto(`${APP}/checks/${checkId}/people`);
+  await a.getByLabel("Role of Bob Builder").selectOption("viewer");
+  await b
+    .getByText("You can view this check but not change it.")
+    .waitFor({ timeout: 10000 });
   ok(
     await b.getByRole("button", { name: /Brick 2 x 4, Red/ }).isDisabled(),
-    "viewers see disabled tiles",
+    "a role change reaches the member live",
   );
+
+  // Alice removes Bob; his page notices
+  a.once("dialog", (d) => d.accept());
+  await a.getByRole("button", { name: "Remove" }).click();
+  await b.getByText("Check not found").waitFor({ timeout: 10000 });
+  ok(true, "a removed member loses access live");
 
   // My checks list
   await a.goto(`${APP}/`);

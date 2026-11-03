@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router";
 import { Button, ErrorBanner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
-import { signInWithEmail, signInWithGoogle } from "../lib/api";
+import { signInWithEmail, signInWithGoogle, verifyEmailCode } from "../lib/api";
 
 export default function Login() {
   const { session } = useAuth();
@@ -16,6 +16,7 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +32,18 @@ export default function Login() {
     } catch (err) {
       setError((err as Error).message);
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitCode(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await verifyEmailCode(email.trim(), code.trim());
+    } catch (err) {
+      setError((err as Error).message);
       setBusy(false);
     }
   }
@@ -64,9 +77,34 @@ export default function Login() {
       {error && <ErrorBanner message={error} />}
 
       {sent ? (
-        <p className="rounded-2xl bg-green-100 p-4 text-center text-green-900 dark:bg-green-950 dark:text-green-100">
-          Check your inbox: we sent a login link to <strong>{email}</strong>.
-        </p>
+        <form onSubmit={submitCode} className="flex flex-col gap-3">
+          <p className="rounded-2xl bg-green-100 p-4 text-center text-green-900 dark:bg-green-950 dark:text-green-100">
+            Check your inbox: we sent a login link to <strong>{email}</strong>.
+            Tap it, or type the 6-digit code here.
+          </p>
+          <input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            placeholder="123456"
+            className="min-h-12 rounded-xl bg-white px-4 text-center text-2xl tracking-[0.4em] ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+            aria-label="Login code"
+          />
+          <Button type="submit" disabled={busy || code.length !== 6}>
+            {busy ? "Checking…" : "Log in with code"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            className="min-h-11 text-sm text-neutral-500"
+          >
+            Use a different email
+          </button>
+        </form>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-3">
           <input

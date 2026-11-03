@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { Outlet, useParams } from "react-router";
 import { ErrorBanner, Header, Spinner } from "../components/ui";
+import { useAuth } from "../hooks/useAuth";
 import { useCheck } from "../hooks/useCheck";
 import { CheckContext } from "../hooks/useCheckContext";
 
@@ -10,7 +12,11 @@ export default function CheckLayoutRoute() {
 }
 
 function CheckLayout({ checkId }: { checkId: string }) {
-  const check = useCheck(checkId);
+  const { session, profile } = useAuth();
+  const userId = session!.user.id;
+  const name = profile?.display_name ?? null;
+  const me = useMemo(() => ({ user_id: userId, name }), [userId, name]);
+  const check = useCheck(checkId, me);
 
   if (check.status === "loading") return <Spinner label="Loading parts…" />;
   if (check.status === "not-found") {

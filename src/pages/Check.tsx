@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
+import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartTile } from "../components/PartTile";
 import { ErrorBanner, Header, ProgressBar } from "../components/ui";
@@ -15,11 +16,13 @@ import {
 } from "../lib/tiles";
 
 // Tiles keep their place while you tap; the grid re-sorts and re-filters this
-// long after the last change, so a tile never moves under your thumb.
+// long after the last change, so a tile never moves under your thumb. Steady
+// activity (a busy collaborator) defers it at most MAX_DEFER_MS.
 const SETTLE_MS = 1500;
+const MAX_DEFER_MS = 5000;
 
 export default function Check() {
-  const { checkId, summary, tiles, error, clearError, canEdit, tap } =
+  const { checkId, summary, tiles, error, clearError, canEdit, tap, others } =
     useCheckContext();
   const [filter, setFilter] = useState<TileFilter>({
     query: "",
@@ -31,8 +34,18 @@ export default function Check() {
   // The tiles the current layout was computed from: refreshed after a quiet
   // period, and right away when the filter or sort changes.
   const [basis, setBasis] = useState<Tile[]>(tiles);
+  const deferredSince = useRef<number | null>(null);
   useEffect(() => {
-    const timer = setTimeout(() => setBasis(tiles), SETTLE_MS);
+    const now = Date.now();
+    deferredSince.current ??= now;
+    const delay = Math.max(
+      0,
+      Math.min(SETTLE_MS, deferredSince.current + MAX_DEFER_MS - now),
+    );
+    const timer = setTimeout(() => {
+      deferredSince.current = null;
+      setBasis(tiles);
+    }, delay);
     return () => clearTimeout(timer);
   }, [tiles]);
   const layoutBasis = basis.length === tiles.length ? basis : tiles;
@@ -56,6 +69,19 @@ export default function Check() {
     <>
       <Header title={summary!.title} back="/">
         <div className="flex items-center gap-3 pb-2">
+          <Link
+            to={`/checks/${checkId}/people`}
+            aria-label="People"
+            className="flex min-h-9 items-center"
+          >
+            {others.length ? (
+              <OnlineAvatars people={others} />
+            ) : (
+              <span className="text-xl" aria-hidden>
+                👥
+              </span>
+            )}
+          </Link>
           <ProgressBar found={found} needed={needed} className="flex-1" />
           <span className="text-sm font-semibold tabular-nums">
             {found}/{needed}

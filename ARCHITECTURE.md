@@ -135,6 +135,21 @@ definer` with `search_path = ''` so that policies don't recurse into
 - Functions prefer a new-style secret key (`SUPABASE_SECRET_KEY` function
   secret) and fall back to the legacy `SUPABASE_SERVICE_ROLE_KEY`.
 
+## Routes
+
+| Path                  | Page        | Notes                                                              |
+| --------------------- | ----------- | ------------------------------------------------------------------ |
+| `/login`              | Login       | magic link, 6-digit code, or Google; returns to the requested path |
+| `/`                   | Checks      | my checks; asks email users for a display name once                |
+| `/new`                | NewCheck    | catalog search → `fetch-set` → create check                        |
+| `/join/:token`        | Join        | invite preview → `accept_invite`                                   |
+| `/checks/:id`         | CheckLayout | owns `useCheck` (one channel, presence) for its children           |
+| `/checks/:id` (index) | Check       | the tile grid                                                      |
+| `/checks/:id/missing` | Missing     | missing list and exports                                           |
+| `/checks/:id/people`  | Share       | members, roles, invite links, leave or delete                      |
+
+Everything except `/login` is behind `RequireAuth`.
+
 ## Frontend conventions
 
 ```
@@ -148,11 +163,26 @@ src/
   components/       presentational components; no data fetching
 ```
 
+- **Presence**: the check channel tracks `{name}` under the user's id.
+  `useCheck` exposes `online` and `others`. A `changed` broadcast bumps
+  `version`, which views such as the member list depend on.
+- **Login**: the login email carries a link and a 6-digit code
+  (`supabase/templates/login.html`). The code matters for the installed iOS
+  PWA, where the link opens Safari instead of the app.
 - Pages and components never import `supabase` directly. They go through
   `lib/api.ts`, usually via a hook. Components don't fetch data; the one
   exception is `AuthProvider`, which holds app-level session state.
 - Database row types are written by hand in `lib/types.ts` for now. Switch to
   `supabase gen types` once a linked project exists.
+- **Recovery** (`useCheck`):
+  - A tap times out after 10 s; a timeout takes the normal failure path.
+  - A refresh requested while one runs schedules exactly one more run.
+  - A failed first load is redone in full on the next reconnect or
+    visibility change.
+  - Background refresh errors are logged, not shown.
+  - Async results from an earlier mount are discarded (generation counter).
+  - A channel that is still leaving is awaited before the same topic is
+    joined again.
 - **Optimistic taps** (`useCheck`):
   - A tile shows the server's count plus its unacknowledged deltas.
   - Each tile has at most one `adjust_part` call in flight. Taps made
@@ -164,8 +194,9 @@ src/
     one held is ignored.
   - A failed call drops its delta, shows the error and refetches progress.
 - **Stable layout**: the grid's order and filtering are computed from a
-  snapshot of the tiles, which is refreshed 1.5 s after the last change, or at
-  once when the filter or sort changes. Tiles don't jump under your thumb while
+  snapshot of the tiles, which is refreshed 1.5 s after the last change (at
+  most 5 s after the first deferred one), or at once when the filter or sort
+  changes. Tiles don't jump under your thumb while
   you tap. `PartTile` re-renders only when its counts change.
 - Every list read is paginated until a page comes back empty, whatever the
   server's `max_rows`.
@@ -180,7 +211,7 @@ src/
 `supabase/functions/_shared/` (CORS, auth check, Rebrickable client with 429
 back-off).
 
-## Invites (phase 2)
+## Invites
 
 - The owner creates an invite: a random uuid token, a role of `helper` or
   `viewer`, and an expiry (7 days by default). The owner can revoke it by
@@ -190,7 +221,8 @@ back-off).
   already are, it never changes or downgrades their role, and it can never
   grant `owner`. It returns the check id.
 - `/join/<token>` survives login: the path is kept and passed as
-  `emailRedirectTo` / `redirectTo`.
+  `emailRedirectTo` / `redirectTo`. Only same-origin paths are accepted.
+- `invite_preview(token)` shows the check, set and inviter before joining.
 - Members can leave a check. The owner can remove members, change their roles,
   or delete the check.
 

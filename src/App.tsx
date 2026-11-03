@@ -11,9 +11,11 @@ import { useAuth } from "./hooks/useAuth";
 import Check from "./pages/Check";
 import CheckLayout from "./pages/CheckLayout";
 import Checks from "./pages/Checks";
+import Join from "./pages/Join";
 import Login from "./pages/Login";
 import Missing from "./pages/Missing";
 import NewCheck from "./pages/NewCheck";
+import Share from "./pages/Share";
 
 function RequireAuth() {
   const { session, loading } = useAuth();
@@ -37,12 +39,14 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Checks /> },
       { path: "/new", element: <NewCheck /> },
+      { path: "/join/:token", element: <Join /> },
       {
         path: "/checks/:checkId",
         element: <CheckLayout />,
         children: [
           { index: true, element: <Check /> },
           { path: "missing", element: <Missing /> },
+          { path: "people", element: <Share /> },
         ],
       },
     ],
