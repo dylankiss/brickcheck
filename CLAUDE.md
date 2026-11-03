@@ -25,6 +25,7 @@ Read `ARCHITECTURE.md` before changing anything; keep it up to date.
 - New tables need RLS policies in the same migration.
 - Never edit a deployed migration; add a new one. (Nothing is deployed yet.)
 - Each step is reviewed by a separate fresh-context agent against `ARCHITECTURE.md`.
+- Commit messages follow Conventional Commits: `type(scope): summary`, lower case and imperative, with details in the body. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`, `perf`, `style`. Scopes are optional, e.g. `db`, `functions`, `ui`, `sync`, `pwa`.
 
 ## Agent skills
 
