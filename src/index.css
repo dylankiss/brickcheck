@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brick: #d01012;
+  --color-brick-dark: #a00d0e;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+  -webkit-tap-highlight-color: transparent;
+}
