@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:db": "supabase test db",
     "import-catalog": "node scripts/import-catalog.mjs",
+    "icons": "node scripts/icons.mjs",
     "smoke": "node scripts/smoke-local.mjs",
     "e2e": "node e2e/check-flow.mjs",
     "test:pwa": "node e2e/pwa.mjs"
@@ -25,6 +26,7 @@
     "react-router": "^8.5.1"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.4",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",

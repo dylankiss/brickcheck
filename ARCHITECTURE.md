@@ -239,6 +239,11 @@ src/
   - Login uses the implicit flow (tokens in the URL hash), which the fallback
     leaves alone.
   - The installed app checks for a new version every hour.
+  - Icons: `scripts/icons.mjs` (`npm run icons`) generates every icon in
+    `public/` from one logo definition: `favicon.svg` and the manifest icons
+    with rounded corners, plus full-bleed `apple-touch-icon.png` and
+    `maskable-512x512.png`, which iOS and Android mask themselves. The logo
+    fits Android's safe zone at full size.
   - In the installed app (`display-mode: standalone`) the login page offers
     only email, because OAuth would finish in Safari, outside the app.
   - Updates use `registerType: 'prompt'`: `UpdatePrompt` asks before
