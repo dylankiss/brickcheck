@@ -114,7 +114,8 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = true
+# Off: the app stores no files (part images load from Rebrickable's CDN).
+enabled = false
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
@@ -414,7 +415,8 @@ deno_version = 2
 REBRICKABLE_API_KEY = "env(REBRICKABLE_API_KEY)"
 
 [analytics]
-enabled = true
+# Off: saves the Logflare and Vector containers locally; nothing reads these logs.
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
