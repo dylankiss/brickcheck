@@ -141,7 +141,8 @@ src/
 ```
 
 - Pages and components never import `supabase` directly. They go through
-  `lib/api.ts`, usually via a hook.
+  `lib/api.ts`, usually via a hook. Components don't fetch data; the one
+  exception is `AuthProvider`, which holds app-level session state.
 - Database row types are written by hand in `lib/types.ts` for now. Switch to
   `supabase gen types` once a linked project exists.
 - **Optimistic taps**: a tile shows the server's count plus the deltas still in

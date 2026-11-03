@@ -30,3 +30,4 @@ dist-ssr
 supabase/.env
 supabase/functions/.env
 .claude/settings.local.json
+e2e/screenshots

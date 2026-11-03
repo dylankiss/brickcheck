@@ -12,4 +12,6 @@ See `ARCHITECTURE.md` for how it fits together and `CLAUDE.md` for commands.
    fill in a Rebrickable API key (https://rebrickable.com/api/).
 3. `npx supabase start` (needs Docker), then put the printed API URL and
    publishable key into `.env.local`.
-4. `npx supabase functions serve` and `npm run dev`.
+4. Seed the set catalog: `SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SECRET_KEY=<secret key> npm run import-catalog`
+5. `npx supabase functions serve` and `npm run dev`, then open http://localhost:5173.
+   Magic-link emails land in Mailpit at http://127.0.0.1:54324.

@@ -1,0 +1,78 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
+import {
+  ErrorBanner,
+  Header,
+  PartImage,
+  ProgressBar,
+  Spinner,
+} from "../components/ui";
+import { listChecks, signOut } from "../lib/api";
+import type { CheckSummary } from "../lib/types";
+
+export default function Checks() {
+  const [checks, setChecks] = useState<CheckSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listChecks().then(setChecks, (e: Error) => setError(e.message));
+  }, []);
+
+  return (
+    <>
+      <Header title="My checks">
+        <button
+          onClick={() => signOut()}
+          className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-4 text-sm text-neutral-500"
+        >
+          Sign out
+        </button>
+      </Header>
+      {error && <ErrorBanner message={error} />}
+      <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-28">
+        {!checks && !error && <Spinner />}
+        {checks?.length === 0 && (
+          <p className="py-12 text-center text-neutral-500">
+            No checks yet. Pick a set and start checking.
+          </p>
+        )}
+        {checks?.map((check) => (
+          <Link
+            key={check.id}
+            to={`/checks/${check.id}`}
+            className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800"
+          >
+            <PartImage
+              src={check.set_img_url}
+              alt=""
+              className="size-16 shrink-0 rounded-lg bg-white"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold">{check.title}</p>
+              <p className="truncate text-sm text-neutral-500">
+                {check.set_num} · {check.set_name}
+                {check.my_role !== "owner" && " · shared with you"}
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <ProgressBar
+                  found={check.found}
+                  needed={check.needed}
+                  className="flex-1"
+                />
+                <span className="text-xs text-neutral-500 tabular-nums">
+                  {check.found}/{check.needed}
+                </span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </main>
+      <Link
+        to="/new"
+        className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] flex min-h-14 items-center rounded-full bg-brick px-6 font-semibold text-white shadow-lg"
+      >
+        + New check
+      </Link>
+    </>
+  );
+}

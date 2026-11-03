@@ -92,7 +92,7 @@ const { data: check, error: ce } = await a
 ok(!ce, `create check ${ce?.message ?? ""}`);
 
 // Concurrency: 20 parallel taps, two users' worth of clients sharing a check.
-const { data: inv, error: ie } = await admin.from("check_members").insert({
+const { error: ie } = await admin.from("check_members").insert({
   check_id: check.id,
   user_id: (await b.auth.getUser()).data.user.id,
   role: "helper",

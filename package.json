@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:db": "supabase test db",
     "import-catalog": "node scripts/import-catalog.mjs",
-    "smoke": "node scripts/smoke-local.mjs"
+    "smoke": "node scripts/smoke-local.mjs",
+    "e2e": "node e2e/check-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.89.0",
+    "playwright-core": "^1.64.1",
     "supabase": "^3.0.0",
     "tailwindcss": "^4.3.4",
     "typescript": "~7.0.2",

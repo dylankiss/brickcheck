@@ -9,8 +9,12 @@ Read `ARCHITECTURE.md` before changing anything; keep it up to date.
 - `npm run build`: type-check and build
 - `npm run lint`: oxlint
 - `npm test`: vitest (pure logic in `src/lib`)
+- `npm run test:db`: pgTAP tests in `supabase/tests/database`
 - `npx supabase start` / `npx supabase db reset`: local stack (Docker)
 - `npx supabase functions serve`: run Edge Functions locally
+- `npm run import-catalog`: seed `lego_sets` from Rebrickable's CSV (needs `SUPABASE_URL`, `SUPABASE_SECRET_KEY`)
+- `npm run smoke`: API smoke test against the local stack
+- `npm run e2e`: browser test of the check flow (local stack + `npm run dev`, uses Google Chrome)
 
 ## Rules
 

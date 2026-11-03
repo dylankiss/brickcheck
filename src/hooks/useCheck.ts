@@ -20,6 +20,7 @@ export type CheckStatus = "loading" | "ready" | "not-found" | "error";
  * Live state of one check: lines from the server, optimistic taps, realtime
  * updates, and a refetch whenever the channel (re)connects or the page becomes
  * visible again (phones drop sockets when the screen locks).
+ * Mount the caller with `key={checkId}` so state starts fresh for each check.
  */
 export function useCheck(checkId: string) {
   const [summary, setSummary] = useState<CheckSummary | null>(null);
@@ -50,9 +51,7 @@ export function useCheck(checkId: string) {
   }, [checkId]);
 
   useEffect(() => {
-    setStatus("loading");
-    setLines(new Map());
-    setPending(new Map());
+    // oxlint-disable-next-line react/set-state-in-effect -- refresh only sets state after awaiting the fetch
     refresh();
 
     const unsubscribe = subscribeToCheck(checkId, {

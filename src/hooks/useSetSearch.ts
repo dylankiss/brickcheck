@@ -3,34 +3,45 @@ import { searchSets } from "../lib/api";
 import type { LegoSet } from "../lib/types";
 import { useDebounced } from "./useDebounced";
 
+interface SearchResult {
+  query: string;
+  sets: LegoSet[];
+  error: string | null;
+}
+
 /** Debounced catalog search. */
 export function useSetSearch() {
   const [query, setQuery] = useState("");
   const debounced = useDebounced(query, 300);
-  const [results, setResults] = useState<LegoSet[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [result, setResult] = useState<SearchResult>({
+    query: "",
+    sets: [],
+    error: null,
+  });
 
   useEffect(() => {
     let current = true;
-    setSearching(true);
-    searchSets(debounced)
-      .then((sets) => {
-        if (!current) return;
-        setResults(sets);
-        setError(null);
-      })
-      .catch((e: Error) => current && setError(e.message))
-      .finally(() => current && setSearching(false));
+    searchSets(debounced).then(
+      (sets) => current && setResult({ query: debounced, sets, error: null }),
+      (e: Error) =>
+        current && setResult({ query: debounced, sets: [], error: e.message }),
+    );
     return () => {
       current = false;
     };
   }, [debounced]);
 
+  const settled = result.query === debounced && debounced === query;
   const noResults =
-    !searching &&
-    !error &&
+    settled &&
+    !result.error &&
     debounced.trim().length >= 2 &&
-    results.length === 0;
-  return { query, setQuery, results, error, noResults };
+    result.sets.length === 0;
+  return {
+    query,
+    setQuery,
+    results: result.sets,
+    error: result.error,
+    noResults,
+  };
 }

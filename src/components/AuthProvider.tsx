@@ -1,20 +1,8 @@
-import type { Session } from "@supabase/supabase-js";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { AuthContext, type AuthState } from "../hooks/useAuth";
 import { getSession, onAuthChange } from "../lib/api";
 
-interface AuthState {
-  session: Session | null;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthState>({ session: null, loading: true });
-
+/** App-level auth state (the one component that uses lib/api, see ARCHITECTURE.md). */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     session: null,
@@ -28,5 +16,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }
-
-export const useAuth = () => useContext(AuthContext);
