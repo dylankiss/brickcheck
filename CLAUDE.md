@@ -23,5 +23,19 @@ Read `ARCHITECTURE.md` before changing anything; keep it up to date.
 - All data access goes through `src/lib/api.ts`.
 - The Rebrickable API is called only from Edge Functions.
 - New tables need RLS policies in the same migration.
-- Never edit an applied migration; add a new one.
+- Never edit a deployed migration; add a new one. (Nothing is deployed yet.)
 - Each step is reviewed by a separate fresh-context agent against `ARCHITECTURE.md`.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `dylankiss/brickcheck`, through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
