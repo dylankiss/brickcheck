@@ -176,11 +176,27 @@ try {
   ok(true, "check created with 11 needed pieces (spare excluded)");
 
   // Tap red brick 3 times, then undo once
-  const red = a.getByRole("button", { name: /Brick 2 x 4, Red/ });
+  // Anchored: the card's own button, not its "Enlarge picture of …" button.
+  const red = a.getByRole("button", { name: /^Brick 2 x 4, Red:/ });
   for (let i = 0; i < 3; i++) await red.click();
   await a.getByRole("button", { name: "Remove one Brick 2 x 4" }).click();
   await a.getByText("2/11").waitFor();
   ok(true, "taps and undo update the counter optimistically");
+
+  // Enlarge a part's picture, zoom in with a tap, then close it with Escape
+  await a
+    .getByRole("button", { name: "Enlarge picture of Brick 2 x 4, Red" })
+    .click();
+  const enlarged = a.getByRole("dialog", { name: "Brick 2 x 4, Red" });
+  await enlarged.getByText(/2 of 4 found/).waitFor();
+  await enlarged.getByRole("img", { name: "Brick 2 x 4, Red" }).click();
+  await a.screenshot({ path: `${OUT}/3b-enlarged-part.png` });
+  await a.keyboard.press("Escape");
+  await enlarged.waitFor({ state: "hidden" });
+  ok(
+    true,
+    "an enlarged picture shows live counts, zooms on tap and closes with Escape",
+  );
 
   // A quick tap + undo burst must end where it started (taps are sent in order).
   // Both clicks fire synchronously, before the first request can return.
@@ -255,6 +271,15 @@ try {
   await a.getByText("4 pieces in 2 parts still to find.").waitFor();
   await a.screenshot({ path: `${OUT}/4-missing.png` });
   ok(true, "missing view lists the 4 missing pieces");
+  await a
+    .getByRole("button", { name: "Enlarge picture of Brick 2 x 4, Red" })
+    .click();
+  await a
+    .getByRole("dialog", { name: "Brick 2 x 4, Red" })
+    .getByRole("button", { name: "Close" })
+    .click();
+  await a.getByRole("dialog").waitFor({ state: "hidden" });
+  ok(true, "missing view enlarges a picture and the Close button closes it");
   const [download] = await Promise.all([
     a.waitForEvent("download"),
     a.getByText("Rebrickable CSV").click(),
@@ -270,7 +295,7 @@ try {
   );
 
   // Missing page updates live from the shared channel
-  await b.getByRole("button", { name: /Brick 2 x 4, Red/ }).click();
+  await b.getByRole("button", { name: /^Brick 2 x 4, Red:/ }).click();
   await a
     .getByText("3 pieces in 2 parts still to find.")
     .waitFor({ timeout: 10000 });
@@ -284,7 +309,7 @@ try {
     .getByText("You can view this check but not change it.")
     .waitFor({ timeout: 10000 });
   ok(
-    await b.getByRole("button", { name: /Brick 2 x 4, Red/ }).isDisabled(),
+    await b.getByRole("button", { name: /^Brick 2 x 4, Red:/ }).isDisabled(),
     "a role change reaches the member live",
   );
 

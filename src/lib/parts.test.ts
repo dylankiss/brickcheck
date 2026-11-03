@@ -7,6 +7,7 @@ import {
   missingParts,
   sortParts,
   partKey,
+  partLabel,
   toBrickLinkXml,
   toLineMap,
   toRebrickableCsv,
@@ -175,5 +176,13 @@ describe("exports", () => {
     expect(xml).toContain("<COLOR>5</COLOR>");
     expect(xml).toContain("<MINQTY>2</MINQTY>");
     expect(skipped.map((s) => s.part.part_num)).toEqual(["x<1>"]);
+  });
+});
+
+describe("partLabel", () => {
+  it("names a part by name and color", () => {
+    expect(partLabel({ part_name: "Brick 2 x 4", color_name: "Red" })).toBe(
+      "Brick 2 x 4, Red",
+    );
   });
 });

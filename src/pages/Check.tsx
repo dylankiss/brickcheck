@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
+import { EnlargedPart } from "../components/EnlargedPart";
 import { ErrorBanner, Header, PeopleIcon, ProgressBar } from "../components/ui";
 import { useCheckContext } from "../hooks/useCheckContext";
 import {
@@ -30,6 +31,8 @@ export default function Check() {
     hideFound: false,
   });
   const [sort, setSort] = useState<SortMode>("color");
+  // The Part whose picture is enlarged, by key, so its counts stay live.
+  const [enlarged, setEnlarged] = useState<string | null>(null);
 
   // The parts the current layout was computed from: refreshed after a quiet
   // period, and right away when the filter or sort changes.
@@ -112,6 +115,7 @@ export default function Check() {
             part={byKey.get(key)!}
             canEdit={canEdit}
             onTap={tap}
+            onEnlarge={setEnlarged}
           />
         ))}
         {order.length === 0 && (
@@ -122,6 +126,10 @@ export default function Check() {
           </p>
         )}
       </main>
+      <EnlargedPart
+        part={enlarged ? (byKey.get(enlarged) ?? null) : null}
+        onClose={() => setEnlarged(null)}
+      />
     </>
   );
 }

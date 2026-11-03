@@ -1,17 +1,20 @@
-import { memo } from "react";
-import { isAllFound, type Part } from "../lib/parts";
+import { memo, useState } from "react";
+import { isAllFound, partLabel, type Part } from "../lib/parts";
+import { EnlargeButton } from "./EnlargedPart";
 import { ColorSwatch, PartImage } from "./ui";
 
 interface Props {
   part: Part;
   canEdit: boolean;
   onTap: (part: Part, delta: 1 | -1) => void;
+  onEnlarge: (key: string) => void;
 }
 
-/** Tap the card to count one found piece; the "−" button undoes one. */
+/** Tap the card to count one found piece; the "−" button undoes one, the magnifier enlarges the picture. */
 export const PartCard = memo(
-  function PartCard({ part, canEdit, onTap }: Props) {
+  function PartCard({ part, canEdit, onTap, onEnlarge }: Props) {
     const allFound = isAllFound(part);
+    const [noPicture, setNoPicture] = useState(!part.img_url);
     return (
       <div
         className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_16rem] [content-visibility:auto] dark:bg-neutral-900 ${
@@ -25,12 +28,13 @@ export const PartCard = memo(
           disabled={!canEdit || allFound}
           onClick={() => onTap(part, 1)}
           className="flex flex-1 flex-col items-stretch p-2 text-left active:scale-[0.97] disabled:active:scale-100"
-          aria-label={`${part.part_name}, ${part.color_name}: ${part.found} of ${part.needed} found. Tap to add one.`}
+          aria-label={`${partLabel(part)}: ${part.found} of ${part.needed} found. Tap to add one.`}
         >
           {/* Renders are drawn for a light background; dark mode only dims it. */}
           <PartImage
             src={part.img_url}
             alt=""
+            onError={() => setNoPicture(true)}
             className="aspect-square w-full rounded-xl bg-white p-1 dark:bg-neutral-200"
           />
           <span
@@ -69,6 +73,13 @@ export const PartCard = memo(
             </span>
           </span>
         </button>
+        {!noPicture && (
+          <EnlargeButton
+            part={part}
+            onEnlarge={onEnlarge}
+            className="absolute top-1 right-1"
+          />
+        )}
         {canEdit && part.found > 0 && (
           <button
             type="button"
@@ -88,5 +99,6 @@ export const PartCard = memo(
     a.part.found === b.part.found &&
     a.part.needed === b.part.needed &&
     a.canEdit === b.canEdit &&
-    a.onTap === b.onTap,
+    a.onTap === b.onTap &&
+    a.onEnlarge === b.onEnlarge,
 );

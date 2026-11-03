@@ -132,10 +132,13 @@ export function PartImage({
   src,
   alt,
   className = "",
+  onError,
 }: {
   src: string | null;
   alt: string;
   className?: string;
+  /** Called when the picture fails to load and the placeholder takes its place. */
+  onError?: () => void;
 }) {
   // Rebrickable has no render for some parts; show the placeholder instead of a broken image.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -144,7 +147,10 @@ export function PartImage({
       src={src}
       alt={alt}
       loading="lazy"
-      onError={() => setFailedSrc(src)}
+      onError={() => {
+        setFailedSrc(src);
+        onError?.();
+      }}
       className={`object-contain ${className}`}
     />
   ) : (

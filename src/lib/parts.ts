@@ -32,6 +32,10 @@ export interface PartFilter {
 export const partKey = (partNum: string, colorId: number) =>
   `${partNum}|${colorId}`;
 
+/** How a Part is named to people and screen readers: "Brick 2 x 4, Red". */
+export const partLabel = (part: Pick<Part, "part_name" | "color_name">) =>
+  `${part.part_name}, ${part.color_name}`;
+
 const collator = new Intl.Collator(undefined, { numeric: true });
 
 export type LineMap = ReadonlyMap<number, InventoryLine>;
