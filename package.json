@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:db": "supabase test db"
+    "test:db": "supabase test db",
+    "import-catalog": "node scripts/import-catalog.mjs",
+    "smoke": "node scripts/smoke-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

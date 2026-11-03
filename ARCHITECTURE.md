@@ -41,18 +41,24 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    (`lego_sets.parts_fetched_at` set). Otherwise it reads everything from the API
    first: the set, its parts, its minifigs, and each minifig's parts. Then it
    writes it all in **one** `import_set(set, parts)` call (service role only).
-   `import_set` takes a per-set advisory lock, inserts with `on conflict do
-nothing`, and stamps `parts_fetched_at` last. Once a set is imported, its
+   `import_set` takes a per-set advisory lock and merges rows that share a line
+   key, summing their quantities (Rebrickable can list the same part and color
+   twice). It inserts with `on conflict do nothing` and stamps
+   `parts_fetched_at` last. Once a set is imported, its
    inventory is **immutable**: `check_progress` references `set_parts.id`, so
    rows are never updated, deleted or re-keyed.
 3. **Checking**: the UI shows one tile per **part + color**. A tile can be backed
    by several inventory lines: the set's own line, minifig lines, and a spare
    line. A tap calls `adjust_part(check, part_num, color_id, delta)`. Increments
    fill the set line first, then minifig lines, then spares; decrements undo in
-   reverse order. The function locks the rows, so concurrent taps never lose
-   counts. Clients never write `check_progress` directly.
+   reverse order. The function locks the tile's rows, always in `set_part_id`
+   order, so concurrent taps neither lose counts nor deadlock. It returns the
+   tile's lines as `{set_part_id, found_qty, updated_at}`, the same shape as a
+   broadcast. Clients never write `check_progress` directly. A retried call
+   applies its delta again, which is accepted for taps. A complete check is
+   not frozen: a piece found later can still be counted.
 4. **Live sync**: a trigger on `check_progress` sends a `progress` broadcast
-   (`{set_part_id, found_qty, updated_by}`) to the **private** Realtime channel
+   (`{set_part_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
    `check:<id>`. RLS policies on `realtime.messages` let only members of the
    check receive broadcasts and send presence there. Phones drop sockets when
    the screen locks, so clients refetch all lines on (re)subscribe and on
@@ -60,18 +66,18 @@ nothing`, and stamps `parts_fetched_at` last. Once a set is imported, its
 
 ## Data model
 
-| Table / view             | Purpose                                                   | Written by                                     |
-| ------------------------ | --------------------------------------------------------- | ---------------------------------------------- |
-| `profiles`               | display name and avatar per auth user                     | trigger on `auth.users`, the user themselves   |
-| `lego_sets`              | set catalog and metadata                                  | catalog script, `import_set` (service role)    |
-| `set_parts`              | cached inventory lines                                    | `import_set` (service role)                    |
-| `set_import_log`         | Rebrickable fetches per user, for rate limiting           | `fetch-set` (service role)                     |
-| `checks`                 | one sorting session of one physical copy of a set         | owner insert; `title` by helpers               |
-| `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`) | trigger (owner), `accept_invite` RPC (phase 2) |
-| `check_progress`         | `found_qty` per (check, set_part); a missing row means 0  | `adjust_part` RPC only                         |
-| `check_invites`          | invite tokens                                             | the owner                                      |
-| `check_lines` (view)     | every line that counts for a check, with `found_qty`      | —                                              |
-| `check_summaries` (view) | per check: set info, my role, needed, found               | —                                              |
+| Table / view             | Purpose                                                            | Written by                                     |
+| ------------------------ | ------------------------------------------------------------------ | ---------------------------------------------- |
+| `profiles`               | display name and avatar per auth user (the email is never exposed) | trigger on `auth.users`, the user themselves   |
+| `lego_sets`              | set catalog and metadata                                           | catalog script, `import_set` (service role)    |
+| `set_parts`              | cached inventory lines                                             | `import_set` (service role)                    |
+| `set_import_log`         | Rebrickable fetches per user, for rate limiting                    | `fetch-set` (service role)                     |
+| `checks`                 | one sorting session of one physical copy of a set                  | owner insert; `title` by helpers               |
+| `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`)          | trigger (owner), `accept_invite` RPC (phase 2) |
+| `check_progress`         | `found_qty` per (check, set_part); a missing row means 0           | `adjust_part` RPC only                         |
+| `check_invites`          | invite tokens                                                      | the owner                                      |
+| `check_lines` (view)     | every line that counts for a check, with `found_qty`               | —                                              |
+| `check_summaries` (view) | per check: set info, my role, needed, found                        | —                                              |
 
 An inventory line (`set_parts`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
@@ -87,18 +93,22 @@ and groups them by part and color.
 
 ## Security rules
 
-- RLS is enabled on every public table. Each migration revokes all privileges
-  from `anon` on the tables and views it adds.
-- Two functions, `is_check_member(check_id)` and `is_check_helper(check_id)`, are
-  `security definer` with `search_path = ''` so that policies don't recurse into
-  `check_members`.
+- RLS is enabled on every public table. `anon` has no privileges in `public`.
+  Default privileges keep it that way for future tables, sequences and
+  functions, and a pgTAP test checks it.
+- The membership functions (`my_check_ids()`, `check_role_of`, `is_check_member`,
+  `is_check_helper`, `is_check_owner`, `shares_check_with`) are `security
+definer` with `search_path = ''` so that policies don't recurse into
+  `check_members`. Row policies use `check_id in (select my_check_ids())`, which
+  is evaluated once per query rather than once per row.
 - Any logged-in user can read the set cache. Only the service role can write it.
 - `checks`, `check_members`, `check_progress` and the views are readable by
   members only. Views are `security_invoker = true`.
 - `profiles` are readable by the user themselves and by people they share a
   check with.
-- Column-level grants limit updates: `checks(title)`,
-  `check_members(role)`, `profiles(display_name, avatar_url)`.
+- Column-level grants limit writes: updates to `checks(title)`,
+  `check_members(role)` and `profiles(display_name, avatar_url)`, and inserts
+  to `check_invites(check_id, role, expires_at)`. Invites expire within 30 days.
 - Every `security definer` function sets `search_path = ''`, checks permissions
   explicitly, and checks that its input belongs together (for example, that a
   part belongs to the check's set). Trigger functions get no execute grant.
@@ -127,8 +137,9 @@ src/
 - Database row types are written by hand in `lib/types.ts` for now. Switch to
   `supabase gen types` once a linked project exists.
 - **Optimistic taps**: a tile shows the server's count plus the deltas still in
-  flight. Each RPC response or broadcast updates the server value; a delta is
-  dropped from the pending list once its own RPC call returns.
+  flight. Server values are kept per line together with `updated_at`. An RPC
+  result, a broadcast or a refetch replaces a line only if it is not older than
+  what is held. A delta leaves the pending list once its own RPC call returns.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
 - The PWA service worker (phase 3) must not cache Supabase API or auth callback

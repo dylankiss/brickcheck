@@ -2,14 +2,20 @@
 
 create extension if not exists pg_trgm with schema extensions;
 
+-- Supabase grants everything on new objects to anon by default. Nothing in this
+-- app is public, so objects created by later migrations start closed to anon too.
+alter default privileges for role postgres in schema public revoke all on tables from anon;
+alter default privileges for role postgres in schema public revoke all on sequences from anon;
+alter default privileges for role postgres in schema public revoke execute on functions from anon, public;
+
 ------------------------------------------------------------------------------
 -- Profiles
 ------------------------------------------------------------------------------
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
-  display_name text,
-  avatar_url text,
+  display_name text check (length(display_name) <= 100),
+  avatar_url text check (length(avatar_url) <= 500 and avatar_url ~ '^https://'),
   created_at timestamptz not null default now()
 );
 
@@ -23,12 +29,12 @@ begin
   insert into public.profiles (id, display_name, avatar_url)
   values (
     new.id,
-    coalesce(
-      new.raw_user_meta_data ->> 'full_name',
-      new.raw_user_meta_data ->> 'name',
-      split_part(new.email, '@', 1)
-    ),
-    new.raw_user_meta_data ->> 'avatar_url'
+    left(coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'), 100),
+    case
+      when new.raw_user_meta_data ->> 'avatar_url' ~ '^https://'
+       and length(new.raw_user_meta_data ->> 'avatar_url') <= 500
+      then new.raw_user_meta_data ->> 'avatar_url'
+    end
   )
   on conflict (id) do nothing;
   return new;
@@ -130,13 +136,16 @@ create table public.check_progress (
   primary key (check_id, set_part_id)
 );
 
+create index check_progress_updated_by_idx on public.check_progress (updated_by);
+
 create table public.check_invites (
   token uuid primary key default gen_random_uuid(),
   check_id uuid not null references public.checks (id) on delete cascade,
   role public.check_role not null default 'helper' check (role <> 'owner'),
   created_by uuid not null default auth.uid() references public.profiles (id) on delete cascade,
   created_at timestamptz not null default now(),
-  expires_at timestamptz not null default now() + interval '7 days'
+  expires_at timestamptz not null default now() + interval '7 days',
+  check (expires_at <= created_at + interval '30 days')
 );
 
 create index check_invites_check_id_idx on public.check_invites (check_id);
@@ -156,7 +165,7 @@ create function public.line_counts(
 returns boolean
 language sql
 immutable
-set search_path = ''
+-- No search_path clause: it references no objects, and SET would prevent inlining.
 as $$
   select (p_include_spares or not p_is_spare)
      and (p_include_minifigs or p_fig_num is null);
@@ -173,6 +182,21 @@ as $$
   from public.check_members m
   where m.check_id = p_check_id
     and m.user_id = (select auth.uid());
+$$;
+
+-- All checks the current user belongs to. Policies use
+-- `check_id in (select public.my_check_ids())`, which runs once per query
+-- instead of once per row.
+create function public.my_check_ids()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select m.check_id
+  from public.check_members m
+  where m.user_id = (select auth.uid());
 $$;
 
 create function public.is_check_member(p_check_id uuid)
@@ -287,16 +311,20 @@ begin
     set_num, part_num, part_name, part_cat_id, color_id, color_name, color_rgb, is_trans,
     img_url, element_id, bricklink_part_id, bricklink_color_id, quantity, is_spare, fig_num
   )
+  -- Rebrickable can list the same part + color twice (e.g. two element ids):
+  -- merge them into one line so no quantity is lost.
   select
-    v_set_num, p.part_num, p.part_name, p.part_cat_id, p.color_id, p.color_name, p.color_rgb,
-    coalesce(p.is_trans, false), p.img_url, p.element_id, p.bricklink_part_id,
-    p.bricklink_color_id, p.quantity, coalesce(p.is_spare, false), p.fig_num
+    v_set_num, p.part_num, min(p.part_name), min(p.part_cat_id), p.color_id, min(p.color_name),
+    min(p.color_rgb), coalesce(bool_or(p.is_trans), false), min(p.img_url), min(p.element_id),
+    min(p.bricklink_part_id), min(p.bricklink_color_id), sum(p.quantity),
+    coalesce(p.is_spare, false), p.fig_num
   from jsonb_to_recordset(p_parts) as p (
     part_num text, part_name text, part_cat_id int, color_id int, color_name text,
     color_rgb text, is_trans boolean, img_url text, element_id text,
     bricklink_part_id text, bricklink_color_id int, quantity int, is_spare boolean,
     fig_num text
   )
+  group by p.part_num, p.color_id, coalesce(p.is_spare, false), p.fig_num
   on conflict on constraint set_parts_line_key do nothing;
 
   update public.lego_sets set parts_fetched_at = now() where set_num = v_set_num;
@@ -372,7 +400,8 @@ select
   sp.quantity,
   sp.is_spare,
   sp.fig_num,
-  coalesce(cp.found_qty, 0) as found_qty
+  coalesce(cp.found_qty, 0) as found_qty,
+  cp.updated_at
 from public.checks c
 join public.set_parts sp on sp.set_num = c.set_num
 left join public.check_progress cp on cp.check_id = c.id and cp.set_part_id = sp.id
@@ -408,8 +437,10 @@ left join lateral (
 -- RPC: adjust the found count of one part + color in a check.
 -- One tile in the UI can be backed by several lines (the set's own line,
 -- minifig lines, a spare line). Increments fill set line -> minifig lines ->
--- spares; decrements undo in reverse. Atomic under concurrent taps.
--- Returns the new total found for that part + color.
+-- spares; decrements undo in reverse. Rows are always locked in set_part_id
+-- order, so concurrent increments and decrements cannot deadlock.
+-- Returns the tile's lines with their new counts (same shape as broadcasts).
+-- Not idempotent: a retried call applies its delta again (accepted for taps).
 ------------------------------------------------------------------------------
 
 create function public.adjust_part(
@@ -418,7 +449,7 @@ create function public.adjust_part(
   p_color_id int,
   p_delta int
 )
-returns int
+returns table (set_part_id bigint, found_qty int, updated_at timestamptz)
 language plpgsql
 security definer
 set search_path = ''
@@ -427,8 +458,7 @@ declare
   v_remaining int := abs(p_delta);
   v_step int;
   v_line record;
-  v_lines int := 0;
-  v_total int;
+  v_ids bigint[];
 begin
   if p_delta is null or p_delta = 0 or abs(p_delta) > 10000 then
     raise exception 'Invalid delta' using errcode = '22023';
@@ -438,63 +468,61 @@ begin
     raise exception 'Not allowed to edit this check' using errcode = '42501';
   end if;
 
-  -- Make sure every counted line has a progress row we can lock.
-  insert into public.check_progress (check_id, set_part_id, found_qty, updated_by)
-  select c.id, sp.id, 0, (select auth.uid())
+  select coalesce(array_agg(sp.id order by sp.id), '{}') into v_ids
   from public.checks c
   join public.set_parts sp on sp.set_num = c.set_num
   where c.id = p_check_id
     and sp.part_num = p_part_num
     and sp.color_id = p_color_id
-    and public.line_counts(c.include_spares, c.include_minifigs, sp.is_spare, sp.fig_num)
-  on conflict (check_id, set_part_id) do nothing;
+    and public.line_counts(c.include_spares, c.include_minifigs, sp.is_spare, sp.fig_num);
+
+  if cardinality(v_ids) = 0 then
+    raise exception 'Part %/% is not part of this check', p_part_num, p_color_id
+      using errcode = '22023';
+  end if;
+
+  -- Make sure every line has a progress row, then lock them in a fixed order.
+  insert into public.check_progress (check_id, set_part_id, found_qty, updated_by)
+  select p_check_id, id, 0, (select auth.uid())
+  from unnest(v_ids) as id
+  on conflict on constraint check_progress_pkey do nothing;
+
+  perform 1
+  from public.check_progress cp
+  where cp.check_id = p_check_id and cp.set_part_id = any (v_ids)
+  order by cp.set_part_id
+  for update;
 
   for v_line in
-    select cp.set_part_id, cp.found_qty, sp.quantity
+    select cp.set_part_id, sp.quantity, cp.found_qty
     from public.check_progress cp
-    join public.checks c on c.id = cp.check_id
     join public.set_parts sp on sp.id = cp.set_part_id
-    where cp.check_id = p_check_id
-      and sp.part_num = p_part_num
-      and sp.color_id = p_color_id
-      and public.line_counts(c.include_spares, c.include_minifigs, sp.is_spare, sp.fig_num)
+    where cp.check_id = p_check_id and cp.set_part_id = any (v_ids)
     order by
       sign(p_delta) * (case when sp.is_spare then 2 when sp.fig_num is not null then 1 else 0 end),
       sign(p_delta) * sp.id
-    for update of cp
   loop
-    v_lines := v_lines + 1;
-    continue when v_remaining = 0;
+    exit when v_remaining = 0;
     if p_delta > 0 then
       v_step := least(v_remaining, v_line.quantity - v_line.found_qty);
     else
       v_step := least(v_remaining, v_line.found_qty);
     end if;
     if v_step > 0 then
-      update public.check_progress
-      set found_qty = found_qty + sign(p_delta)::int * v_step,
+      update public.check_progress cp
+      set found_qty = cp.found_qty + sign(p_delta)::int * v_step,
           updated_by = (select auth.uid()),
-          updated_at = now()
-      where check_id = p_check_id and set_part_id = v_line.set_part_id;
+          updated_at = clock_timestamp()
+      where cp.check_id = p_check_id and cp.set_part_id = v_line.set_part_id;
       v_remaining := v_remaining - v_step;
     end if;
   end loop;
 
-  if v_lines = 0 then
-    raise exception 'Part %/% is not part of this check', p_part_num, p_color_id
-      using errcode = '22023';
-  end if;
-
-  select coalesce(sum(cp.found_qty), 0)::int into v_total
+  return query
+  select cp.set_part_id, cp.found_qty, cp.updated_at
   from public.check_progress cp
-  join public.checks c on c.id = cp.check_id
-  join public.set_parts sp on sp.id = cp.set_part_id
-  where cp.check_id = p_check_id
-    and sp.part_num = p_part_num
-    and sp.color_id = p_color_id
-    and public.line_counts(c.include_spares, c.include_minifigs, sp.is_spare, sp.fig_num);
-
-  return v_total;
+  where cp.check_id = p_check_id and cp.set_part_id = any (v_ids)
+  order by cp.set_part_id;
 end;
 $$;
 
@@ -521,6 +549,7 @@ begin
     jsonb_build_object(
       'set_part_id', new.set_part_id,
       'found_qty', new.found_qty,
+      'updated_at', new.updated_at,
       'updated_by', new.updated_by
     ),
     'progress',
@@ -596,7 +625,7 @@ revoke all on public.set_import_log from authenticated;
 -- the after-insert trigger has added the owner membership.
 create policy "checks: read as member" on public.checks
   for select to authenticated
-  using (owner_id = (select auth.uid()) or public.is_check_member(id));
+  using (owner_id = (select auth.uid()) or id in (select public.my_check_ids()));
 
 create policy "checks: create own" on public.checks
   for insert to authenticated
@@ -614,10 +643,10 @@ create policy "checks: owner deletes" on public.checks
 revoke update on public.checks from authenticated;
 grant update (title) on public.checks to authenticated;
 
--- check_members (rows are created by trigger and by the accept_invite RPC)
+-- check_members (rows are created by trigger, and by accept_invite in phase 2)
 create policy "check_members: read as member" on public.check_members
   for select to authenticated
-  using (public.is_check_member(check_id));
+  using (check_id in (select public.my_check_ids()));
 
 create policy "check_members: owner changes roles" on public.check_members
   for update to authenticated
@@ -637,7 +666,7 @@ grant update (role) on public.check_members to authenticated;
 -- check_progress (written by adjust_part only)
 create policy "check_progress: read as member" on public.check_progress
   for select to authenticated
-  using (public.is_check_member(check_id));
+  using (check_id in (select public.my_check_ids()));
 
 revoke insert, update, delete on public.check_progress from authenticated;
 
@@ -654,7 +683,11 @@ create policy "check_invites: owner deletes" on public.check_invites
   for delete to authenticated
   using (public.is_check_owner(check_id));
 
-revoke update on public.check_invites from authenticated;
+revoke insert, update on public.check_invites from authenticated;
+grant insert (check_id, role, expires_at) on public.check_invites to authenticated;
+
+-- PostgREST cannot use these, but nobody needs them either.
+revoke truncate, references, trigger on all tables in schema public from authenticated;
 
 -- views are read-only
 revoke insert, update, delete on public.check_lines, public.check_summaries from authenticated;
@@ -677,6 +710,9 @@ grant execute on function public.import_set(jsonb, jsonb) to service_role;
 
 -- Logged-in users only.
 revoke execute on function
+  public.line_counts(boolean, boolean, boolean, text),
+  public.check_id_from_topic(text),
+  public.my_check_ids(),
   public.check_role_of(uuid),
   public.is_check_member(uuid),
   public.is_check_helper(uuid),

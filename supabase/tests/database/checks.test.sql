@@ -53,6 +53,12 @@ select is(
   'profile is created from auth metadata'
 );
 
+-- adjust_part returns the tile's lines; tests compare the tile total.
+create function pg_temp.tap(p_check_id uuid, p_part_num text, p_color_id int, p_delta int)
+returns int language sql as $$
+  select sum(found_qty)::int from public.adjust_part(p_check_id, p_part_num, p_color_id, p_delta)
+$$;
+
 create temporary table ctx (check_id uuid, spares_check_id uuid);
 insert into ctx values (null, null);
 grant all on ctx to authenticated;
@@ -136,39 +142,39 @@ select is(
   'check_lines excludes spares when include_spares is false'
 );
 
-select is((select public.adjust_part(check_id, '3001', 4, 1) from ctx), 1, 'first tap counts 1');
-select is((select public.adjust_part(check_id, '3001', 4, 2) from ctx), 3, 'taps accumulate');
+select is((select pg_temp.tap(check_id, '3001', 4, 1) from ctx), 1, 'first tap counts 1');
+select is((select pg_temp.tap(check_id, '3001', 4, 2) from ctx), 3, 'taps accumulate');
 select is(
   (select found_qty from public.check_lines where check_id = (select check_id from ctx) and part_num = '3001' and fig_num is null),
   3,
   'the set line fills first'
 );
-select is((select public.adjust_part(check_id, '3001', 4, 1) from ctx), 4, 'then the minifig line');
-select is((select public.adjust_part(check_id, '3001', 4, 50) from ctx), 4, 'total is clamped to what is needed');
-select is((select public.adjust_part(check_id, '3001', 4, -1) from ctx), 3, 'decrement');
+select is((select pg_temp.tap(check_id, '3001', 4, 1) from ctx), 4, 'then the minifig line');
+select is((select pg_temp.tap(check_id, '3001', 4, 50) from ctx), 4, 'total is clamped to what is needed');
+select is((select pg_temp.tap(check_id, '3001', 4, -1) from ctx), 3, 'decrement');
 select is(
   (select found_qty from public.check_lines where check_id = (select check_id from ctx) and part_num = '3001' and fig_num is not null),
   0,
   'decrements empty the minifig line before the set line'
 );
-select is((select public.adjust_part(check_id, '3001', 4, -50) from ctx), 0, 'total is clamped to zero');
-select is((select public.adjust_part(spares_check_id, '3001', 4, 5) from ctx), 5, 'spares count when included');
+select is((select pg_temp.tap(check_id, '3001', 4, -50) from ctx), 0, 'total is clamped to zero');
+select is((select pg_temp.tap(spares_check_id, '3001', 4, 5) from ctx), 5, 'spares count when included');
 
 select throws_ok(
-  $$ select public.adjust_part(check_id, '3002', 1, 1) from ctx $$,
+  $$ select pg_temp.tap(check_id, '3002', 1, 1) from ctx $$,
   '22023',
   null,
   'a part from another set is rejected'
 );
 
 select throws_ok(
-  $$ select public.adjust_part(check_id, '3001', 4, 0) from ctx $$,
+  $$ select pg_temp.tap(check_id, '3001', 4, 0) from ctx $$,
   '22023',
   null,
   'zero delta is rejected'
 );
 
-select public.adjust_part(check_id, '3001', 4, 2) from ctx;
+select pg_temp.tap(check_id, '3001', 4, 2) from ctx;
 select results_eq(
   $$ select needed, found from public.check_summaries where id = (select check_id from ctx) $$,
   $$ values (5, 2) $$,
@@ -189,7 +195,7 @@ select is(
   'stranger cannot read the owner profile'
 );
 select throws_ok(
-  $$ select public.adjust_part(check_id, '3001', 4, 1) from ctx $$,
+  $$ select pg_temp.tap(check_id, '3001', 4, 1) from ctx $$,
   '42501',
   null,
   'stranger cannot adjust counts'
@@ -210,7 +216,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-000000
 
 select is((select count(*)::int from public.checks), 1, 'viewer sees the shared check only');
 select throws_ok(
-  $$ select public.adjust_part(check_id, '3001', 4, 1) from ctx $$,
+  $$ select pg_temp.tap(check_id, '3001', 4, 1) from ctx $$,
   '42501',
   null,
   'viewer cannot adjust counts'
@@ -219,7 +225,7 @@ update public.checks set title = 'Hijacked';
 
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-00000000000c", "role": "authenticated"}', true);
 
-select is((select public.adjust_part(check_id, '3626', 14, 1) from ctx), 1, 'helper can adjust counts');
+select is((select pg_temp.tap(check_id, '3626', 14, 1) from ctx), 1, 'helper can adjust counts');
 select is((select title from public.checks), 'My first check', 'viewer could not rename the check');
 select is(
   (select display_name from public.profiles where id = '00000000-0000-0000-0000-00000000000a'),
