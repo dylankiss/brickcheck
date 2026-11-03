@@ -1,11 +1,16 @@
-# Refreshes the set catalog from Rebrickable's CSV dump every week. As a side
-# effect this keeps a free Supabase project from being paused for inactivity.
+# Refreshes the set catalog from Rebrickable's CSV dump twice a week. As a side
+# effect this keeps a free Supabase project from being paused after 7 idle days
+# (twice a week leaves margin for delayed scheduled runs). GitHub disables
+# schedules after 60 days without repository activity; re-enable it in Actions.
 name: Refresh set catalog
 
 on:
   schedule:
-    - cron: "17 4 * * 1"
+    - cron: "17 4 * * 1,4"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   import:

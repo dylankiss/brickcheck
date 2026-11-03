@@ -43,10 +43,29 @@ function RequireAuth() {
   );
 }
 
+// After a deploy, a lazy page chunk of the old version may be gone: reload into the new one.
+window.addEventListener("vite:preloadError", () => window.location.reload());
+
+function RouteError() {
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 p-4 text-center">
+      <p className="text-lg font-semibold">Something went wrong.</p>
+      <p className="text-neutral-500">BrickCheck may have just been updated.</p>
+      <button
+        className="min-h-11 rounded-xl bg-brick px-4 font-semibold text-white"
+        onClick={() => window.location.reload()}
+      >
+        Reload
+      </button>
+    </main>
+  );
+}
+
 const router = createBrowserRouter([
-  { path: "/login", element: <Login /> },
+  { path: "/login", element: <Login />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
+    errorElement: <RouteError />,
     children: [
       { path: "/", element: <Checks /> },
       { path: "/new", element: <NewCheck /> },

@@ -43,7 +43,8 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    is cached (`lego_sets.parts_fetched_at` set). Before calling Rebrickable it
    calls `claim_import`. That function atomically applies the per-user hourly
    limit and a global cap of 200 imports per hour, and refuses a second import
-   of the same set within 3 minutes. Each Rebrickable
+   of the same set within 3 minutes. A failed import calls `release_import`,
+   so it can be retried at once; the attempt still counts towards the limits. Each Rebrickable
    request has a 10 s timeout, and the whole import has a 110 s budget (free
    Edge Functions stop at 150 s). Otherwise it reads everything from the API
    first: the set, its parts, its minifigs, and each minifig's parts. Then it
@@ -80,19 +81,19 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 
 ## Data model
 
-| Table / view             | Purpose                                                            | Written by                                     |
-| ------------------------ | ------------------------------------------------------------------ | ---------------------------------------------- |
-| `profiles`               | display name and avatar per auth user (the email is never exposed) | trigger on `auth.users`, the user themselves   |
-| `lego_sets`              | set catalog and metadata                                           | catalog script, `import_set` (service role)    |
-| `set_parts`              | cached inventory lines                                             | `import_set` (service role)                    |
-| `set_import_log`         | Rebrickable fetches per user, for rate limiting                    | `fetch-set` (service role)                     |
-| `checks`                 | one sorting session of one physical copy of a set                  | owner insert; `title` by helpers               |
-| `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`)          | trigger (owner), `accept_invite` RPC (phase 2) |
-| `check_progress`         | `found_qty` per (check, set_part); a missing row means 0           | `adjust_part` RPC only                         |
-| `check_invites`          | invite tokens                                                      | the owner                                      |
-| `check_removals`         | who the owner removed, and when                                    | trigger on `check_members` delete              |
-| `check_lines` (view)     | every line that counts for a check, with `found_qty`               | —                                              |
-| `check_summaries` (view) | per check: set info, my role, needed, found                        | —                                              |
+| Table / view             | Purpose                                                            | Written by                                                                                          |
+| ------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `profiles`               | display name and avatar per auth user (the email is never exposed) | trigger on `auth.users`, the user themselves                                                        |
+| `lego_sets`              | set catalog and metadata                                           | catalog script, `import_set` (service role)                                                         |
+| `set_parts`              | cached inventory lines                                             | `import_set` (service role)                                                                         |
+| `set_import_log`         | Rebrickable fetches per user, for rate limiting                    | `fetch-set` (service role)                                                                          |
+| `checks`                 | one sorting session of one physical copy of a set                  | owner insert; `title` by helpers                                                                    |
+| `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`)          | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member |
+| `check_progress`         | `found_qty` per (check, set_part); a missing row means 0           | `adjust_part` RPC only                                                                              |
+| `check_invites`          | invite tokens                                                      | the owner                                                                                           |
+| `check_removals`         | who the owner removed, and when                                    | trigger on `check_members` delete                                                                   |
+| `check_lines` (view)     | every line that counts for a check, with `found_qty`               | —                                                                                                   |
+| `check_summaries` (view) | per check: set info, my role, needed, found                        | —                                                                                                   |
 
 An inventory line (`set_parts`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
@@ -122,7 +123,7 @@ definer` with `search_path = ''` so that policies don't recurse into
 - `profiles` are readable by the user themselves and by people they share a
   check with.
 - Column-level grants limit writes: updates to `checks(title)`,
-  `check_members(role)` and `profiles(display_name, avatar_url)`, and inserts
+  `check_members(role)` and `profiles(display_name)`, and inserts
   to `check_invites(check_id, role, expires_at)`. Invites expire within 30 days.
 - Every `security definer` function sets `search_path = ''`, checks permissions
   explicitly, and checks that its input belongs together (for example, that a
@@ -219,14 +220,24 @@ src/
 - Every list read is paginated until a page comes back empty, whatever the
   server's `max_rows`.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
-- Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and
+  optionally `VITE_PUBLIC_URL`. Function secrets: `REBRICKABLE_API_KEY`,
+  `BRICKCHECK_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated, `*` wildcards).
+- **Errors**: routes have an error page with a Reload button, and a failed
+  lazy chunk load (after a deploy) reloads the page into the new version.
 - **PWA** (`vite.config.ts`):
   - The service worker precaches the app shell, and every navigation falls
     back to `index.html`, so deep links and invite links open offline.
-  - Only `cdn.rebrickable.com` images are cached at runtime (cache-first,
-    3,000 entries, 60 days). Supabase (API, auth, realtime) is never cached.
-    Login uses the implicit flow (tokens in the URL hash), which the fallback
+  - Nothing is cached at runtime. Supabase (API, auth, realtime) must never
+    be. Rebrickable images send no CORS headers, so a service worker could
+    only store them as opaque responses, which count about 7 MB each against
+    the quota. The browser's HTTP cache keeps them instead (the CDN sends
+    `max-age=31536000`), and that also works offline.
+  - Login uses the implicit flow (tokens in the URL hash), which the fallback
     leaves alone.
+  - The installed app checks for a new version every hour.
+  - In the installed app (`display-mode: standalone`) the login page offers
+    only email, because OAuth would finish in Safari, outside the app.
   - Updates use `registerType: 'prompt'`: `UpdatePrompt` asks before
     reloading, because a reload would drop taps in flight.
   - Routes other than login and My checks are lazy-loaded. React and Supabase
@@ -267,10 +278,11 @@ Step-by-step instructions are in `DEPLOY.md`.
   `https://*.<project>.pages.dev/**` to the redirect URLs. Do **not** run
   `supabase config push`, which would push the local `localhost` settings.
 - **Email**: Supabase's built-in SMTP only sends to team members and is heavily
-  rate-limited. Use a free SMTP provider (Resend or Brevo) for magic links, and
-  add a CAPTCHA (Cloudflare Turnstile) to sign-in once the app is public.
-- **Free tier**: a project with no activity for a week is paused. A scheduled
-  ping prevents that if needed.
+  rate-limited. Use a free SMTP provider for magic links: Brevo works with a
+  single verified sender address, while Resend needs a domain you own. Add a
+  CAPTCHA (Cloudflare Turnstile) to sign-in once the app is public.
+- **Free tier**: a project with no activity for a week is paused. The
+  twice-weekly catalog refresh (`.github/workflows/catalog.yml`) prevents that.
 - **Testing on a phone**: Vite listens on the LAN (`server.host`). Add the LAN
   URL to `additional_redirect_urls` so magic links work on the phone.
 

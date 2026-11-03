@@ -101,39 +101,48 @@ serve(async (req) => {
       "Many new sets are being added right now, try again later",
     );
 
-  // Read everything first, then write once (import_set is atomic).
-  const rb = Rebrickable.fromEnv();
-  const set = await rb.getSet(cached.set_num);
-  const lines = new Map<string, ImportLine>();
-  addLines(lines, await rb.getSetParts(cached.set_num), null, 1);
+  try {
+    // Read everything first, then write once (import_set is atomic).
+    const rb = Rebrickable.fromEnv();
+    const set = await rb.getSet(cached.set_num);
+    const lines = new Map<string, ImportLine>();
+    addLines(lines, await rb.getSetParts(cached.set_num), null, 1);
 
-  const figCopies = new Map<string, number>();
-  for (const fig of await rb.getSetMinifigs(cached.set_num)) {
-    figCopies.set(
-      fig.set_num,
-      (figCopies.get(fig.set_num) ?? 0) + fig.quantity,
-    );
+    const figCopies = new Map<string, number>();
+    for (const fig of await rb.getSetMinifigs(cached.set_num)) {
+      figCopies.set(
+        fig.set_num,
+        (figCopies.get(fig.set_num) ?? 0) + fig.quantity,
+      );
+    }
+    for (const [figNum, copies] of figCopies) {
+      addLines(lines, await rb.getMinifigParts(figNum), figNum, copies);
+    }
+
+    // Not cached: retrying an empty set costs quota, but such sets are rare and the claim limits retries.
+    if (lines.size === 0)
+      throw new HttpError(422, "Rebrickable has no inventory for this set");
+
+    const { error: importError } = await admin.rpc("import_set", {
+      p_set: {
+        set_num: cached.set_num,
+        name: set.name,
+        year: set.year,
+        theme_id: set.theme_id,
+        num_parts: set.num_parts,
+        img_url: set.set_img_url,
+      },
+      p_parts: [...lines.values()],
+    });
+    if (importError) throw importError;
+  } catch (error) {
+    // Let the next attempt start right away (the attempt still counts towards the limits).
+    await admin.rpc("release_import", {
+      p_user_id: userId,
+      p_set_num: cached.set_num,
+    });
+    throw error;
   }
-  for (const [figNum, copies] of figCopies) {
-    addLines(lines, await rb.getMinifigParts(figNum), figNum, copies);
-  }
-
-  // Not cached: retrying an empty set costs quota, but such sets are rare and the claim limits retries.
-  if (lines.size === 0)
-    throw new HttpError(422, "Rebrickable has no inventory for this set");
-
-  const { error: importError } = await admin.rpc("import_set", {
-    p_set: {
-      set_num: cached.set_num,
-      name: set.name,
-      year: set.year,
-      theme_id: set.theme_id,
-      num_parts: set.num_parts,
-      img_url: set.set_img_url,
-    },
-    p_parts: [...lines.values()],
-  });
-  if (importError) throw importError;
 
   const { data: imported, error: importedError } = await admin
     .from("lego_sets")

@@ -10,7 +10,6 @@ export default defineConfig({
     VitePWA({
       // Ask before reloading into a new version: a reload would drop taps in flight.
       registerType: "prompt",
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "BrickCheck",
         short_name: "BrickCheck",
@@ -35,22 +34,11 @@ export default defineConfig({
         // The app shell works offline; every route falls back to index.html.
         navigateFallback: "index.html",
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        // Supabase (API, auth, realtime) is never cached: only part and set images are.
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) =>
-              url.origin === "https://cdn.rebrickable.com",
-            handler: "CacheFirst",
-            options: {
-              cacheName: "rebrickable-images",
-              expiration: {
-                maxEntries: 3000,
-                maxAgeSeconds: 60 * 60 * 24 * 60,
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        // Nothing is cached at runtime. Supabase (API, auth, realtime) must never be.
+        // Rebrickable images send no CORS headers, so a service worker could only
+        // store them as opaque responses, which browsers count as ~7 MB each
+        // against the quota. They are cached by the browser's HTTP cache instead
+        // (the CDN sends max-age=31536000), which also serves them offline.
       },
     }),
   ],

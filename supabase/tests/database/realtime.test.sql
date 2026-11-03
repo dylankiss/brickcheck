@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(4);
+select plan(6);
 
 select has_trigger('public', 'check_progress', 'check_progress_broadcast', 'progress changes are broadcast');
 select has_trigger('public', 'check_members', 'check_members_broadcast', 'membership changes are broadcast');
@@ -20,6 +20,26 @@ select is(
   public.claim_import('00000000-0000-0000-0000-00000000000a', 'tcap-new', 30),
   'busy',
   'imports stop once the global hourly cap is reached'
+);
+
+-- A failed import releases its claim for the set but still counts.
+delete from public.set_import_log;
+-- In a DO block: a bare select would print "ok", which TAP reads as a result.
+do $$
+begin
+  perform public.claim_import('00000000-0000-0000-0000-00000000000a', 'tfail-1', 2);
+  perform public.release_import('00000000-0000-0000-0000-00000000000a', 'tfail-1');
+end;
+$$;
+select is(
+  public.claim_import('00000000-0000-0000-0000-00000000000a', 'tfail-1', 2),
+  'ok',
+  'a released (failed) import can be retried at once'
+);
+select is(
+  public.claim_import('00000000-0000-0000-0000-00000000000a', 'tfail-2', 2),
+  'rate_limited',
+  'failed imports still count towards the hourly limit'
 );
 
 select * from finish();

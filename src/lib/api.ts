@@ -350,7 +350,9 @@ export async function deleteInvite(token: string): Promise<void> {
 }
 
 // The public address, so links made on a preview deploy still point at production.
-const PUBLIC_URL = import.meta.env.VITE_PUBLIC_URL || window.location.origin;
+const PUBLIC_URL = (
+  import.meta.env.VITE_PUBLIC_URL || window.location.origin
+).replace(/\/+$/, "");
 
 export const inviteUrl = (token: string) => `${PUBLIC_URL}/join/${token}`;
 

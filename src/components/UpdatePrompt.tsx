@@ -5,7 +5,13 @@ export function UpdatePrompt() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    // An installed app can stay open for days: look for a new version every hour.
+    onRegisteredSW: (_url, registration) => {
+      if (registration)
+        setInterval(() => registration.update(), 60 * 60 * 1000);
+    },
+  });
 
   if (!needRefresh) return null;
   return (

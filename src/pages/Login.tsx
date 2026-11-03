@@ -16,11 +16,23 @@ export default function Login() {
       : "/";
   const redirectTo = window.location.origin + from;
 
+  // Supabase reports a failed link in the URL hash, e.g. when a mail scanner
+  // opened (and used up) the link before you did.
+  const linkError = new URLSearchParams(window.location.hash.slice(1)).get(
+    "error_code",
+  );
+  // OAuth leaves an installed iOS app and finishes in Safari, so offer email only there.
+  const standalone = window.matchMedia("(display-mode: standalone)").matches;
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    linkError
+      ? "That login link has expired or was already used. Ask for a new one, or use the code from the email."
+      : null,
+  );
 
   if (session) return <Navigate to={from} replace />;
 
@@ -87,8 +99,8 @@ export default function Login() {
           <input
             inputMode="numeric"
             autoComplete="one-time-code"
-            pattern="[0-9]{6}"
-            maxLength={6}
+            pattern="[0-9]{6,10}"
+            maxLength={10}
             required
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
@@ -96,7 +108,7 @@ export default function Login() {
             className="min-h-12 rounded-xl bg-white px-4 text-center text-2xl tracking-[0.4em] ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
             aria-label="Login code"
           />
-          <Button type="submit" disabled={busy || code.length !== 6}>
+          <Button type="submit" disabled={busy || code.length < 6}>
             {busy ? "Checking…" : "Log in with code"}
           </Button>
           <button
@@ -124,14 +136,18 @@ export default function Login() {
         </form>
       )}
 
-      <div className="flex items-center gap-3 text-sm text-neutral-500">
-        <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
-        or
-        <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
-      </div>
-      <Button variant="secondary" onClick={google}>
-        Continue with Google
-      </Button>
+      {!standalone && (
+        <>
+          <div className="flex items-center gap-3 text-sm text-neutral-500">
+            <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
+            or
+            <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
+          </div>
+          <Button variant="secondary" onClick={google}>
+            Continue with Google
+          </Button>
+        </>
+      )}
     </main>
   );
 }

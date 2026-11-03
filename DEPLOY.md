@@ -18,7 +18,7 @@ Everything below runs on free tiers. Expect about an hour the first time.
    npx supabase functions deploy fetch-set --no-verify-jwt
    npx supabase secrets set REBRICKABLE_API_KEY=<key from rebrickable.com/api> \
      BRICKCHECK_SECRET_KEY=<sb_secret_... from Settings > API keys> \
-     ALLOWED_ORIGIN=https://<your-domain>
+     ALLOWED_ORIGINS='https://<your-domain>,https://*.<pages-project>.pages.dev'
    ```
 4. Seed the catalog once (28k sets, about a minute):
    ```sh
@@ -27,12 +27,15 @@ Everything below runs on free tiers. Expect about an hour the first time.
 5. Dashboard settings:
    - **Authentication > URL configuration**: Site URL `https://<your-domain>`. Redirect
      URLs `https://<your-domain>/**` and `https://*.<pages-project>.pages.dev/**` (previews).
-   - **Authentication > Emails > SMTP**: use a free provider (Resend or Brevo).
-     The built-in sender only mails team members and allows a few emails per hour.
+   - **Authentication > Emails > SMTP**: use a free provider. The built-in sender
+     only mails team members and allows a few emails per hour. Brevo works with a
+     single verified sender address. Resend needs a domain you own, so it won't
+     work with a bare `pages.dev` site.
    - **Authentication > Emails > Templates**: paste `supabase/templates/login.html`
      into both _Magic link_ and _Confirm signup_ (subject "Your BrickCheck login").
      The 6-digit code is needed by the installed iOS app.
-   - **Authentication > Sign in / Providers > Email**: email OTP expiration 900 s.
+   - **Authentication > Sign in / Providers > Email**: email OTP expiration 900 s,
+     email OTP length 6.
    - **Authentication > Sign in / Providers > Google**: enable it with an OAuth
      client from Google Cloud Console (Web application). Add the authorized
      redirect URI that Supabase shows.
@@ -60,9 +63,11 @@ routes like `/join/<token>` work. `public/_headers` sets security headers and ke
 ## 3. GitHub
 
 - **CI** (`.github/workflows/ci.yml`) runs lint, unit tests, the build and the database tests.
-- **Catalog refresh** (`.github/workflows/catalog.yml`) runs weekly. Add the repository
-  secrets `SUPABASE_URL` and `SUPABASE_SECRET_KEY`. It also keeps the free project
-  from being paused after 7 idle days.
+- **Catalog refresh** (`.github/workflows/catalog.yml`) runs twice a week. Add the
+  repository secrets `SUPABASE_URL` and `SUPABASE_SECRET_KEY`. It also keeps the
+  free project from being paused after 7 idle days. GitHub disables scheduled
+  workflows after 60 days without repository activity; re-enable it under Actions
+  if that happens.
 
 ## 4. Smoke test the deployment
 
