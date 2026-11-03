@@ -4,9 +4,9 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(6);
 
-select has_trigger('public', 'check_progress', 'check_progress_broadcast', 'progress changes are broadcast');
-select has_trigger('public', 'check_members', 'check_members_broadcast', 'membership changes are broadcast');
-select has_trigger('public', 'checks', 'checks_broadcast', 'check changes are broadcast');
+select has_trigger('public', 'set_progress', 'set_progress_broadcast', 'progress changes are broadcast');
+select has_trigger('public', 'set_members', 'set_members_broadcast', 'membership changes are broadcast');
+select has_trigger('public', 'sets', 'sets_broadcast', 'set changes are broadcast');
 
 -- The global cap: fill the last hour with 200 imports by other users.
 insert into auth.users (id, email, aud, role) values

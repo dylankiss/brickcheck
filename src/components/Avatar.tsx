@@ -63,7 +63,7 @@ export function Avatar({
   );
 }
 
-/** Overlapping avatars of the people who have the check open. */
+/** Overlapping avatars of the people who have the set open. */
 export function OnlineAvatars({
   people,
 }: {

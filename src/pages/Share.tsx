@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { Avatar } from "../components/Avatar";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
-import { useCheckContext } from "../hooks/useCheckContext";
+import { useSetContext } from "../hooks/useSetContext";
 import { useMembers } from "../hooks/useMembers";
 import { inviteUrl } from "../lib/api";
 import type { Invite } from "../lib/types";
@@ -37,10 +37,10 @@ async function shareLink(
 export default function Share() {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const { checkId, summary, version, online, members, reloadMembers } =
-    useCheckContext();
-  const check = summary!;
-  const isOwner = check.my_role === "owner";
+  const { setId, summary, version, online, members, reloadMembers } =
+    useSetContext();
+  const set = summary!;
+  const isOwner = set.my_role === "owner";
   const me = session!.user.id;
   const {
     invites,
@@ -51,8 +51,8 @@ export default function Share() {
     setRole,
     remove,
     leave,
-    deleteCheck,
-  } = useMembers(checkId, me, isOwner, version, reloadMembers);
+    deleteSet,
+  } = useMembers(setId, me, isOwner, version, reloadMembers);
   const [copied, setCopied] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const onlineIds = new Set(online.map((o) => o.user_id));
@@ -64,7 +64,7 @@ export default function Share() {
 
   async function send(token: string) {
     try {
-      if ((await shareLink(inviteUrl(token), check.title)) === "copied") {
+      if ((await shareLink(inviteUrl(token), set.title)) === "copied") {
         setCopied(token);
         setTimeout(() => setCopied(null), 2000);
       }
@@ -75,16 +75,16 @@ export default function Share() {
 
   async function leaveOrDelete() {
     const question = isOwner
-      ? `Delete "${check.title}" for everyone? Progress is lost.`
-      : `Leave "${check.title}"? You can rejoin with an invite link.`;
+      ? `Delete "${set.title}" for everyone? Progress is lost.`
+      : `Leave "${set.title}"? You can rejoin with an invite link.`;
     if (!window.confirm(question)) return;
-    if (await (isOwner ? deleteCheck() : leave()))
+    if (await (isOwner ? deleteSet() : leave()))
       navigate("/", { replace: true });
   }
 
   return (
     <>
-      <Header title={`People · ${check.title}`} back={`/checks/${checkId}`} />
+      <Header title={`People · ${set.title}`} back={`/sets/${setId}`} />
       {(error || actionError) && (
         <ErrorBanner
           message={(error || actionError)!}
@@ -99,8 +99,8 @@ export default function Share() {
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">Invite people</h2>
             <p className="text-sm text-neutral-500">
-              Send a link. Anyone who opens it and logs in joins this check.
-              Links expire after 7 days.
+              Send a link. Anyone who opens it and logs in joins this set. Links
+              expire after 7 days.
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Button onClick={() => createAndShare("helper")}>
@@ -205,7 +205,7 @@ export default function Share() {
           onClick={leaveOrDelete}
           className="text-red-700 dark:text-red-400"
         >
-          {isOwner ? "Delete check" : "Leave check"}
+          {isOwner ? "Delete set" : "Leave set"}
         </Button>
       </main>
     </>

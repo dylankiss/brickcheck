@@ -73,7 +73,7 @@ routes like `/join/<token>` work. `public/_headers` sets security headers and ke
 
 1. Open the site on your phone, log in with your email, and install it
    (Safari: Share > Add to Home Screen; Chrome: Install app).
-2. Create a check for a small set (e.g. 40516-1). The first import takes a few
+2. Add a set, a small one (e.g. 40516-1). The first import takes a few
    seconds per minifigure.
 3. Invite yourself from a second account in another browser and tap a part. It
    should appear on both screens.

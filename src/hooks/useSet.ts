@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   adjustPart,
-  getCheck,
-  getCheckLines,
-  getCheckProgress,
+  getSet,
+  getSetLines,
+  getSetProgress,
   listMembers,
-  subscribeToCheck,
+  subscribeToSet,
 } from "../lib/api";
 import {
   applyProgress,
@@ -16,13 +16,13 @@ import {
   type LineMap,
   type Part,
 } from "../lib/parts";
-import type { CheckSummary, LineProgress, Member } from "../lib/types";
+import type { SetSummary, LineProgress, Member } from "../lib/types";
 
-export type CheckStatus = "loading" | "ready" | "not-found" | "error";
+export type SetStatus = "loading" | "ready" | "not-found" | "error";
 
 /**
- * Live state of one check. Call it once per check (CheckLayout) and share it
- * through CheckContext, so there is a single realtime channel per check.
+ * Live state of one set. Call it once per set (SetLayout) and share it
+ * through SetContext, so there is a single realtime channel per set.
  *
  * - The inventory is loaded once; reconnects and visibility changes refetch
  *   only the progress numbers (or redo the full load if it had failed).
@@ -32,17 +32,17 @@ export type CheckStatus = "loading" | "ready" | "not-found" | "error";
  *   refetches) are held back and applied together with the request's result,
  *   so the optimistic delta is never counted twice.
  */
-export function useCheck(checkId: string, myUserId: string) {
-  const [summary, setSummary] = useState<CheckSummary | null>(null);
+export function useSet(setId: string, myUserId: string) {
+  const [summary, setSummary] = useState<SetSummary | null>(null);
   const [lines, setLines] = useState<LineMap>(() => new Map());
   const [pending, setPending] = useState<ReadonlyMap<string, number>>(
     () => new Map(),
   );
-  const [status, setStatus] = useState<CheckStatus>("loading");
+  const [status, setStatus] = useState<SetStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
   const [onlineIds, setOnlineIds] = useState<string[]>([]);
-  // Bumped when the check or its members change, so dependent views refetch.
+  // Bumped when the set or its members change, so dependent views refetch.
   const [version, setVersion] = useState(0);
 
   // Bookkeeping read and written outside render.
@@ -58,7 +58,7 @@ export function useCheck(checkId: string, myUserId: string) {
   const stopChannel = useRef<(() => void) | null>(null);
   const membersRequest = useRef(0);
 
-  /** The check is gone or we were removed: stop listening (the channel would only be refused). */
+  /** The set is gone or we were removed: stop listening (the channel would only be refused). */
   const lostAccess = useCallback(() => {
     setStatus("not-found");
     stopChannel.current?.();
@@ -69,12 +69,12 @@ export function useCheck(checkId: string, myUserId: string) {
   const loadMembers = useCallback(async () => {
     const request = ++membersRequest.current;
     try {
-      const list = await listMembers(checkId);
+      const list = await listMembers(setId);
       if (request === membersRequest.current) setMembers(list);
     } catch (e) {
       console.warn("Loading members failed", e);
     }
-  }, [checkId]);
+  }, [setId]);
 
   /** Applies server values, holding back those for parts with a request in flight. */
   const receive = useCallback((updates: LineProgress[]) => {
@@ -97,19 +97,19 @@ export function useCheck(checkId: string, myUserId: string) {
   const load = useCallback(async () => {
     const gen = generation.current;
     try {
-      const [check, fetched] = await Promise.all([
-        getCheck(checkId),
-        getCheckLines(checkId),
+      const [set, fetched] = await Promise.all([
+        getSet(setId),
+        getSetLines(setId),
       ]);
       if (gen !== generation.current) return false;
-      if (!check) {
+      if (!set) {
         lostAccess();
         return false;
       }
       partOfLine.current = new Map(
         fetched.map((l) => [l.line_id, partKey(l.part_num, l.color_id)]),
       );
-      setSummary(check);
+      setSummary(set);
       setLines(toLineMap(fetched));
       setStatus("ready");
       setError(null);
@@ -121,7 +121,7 @@ export function useCheck(checkId: string, myUserId: string) {
       }
       return false;
     }
-  }, [checkId, lostAccess]);
+  }, [setId, lostAccess]);
 
   /**
    * Catches up with the server. Requests made while one runs schedule exactly
@@ -145,16 +145,16 @@ export function useCheck(checkId: string, myUserId: string) {
             await loaded.current;
             continue;
           }
-          const [check, progress] = await Promise.all([
-            getCheck(checkId),
-            getCheckProgress(checkId),
+          const [set, progress] = await Promise.all([
+            getSet(setId),
+            getSetProgress(setId),
           ]);
           if (gen !== generation.current) return;
-          if (!check) {
+          if (!set) {
             lostAccess();
             return;
           }
-          setSummary(check);
+          setSummary(set);
           receive(progress);
         } catch (e) {
           console.warn("Background refresh failed", e);
@@ -164,14 +164,14 @@ export function useCheck(checkId: string, myUserId: string) {
       refreshing.current = null;
     });
     return refreshing.current;
-  }, [checkId, load, receive, lostAccess]);
+  }, [setId, load, receive, lostAccess]);
 
   useEffect(() => {
     generation.current++;
     loaded.current = load();
     loadMembers();
 
-    stopChannel.current = subscribeToCheck(checkId, myUserId, {
+    stopChannel.current = subscribeToSet(setId, myUserId, {
       onProgress: (progress) => receive([progress]),
       onChanged: () => {
         setVersion((v) => v + 1);
@@ -194,7 +194,7 @@ export function useCheck(checkId: string, myUserId: string) {
       stopChannel.current = null;
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [checkId, myUserId, load, loadMembers, receive, refresh]);
+  }, [setId, myUserId, load, loadMembers, receive, refresh]);
 
   const parts = useMemo(() => groupParts(lines, pending), [lines, pending]);
 
@@ -225,7 +225,7 @@ export function useCheck(checkId: string, myUserId: string) {
         heldBack.current.delete(key);
         return held;
       };
-      adjustPart(checkId, partNum, colorId, delta).then(
+      adjustPart(setId, partNum, colorId, delta).then(
         (progress) => {
           const held = release();
           // Same tick, so React renders the server value and the settled delta together.
@@ -243,7 +243,7 @@ export function useCheck(checkId: string, myUserId: string) {
         },
       );
     },
-    [checkId, settle, refresh],
+    [setId, settle, refresh],
   );
 
   const tap = useCallback(
@@ -273,7 +273,7 @@ export function useCheck(checkId: string, myUserId: string) {
   );
 
   return {
-    checkId,
+    setId,
     summary,
     parts,
     status,
@@ -289,4 +289,4 @@ export function useCheck(checkId: string, myUserId: string) {
   };
 }
 
-export type CheckState = ReturnType<typeof useCheck>;
+export type LiveSetState = ReturnType<typeof useSet>;

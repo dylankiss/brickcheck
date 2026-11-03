@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { adjustPart, getLinesOfChecks, listChecks } from "../lib/api";
+import { adjustPart, getLinesOfSets, listMySets } from "../lib/api";
 import {
-  applyCheckProgress,
+  applySetProgress,
   isComplete,
-  missingAcrossChecks,
+  missingAcrossSets,
   type MissingAcross,
   type Part,
 } from "../lib/parts";
-import type { CheckSummary, InventoryLine } from "../lib/types";
+import type { SetSummary, InventoryLine } from "../lib/types";
 
-const busyKey = (checkId: string, part: Part) => `${checkId}|${part.key}`;
+const busyKey = (setId: string, part: Part) => `${setId}|${part.key}`;
 
 /**
- * Every Part still missing in the user's incomplete Checks, and a way to tick
- * one off in a given Check. Loaded on open and when the page becomes visible
- * again; not live like a Check's own page.
+ * Every Part still missing in the user's incomplete Sets, and a way to tick
+ * one off in a given Set. Loaded on open and when the page becomes visible
+ * again; not live like a Set's own page.
  */
-export function useMissingAcrossChecks() {
+export function useMissingAcrossSets() {
   const [data, setData] = useState<{
-    checks: CheckSummary[];
+    sets: SetSummary[];
     lines: InventoryLine[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +30,10 @@ export function useMissingAcrossChecks() {
   const load = useCallback(async () => {
     const started = ++version.current;
     try {
-      const checks = (await listChecks()).filter((c) => !isComplete(c));
-      const lines = await getLinesOfChecks(checks.map((c) => c.id));
+      const sets = (await listMySets()).filter((c) => !isComplete(c));
+      const lines = await getLinesOfSets(sets.map((c) => c.id));
       if (version.current !== started) return;
-      setData({ checks, lines });
+      setData({ sets, lines });
       setError(null);
     } catch (e) {
       if (version.current === started) setError((e as Error).message);
@@ -51,13 +51,13 @@ export function useMissingAcrossChecks() {
   }, [load]);
 
   const tickOff = useCallback(
-    async (checkId: string, part: Part) => {
-      const id = busyKey(checkId, part);
+    async (setId: string, part: Part) => {
+      const id = busyKey(setId, part);
       version.current++;
       setBusy((prev) => new Set(prev).add(id));
       try {
         const progress = await adjustPart(
-          checkId,
+          setId,
           part.part_num,
           part.color_id,
           1,
@@ -66,7 +66,7 @@ export function useMissingAcrossChecks() {
           (prev) =>
             prev && {
               ...prev,
-              lines: applyCheckProgress(prev.lines, checkId, progress),
+              lines: applySetProgress(prev.lines, setId, progress),
             },
         );
       } catch (e) {
@@ -85,11 +85,11 @@ export function useMissingAcrossChecks() {
   );
 
   const isBusy = useCallback(
-    (checkId: string, part: Part) => busy.has(busyKey(checkId, part)),
+    (setId: string, part: Part) => busy.has(busyKey(setId, part)),
     [busy],
   );
   const missing = useMemo<MissingAcross[] | null>(
-    () => data && missingAcrossChecks(data.checks, data.lines),
+    () => data && missingAcrossSets(data.sets, data.lines),
     [data],
   );
   return { missing, error, clearError: () => setError(null), isBusy, tickOff };

@@ -23,7 +23,7 @@ export function NamePrompt() {
       className="mx-auto mt-[20vh] flex max-w-sm flex-col gap-3 p-4"
     >
       <label htmlFor="display-name" className="text-lg font-semibold">
-        What name should people you check with see?
+        What name should people you share sets with see?
       </label>
       <div className="flex gap-2">
         <input

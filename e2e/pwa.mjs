@@ -39,7 +39,7 @@ try {
   await page.reload();
   await page.getByText("Email me a login link").waitFor({ timeout: 5000 });
   ok(true, "the app shell loads offline");
-  await page.goto(`${APP}/checks/some-check`);
+  await page.goto(`${APP}/sets/some-set`);
   await page.getByText("Email me a login link").waitFor({ timeout: 5000 });
   ok(true, "deep links load offline (index.html fallback)");
 } finally {

@@ -5,7 +5,7 @@ import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
 import { EnlargedPart } from "../components/EnlargedPart";
 import { ErrorBanner, Header, PeopleIcon, ProgressBar } from "../components/ui";
-import { useCheckContext } from "../hooks/useCheckContext";
+import { useSetContext } from "../hooks/useSetContext";
 import {
   filterParts,
   sortParts,
@@ -22,9 +22,9 @@ import {
 const SETTLE_MS = 1500;
 const MAX_DEFER_MS = 5000;
 
-export default function Check() {
-  const { checkId, summary, parts, error, clearError, canEdit, tap, others } =
-    useCheckContext();
+export default function SetPage() {
+  const { setId, summary, parts, error, clearError, canEdit, tap, others } =
+    useSetContext();
   const [filter, setFilter] = useState<PartFilter>({
     query: "",
     colorId: null,
@@ -73,7 +73,7 @@ export default function Check() {
       <Header title={summary!.title} back="/">
         <div className="flex items-center gap-3 pb-2">
           <Link
-            to={`/checks/${checkId}/people`}
+            to={`/sets/${setId}/people`}
             aria-label="People"
             className="flex min-h-9 items-center"
           >
@@ -88,7 +88,7 @@ export default function Check() {
             {found}/{needed}
           </span>
           <Link
-            to={`/checks/${checkId}/missing`}
+            to={`/sets/${setId}/missing`}
             className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-brick ring-1 ring-brick"
           >
             Missing {needed - found}
@@ -105,7 +105,7 @@ export default function Check() {
       {error && <ErrorBanner message={error} onClose={clearError} />}
       {!canEdit && (
         <p className="px-4 pt-3 text-sm text-neutral-500">
-          You can view this check but not change it.
+          You can view this set but not change it.
         </p>
       )}
       <main className="grid grid-cols-2 gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">

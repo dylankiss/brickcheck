@@ -3,14 +3,14 @@ import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type {
   InventoryLine,
-  CheckRole,
-  CheckSummary,
+  SetRole,
+  SetSummary,
   Invite,
   InvitePreview,
-  LegoSet,
+  CatalogSet,
   LineProgress,
   Member,
-  NewCheck,
+  NewSet,
   Profile,
 } from "./types";
 
@@ -125,13 +125,13 @@ export async function updateMyName(
 }
 
 // ---------------------------------------------------------------------------
-// Sets
+// Catalog
 // ---------------------------------------------------------------------------
 
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /** Searches the catalog by set number prefix ("75192") or name ("falcon"). */
-export async function searchSets(query: string): Promise<LegoSet[]> {
+export async function searchCatalog(query: string): Promise<CatalogSet[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   let request = supabase.from("lego_sets").select("*").gt("num_parts", 0);
@@ -145,9 +145,9 @@ export async function searchSets(query: string): Promise<LegoSet[]> {
   return data;
 }
 
-/** Makes sure the set's inventory is cached, importing it from Rebrickable if needed. */
-export async function fetchSet(setNum: string): Promise<LegoSet> {
-  const { data, error } = await supabase.functions.invoke<LegoSet>(
+/** Makes sure the catalog set's inventory is cached, importing it from Rebrickable if needed. */
+export async function fetchCatalogSet(setNum: string): Promise<CatalogSet> {
+  const { data, error } = await supabase.functions.invoke<CatalogSet>(
     "fetch-set",
     { body: { set_num: setNum } },
   );
@@ -163,13 +163,13 @@ export async function fetchSet(setNum: string): Promise<LegoSet> {
 }
 
 // ---------------------------------------------------------------------------
-// Checks
+// Sets
 // ---------------------------------------------------------------------------
 
-export function listChecks(): Promise<CheckSummary[]> {
+export function listMySets(): Promise<SetSummary[]> {
   return fetchAll((from, to) =>
     supabase
-      .from("check_summaries")
+      .from("set_summaries")
       .select("*")
       .order("created_at", { ascending: false })
       .order("id")
@@ -177,75 +177,72 @@ export function listChecks(): Promise<CheckSummary[]> {
   );
 }
 
-export async function getCheck(checkId: string): Promise<CheckSummary | null> {
+export async function getSet(setId: string): Promise<SetSummary | null> {
   const { data, error } = await supabase
-    .from("check_summaries")
+    .from("set_summaries")
     .select("*")
-    .eq("id", checkId)
+    .eq("id", setId)
     .maybeSingle();
   if (error) fail(error);
   return data;
 }
 
-export async function createCheck(check: NewCheck): Promise<string> {
+export async function createSet(set: NewSet): Promise<string> {
   const { data, error } = await supabase
-    .from("checks")
-    .insert(check)
+    .from("sets")
+    .insert(set)
     .select("id")
     .single();
   if (error) fail(error);
   return data.id;
 }
 
-export async function updateCheck(
-  checkId: string,
+export async function updateSet(
+  setId: string,
   changes: { title?: string },
 ): Promise<void> {
-  const { error } = await supabase
-    .from("checks")
-    .update(changes)
-    .eq("id", checkId);
+  const { error } = await supabase.from("sets").update(changes).eq("id", setId);
   if (error) fail(error);
 }
 
-export async function deleteCheck(checkId: string): Promise<void> {
-  const { error } = await supabase.from("checks").delete().eq("id", checkId);
+export async function deleteSet(setId: string): Promise<void> {
+  const { error } = await supabase.from("sets").delete().eq("id", setId);
   if (error) fail(error);
 }
 
-/** The check's full inventory with progress; loaded once per visit. */
-export function getCheckLines(checkId: string): Promise<InventoryLine[]> {
+/** The set's full inventory with progress; loaded once per visit. */
+export function getSetLines(setId: string): Promise<InventoryLine[]> {
   return fetchAll((from, to) =>
     supabase
-      .from("check_lines")
+      .from("set_lines")
       .select("*")
-      .eq("check_id", checkId)
+      .eq("set_id", setId)
       .order("line_id")
       .range(from, to),
   );
 }
 
-/** The inventory with progress of several checks at once (missing across checks). */
-export function getLinesOfChecks(checkIds: string[]): Promise<InventoryLine[]> {
-  if (checkIds.length === 0) return Promise.resolve([]);
+/** The inventory with progress of several sets at once (missing across sets). */
+export function getLinesOfSets(setIds: string[]): Promise<InventoryLine[]> {
+  if (setIds.length === 0) return Promise.resolve([]);
   return fetchAll((from, to) =>
     supabase
-      .from("check_lines")
+      .from("set_lines")
       .select("*")
-      .in("check_id", checkIds)
-      .order("check_id")
+      .in("set_id", setIds)
+      .order("set_id")
       .order("line_id")
       .range(from, to),
   );
 }
 
 /** Only the progress numbers, for cheap refreshes after reconnecting. */
-export function getCheckProgress(checkId: string): Promise<LineProgress[]> {
+export function getSetProgress(setId: string): Promise<LineProgress[]> {
   return fetchAll((from, to) =>
     supabase
-      .from("check_progress")
+      .from("set_progress")
       .select("line_id, found_qty, updated_at")
-      .eq("check_id", checkId)
+      .eq("set_id", setId)
       .order("line_id")
       .range(from, to),
   );
@@ -253,14 +250,14 @@ export function getCheckProgress(checkId: string): Promise<LineProgress[]> {
 
 /** Adds `delta` found pieces of one part + color; returns that part's lines. */
 export async function adjustPart(
-  checkId: string,
+  setId: string,
   partNum: string,
   colorId: number,
   delta: number,
 ): Promise<LineProgress[]> {
   const { data, error } = await supabase
     .rpc("adjust_part", {
-      p_check_id: checkId,
+      p_set_id: setId,
       p_part_num: partNum,
       p_color_id: colorId,
       p_delta: delta,
@@ -279,12 +276,12 @@ export async function adjustPart(
 // Members and invites
 // ---------------------------------------------------------------------------
 
-export async function listMembers(checkId: string): Promise<Member[]> {
+export async function listMembers(setId: string): Promise<Member[]> {
   const data = await fetchAll((from, to) =>
     supabase
-      .from("check_members")
+      .from("set_members")
       .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
-      .eq("check_id", checkId)
+      .eq("set_id", setId)
       .order("joined_at")
       .order("user_id")
       .range(from, to),
@@ -296,7 +293,7 @@ export async function listMembers(checkId: string): Promise<Member[]> {
     > | null;
     return {
       ...member,
-      role: member.role as CheckRole,
+      role: member.role as SetRole,
       display_name: profile?.display_name ?? null,
       avatar_url: profile?.avatar_url ?? null,
     };
@@ -304,37 +301,37 @@ export async function listMembers(checkId: string): Promise<Member[]> {
 }
 
 export async function setMemberRole(
-  checkId: string,
+  setId: string,
   userId: string,
-  role: Exclude<CheckRole, "owner">,
+  role: Exclude<SetRole, "owner">,
 ): Promise<void> {
   const { error } = await supabase
-    .from("check_members")
+    .from("set_members")
     .update({ role })
-    .eq("check_id", checkId)
+    .eq("set_id", setId)
     .eq("user_id", userId);
   if (error) fail(error);
 }
 
-/** Removes a member; with your own id this is "leave the check". */
+/** Removes a member; with your own id this is "leave the set". */
 export async function removeMember(
-  checkId: string,
+  setId: string,
   userId: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("check_members")
+    .from("set_members")
     .delete()
-    .eq("check_id", checkId)
+    .eq("set_id", setId)
     .eq("user_id", userId);
   if (error) fail(error);
 }
 
-export function listInvites(checkId: string): Promise<Invite[]> {
+export function listInvites(setId: string): Promise<Invite[]> {
   return fetchAll((from, to) =>
     supabase
-      .from("check_invites")
+      .from("set_invites")
       .select("token, role, expires_at")
-      .eq("check_id", checkId)
+      .eq("set_id", setId)
       .gt("expires_at", new Date().toISOString())
       .order("created_at")
       .order("token")
@@ -343,12 +340,12 @@ export function listInvites(checkId: string): Promise<Invite[]> {
 }
 
 export async function createInvite(
-  checkId: string,
+  setId: string,
   role: Invite["role"],
 ): Promise<Invite> {
   const { data, error } = await supabase
-    .from("check_invites")
-    .insert({ check_id: checkId, role })
+    .from("set_invites")
+    .insert({ set_id: setId, role })
     .select("token, role, expires_at")
     .single();
   if (error) fail(error);
@@ -357,7 +354,7 @@ export async function createInvite(
 
 export async function deleteInvite(token: string): Promise<void> {
   const { error } = await supabase
-    .from("check_invites")
+    .from("set_invites")
     .delete()
     .eq("token", token);
   if (error) fail(error);
@@ -380,7 +377,7 @@ export async function getInvitePreview(
   return (data as InvitePreview[])[0] ?? null;
 }
 
-/** Joins the invite's check; returns its id. */
+/** Joins the invite's set; returns its id. */
 export async function acceptInvite(token: string): Promise<string> {
   const { data, error } = await supabase.rpc("accept_invite", {
     p_token: token,
@@ -393,13 +390,13 @@ export async function acceptInvite(token: string): Promise<string> {
 // Realtime
 // ---------------------------------------------------------------------------
 
-export interface CheckChannelHandlers {
+export interface SetChannelHandlers {
   onProgress: (progress: LineProgress) => void;
-  /** The check or its members changed (rename, join, leave, role change). */
+  /** The set or its members changed (rename, join, leave, role change). */
   onChanged: () => void;
   /** Called on every (re)subscribe, so callers can refetch what they missed. */
   onSubscribed: () => void;
-  /** User ids with the check open; names come from the member list, not from presence. */
+  /** User ids with the set open; names come from the member list, not from presence. */
   onPresence: (userIds: string[]) => void;
 }
 
@@ -408,21 +405,21 @@ export interface CheckChannelHandlers {
 const leaving = new Map<string, Promise<unknown>>();
 
 /**
- * Subscribes to the check's private channel and announces `me` there;
- * returns an unsubscribe function. One channel per check (ARCHITECTURE.md).
+ * Subscribes to the set's private channel and announces `me` there;
+ * returns an unsubscribe function. One channel per set (ARCHITECTURE.md).
  */
-export function subscribeToCheck(
-  checkId: string,
+export function subscribeToSet(
+  setId: string,
   userId: string,
-  handlers: CheckChannelHandlers,
+  handlers: SetChannelHandlers,
 ): () => void {
-  const topic = `check:${checkId}`;
+  const topic = `set:${setId}`;
   let channel: ReturnType<typeof supabase.channel> | null = null;
   let cancelled = false;
 
   Promise.all([leaving.get(topic), supabase.realtime.setAuth()]).then(() => {
     if (cancelled) return;
-    channel = openCheckChannel(topic, userId, handlers);
+    channel = openSetChannel(topic, userId, handlers);
   });
 
   return () => {
@@ -435,10 +432,10 @@ export function subscribeToCheck(
   };
 }
 
-function openCheckChannel(
+function openSetChannel(
   topic: string,
   userId: string,
-  handlers: CheckChannelHandlers,
+  handlers: SetChannelHandlers,
 ) {
   const channel = supabase.channel(topic, {
     config: { private: true, presence: { key: userId } },

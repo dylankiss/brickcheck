@@ -1,9 +1,9 @@
 // Row shapes as returned by PostgREST. Hand-written until a linked project
 // exists for `supabase gen types` (see ARCHITECTURE.md).
 
-export type CheckRole = "owner" | "helper" | "viewer";
+export type SetRole = "owner" | "helper" | "viewer";
 
-export interface LegoSet {
+export interface CatalogSet {
   set_num: string;
   name: string;
   year: number | null;
@@ -13,8 +13,8 @@ export interface LegoSet {
   parts_fetched_at: string | null;
 }
 
-/** Row of the `check_summaries` view. */
-export interface CheckSummary {
+/** Row of the `set_summaries` view. */
+export interface SetSummary {
   id: string;
   owner_id: string;
   set_num: string;
@@ -22,17 +22,17 @@ export interface CheckSummary {
   include_spares: boolean;
   include_minifigs: boolean;
   created_at: string;
-  set_name: string;
-  set_year: number | null;
-  set_img_url: string | null;
-  my_role: CheckRole | null;
+  catalog_name: string;
+  catalog_year: number | null;
+  catalog_img_url: string | null;
+  my_role: SetRole | null;
   needed: number;
   found: number;
 }
 
-/** Row of the `check_lines` view: one inventory line that counts for a check. */
+/** Row of the `set_lines` view: one inventory line that counts for a set. */
 export interface InventoryLine {
-  check_id: string;
+  set_id: string;
   line_id: number;
   part_num: string;
   part_name: string;
@@ -61,7 +61,7 @@ export interface LineProgress {
   updated_by?: string | null;
 }
 
-export interface NewCheck {
+export interface NewSet {
   set_num: string;
   title: string;
   include_spares: boolean;
@@ -76,7 +76,7 @@ export interface Profile {
 
 export interface Member {
   user_id: string;
-  role: CheckRole;
+  role: SetRole;
   joined_at: string;
   display_name: string | null;
   avatar_url: string | null;
@@ -84,18 +84,18 @@ export interface Member {
 
 export interface Invite {
   token: string;
-  role: Exclude<CheckRole, "owner">;
+  role: Exclude<SetRole, "owner">;
   expires_at: string;
 }
 
 /** What an invite link leads to (invite_preview RPC). */
 export interface InvitePreview {
-  check_id: string;
-  check_title: string;
+  set_id: string;
+  set_title: string;
   set_num: string;
-  set_name: string;
-  set_img_url: string | null;
-  role: Exclude<CheckRole, "owner">;
+  catalog_name: string;
+  catalog_img_url: string | null;
+  role: Exclude<SetRole, "owner">;
   invited_by: string | null;
   already_member: boolean;
 }

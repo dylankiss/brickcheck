@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { EnlargeableThumbnail, EnlargedPart } from "../components/EnlargedPart";
 import { Button, ColorSwatch, Header } from "../components/ui";
-import { useCheckContext } from "../hooks/useCheckContext";
+import { useSetContext } from "../hooks/useSetContext";
 import {
   missingParts,
   toBrickLinkXml,
@@ -19,8 +19,8 @@ function download(filename: string, content: string, type: string) {
 }
 
 export default function Missing() {
-  const { checkId, summary: check, parts } = useCheckContext();
-  const summary = check!;
+  const { setId, summary: set, parts } = useSetContext();
+  const summary = set!;
   const missing = useMemo(() => missingParts(parts), [parts]);
   const bricklink = useMemo(() => toBrickLinkXml(missing), [missing]);
   const total = missing.reduce((sum, m) => sum + m.missing, 0);
@@ -29,14 +29,11 @@ export default function Missing() {
   const base = `${summary.set_num}-missing`;
   return (
     <>
-      <Header
-        title={`Missing · ${summary.title}`}
-        back={`/checks/${checkId}`}
-      />
+      <Header title={`Missing · ${summary.title}`} back={`/sets/${setId}`} />
       <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
         {missing.length === 0 ? (
           <p className="py-12 text-center text-lg">
-            Nothing is missing. This check is complete! 🎉
+            Nothing is missing. This set is complete! 🎉
           </p>
         ) : (
           <>

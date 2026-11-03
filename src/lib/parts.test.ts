@@ -4,8 +4,8 @@ import {
   groupParts,
   compareTimestamps,
   filterParts,
-  applyCheckProgress,
-  missingAcrossChecks,
+  applySetProgress,
+  missingAcrossSets,
   searchMissingAcross,
   missingParts,
   sortParts,
@@ -15,12 +15,12 @@ import {
   toLineMap,
   toRebrickableCsv,
 } from "./parts";
-import type { CheckSummary, InventoryLine } from "./types";
+import type { SetSummary, InventoryLine } from "./types";
 
 let nextId = 1;
 function line(overrides: Partial<InventoryLine>): InventoryLine {
   return {
-    check_id: "c1",
+    set_id: "c1",
     line_id: nextId++,
     part_num: "3001",
     part_name: "Brick 2 x 4",
@@ -190,21 +190,18 @@ describe("partLabel", () => {
   });
 });
 
-function check(
-  id: string,
-  overrides: Partial<CheckSummary> = {},
-): CheckSummary {
+function aSet(id: string, overrides: Partial<SetSummary> = {}): SetSummary {
   return {
     id,
     owner_id: "u1",
     set_num: "1-1",
-    title: `Check ${id}`,
+    title: `Set ${id}`,
     include_spares: false,
     include_minifigs: true,
     created_at: "2026-11-01T00:00:00Z",
-    set_name: "Test set",
-    set_year: 2026,
-    set_img_url: null,
+    catalog_name: "Test set",
+    catalog_year: 2026,
+    catalog_img_url: null,
     my_role: "owner",
     needed: 0,
     found: 0,
@@ -212,75 +209,72 @@ function check(
   };
 }
 
-describe("missingAcrossChecks", () => {
-  it("lists every Check a missing part goes to, with what each still needs", () => {
-    const missing = missingAcrossChecks(
-      [check("a", { title: "House" }), check("b", { title: "Castle" })],
+describe("missingAcrossSets", () => {
+  it("lists every Set a missing part goes to, with what each still needs", () => {
+    const missing = missingAcrossSets(
+      [aSet("a", { title: "House" }), aSet("b", { title: "Castle" })],
       [
-        line({ check_id: "a", quantity: 4, found_qty: 1 }),
-        line({ check_id: "b", quantity: 2, found_qty: 1 }),
+        line({ set_id: "a", quantity: 4, found_qty: 1 }),
+        line({ set_id: "b", quantity: 2, found_qty: 1 }),
       ],
     );
     expect(missing).toHaveLength(1);
     expect(missing[0].part.part_name).toBe("Brick 2 x 4");
     expect(missing[0].missing).toBe(4);
-    expect(missing[0].checks).toEqual([
-      { checkId: "a", label: "House", missing: 3, canTickOff: true },
-      { checkId: "b", label: "Castle", missing: 1, canTickOff: true },
+    expect(missing[0].sets).toEqual([
+      { setId: "a", label: "House", missing: 3, canTickOff: true },
+      { setId: "b", label: "Castle", missing: 1, canTickOff: true },
     ]);
   });
 
-  it("lists Checks you only view without letting you tick off, and skips fully found ones", () => {
-    const missing = missingAcrossChecks(
-      [check("a", { my_role: "viewer" }), check("b", { my_role: "helper" })],
+  it("lists Sets you only view without letting you tick off, and skips fully found ones", () => {
+    const missing = missingAcrossSets(
+      [aSet("a", { my_role: "viewer" }), aSet("b", { my_role: "helper" })],
       [
-        line({ check_id: "a", quantity: 2, found_qty: 0 }),
-        line({ check_id: "b", quantity: 2, found_qty: 2 }),
+        line({ set_id: "a", quantity: 2, found_qty: 0 }),
+        line({ set_id: "b", quantity: 2, found_qty: 2 }),
       ],
     );
-    expect(missing.map((m) => m.checks)).toEqual([
-      [{ checkId: "a", label: "Check a", missing: 2, canTickOff: false }],
+    expect(missing.map((m) => m.sets)).toEqual([
+      [{ setId: "a", label: "Set a", missing: 2, canTickOff: false }],
     ]);
   });
 
-  it("orders parts by color and, per part, the Check needing the most first", () => {
-    const missing = missingAcrossChecks(
-      [check("a"), check("b")],
+  it("orders parts by color and, per part, the Set needing the most first", () => {
+    const missing = missingAcrossSets(
+      [aSet("a"), aSet("b")],
       [
-        line({ check_id: "a", color_id: 4, color_name: "Red", quantity: 1 }),
-        line({ check_id: "b", color_id: 4, color_name: "Red", quantity: 3 }),
-        line({ check_id: "a", color_id: 1, color_name: "Blue", quantity: 1 }),
+        line({ set_id: "a", color_id: 4, color_name: "Red", quantity: 1 }),
+        line({ set_id: "b", color_id: 4, color_name: "Red", quantity: 3 }),
+        line({ set_id: "a", color_id: 1, color_name: "Blue", quantity: 1 }),
       ],
     );
     expect(missing.map((m) => m.part.color_name)).toEqual(["Blue", "Red"]);
-    expect(missing[1].checks.map((c) => c.checkId)).toEqual(["b", "a"]);
+    expect(missing[1].sets.map((c) => c.setId)).toEqual(["b", "a"]);
   });
 
-  it("tells apart Checks with the same title (two copies of one Set) by start date", () => {
-    const missing = missingAcrossChecks(
+  it("tells apart Sets with the same title (two copies of one Catalog set) by start date", () => {
+    const missing = missingAcrossSets(
       [
-        check("a", { title: "House", created_at: "2026-11-01T09:00:00Z" }),
-        check("b", { title: "House", created_at: "2026-11-03T09:00:00Z" }),
+        aSet("a", { title: "House", created_at: "2026-11-01T09:00:00Z" }),
+        aSet("b", { title: "House", created_at: "2026-11-03T09:00:00Z" }),
       ],
-      [
-        line({ check_id: "a", quantity: 1 }),
-        line({ check_id: "b", quantity: 2 }),
-      ],
+      [line({ set_id: "a", quantity: 1 }), line({ set_id: "b", quantity: 2 })],
     );
-    expect(missing[0].checks.map((c) => c.label)).toEqual([
+    expect(missing[0].sets.map((c) => c.label)).toEqual([
       "House (started 3 Nov)",
       "House (started 1 Nov)",
     ]);
   });
 
   it("searches by name, number or color and totals what is shown", () => {
-    const missing = missingAcrossChecks(
-      [check("a"), check("b")],
+    const missing = missingAcrossSets(
+      [aSet("a"), aSet("b")],
       [
-        line({ check_id: "a", quantity: 2 }),
-        line({ check_id: "b", quantity: 1 }),
+        line({ set_id: "a", quantity: 2 }),
+        line({ set_id: "b", quantity: 1 }),
         line({
-          check_id: "a",
+          set_id: "a",
           part_num: "3004",
           part_name: "Brick 1 x 2",
           color_id: 1,
@@ -294,11 +288,11 @@ describe("missingAcrossChecks", () => {
     ).toMatchObject({
       parts: [{ part: { part_num: "3001" } }],
       pieces: 3,
-      checks: 2,
+      sets: 2,
     });
     expect(
       searchMissingAcross(missing, { query: "", colorId: null }),
-    ).toMatchObject({ pieces: 6, checks: 2 });
+    ).toMatchObject({ pieces: 6, sets: 2 });
     expect(
       searchMissingAcross(missing, { query: "3004", colorId: null }).parts.map(
         (m) => m.part.part_name,
@@ -309,19 +303,19 @@ describe("missingAcrossChecks", () => {
     ).toMatchObject({
       parts: [{ part: { color_name: "Blue" } }],
       pieces: 3,
-      checks: 1,
+      sets: 1,
     });
   });
 
-  it("applies a tick-off to its own Check only, though Checks of one Set share line ids", () => {
+  it("applies a tick-off to its own Set only, though Sets of one Catalog set share line ids", () => {
     const lines = [
-      line({ check_id: "a", line_id: 7, quantity: 2 }),
-      line({ check_id: "b", line_id: 7, quantity: 2 }),
+      line({ set_id: "a", line_id: 7, quantity: 2 }),
+      line({ set_id: "b", line_id: 7, quantity: 2 }),
     ];
-    const next = applyCheckProgress(lines, "b", [
+    const next = applySetProgress(lines, "b", [
       { line_id: 7, found_qty: 1, updated_at: "2026-11-04T10:00:00Z" },
     ]);
-    expect(next.map((l) => [l.check_id, l.found_qty])).toEqual([
+    expect(next.map((l) => [l.set_id, l.found_qty])).toEqual([
       ["a", 0],
       ["b", 1],
     ]);

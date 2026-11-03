@@ -5,7 +5,7 @@ create extension if not exists pgtap with schema extensions;
 select plan(36);
 
 ------------------------------------------------------------------------------
--- Fixtures: Alice owns a check on 1-1 (with include_minifigs = false),
+-- Fixtures: Alice owns a set on 1-1 (with include_minifigs = false),
 -- Bob is a helper, Carol a viewer, Dave a stranger.
 ------------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ select throws_ok(
   'import_set rejects an empty inventory'
 );
 
-create temporary table ctx (check_id uuid, no_figs_check_id uuid);
+create temporary table ctx (set_id uuid, no_figs_set_id uuid);
 insert into ctx values (null, null);
 grant all on ctx to authenticated;
 
@@ -50,16 +50,16 @@ $$;
 
 set local role authenticated;
 select pg_temp.login('a');
-with c as (insert into public.checks (set_num, title, include_spares) values ('t1-1', 'Shared', true) returning id)
-update ctx set check_id = (select id from c);
-with c as (insert into public.checks (set_num, title, include_minifigs) values ('t1-1', 'No figs', false) returning id)
-update ctx set no_figs_check_id = (select id from c);
+with c as (insert into public.sets (set_num, title, include_spares) values ('t1-1', 'Shared', true) returning id)
+update ctx set set_id = (select id from c);
+with c as (insert into public.sets (set_num, title, include_minifigs) values ('t1-1', 'No figs', false) returning id)
+update ctx set no_figs_set_id = (select id from c);
 
 reset role;
-insert into public.check_members (check_id, user_id, role)
-select check_id, '00000000-0000-0000-0000-00000000000b'::uuid, 'helper'::public.check_role from ctx
+insert into public.set_members (set_id, user_id, role)
+select set_id, '00000000-0000-0000-0000-00000000000b'::uuid, 'helper'::public.set_role from ctx
 union all
-select check_id, '00000000-0000-0000-0000-00000000000c'::uuid, 'viewer'::public.check_role from ctx;
+select set_id, '00000000-0000-0000-0000-00000000000c'::uuid, 'viewer'::public.set_role from ctx;
 set local role authenticated;
 
 ------------------------------------------------------------------------------
@@ -69,39 +69,39 @@ set local role authenticated;
 select pg_temp.login('a');
 
 select is(
-  (select count(*)::int from public.check_lines where check_id = (select no_figs_check_id from ctx)),
+  (select count(*)::int from public.set_lines where set_id = (select no_figs_set_id from ctx)),
   1,
   'include_minifigs = false leaves only the set line (spares excluded too)'
 );
 
 select is(
-  (select sum(found_qty)::int from public.adjust_part((select no_figs_check_id from ctx), '3001', 4, 9)),
+  (select sum(found_qty)::int from public.adjust_part((select no_figs_set_id from ctx), '3001', 4, 9)),
   3,
   'without minifigs the part is capped at the set line'
 );
 
 select is(
-  (select sum(found_qty)::int from public.adjust_part((select check_id from ctx), '3001', 4, 5)),
+  (select sum(found_qty)::int from public.adjust_part((select set_id from ctx), '3001', 4, 5)),
   5,
   'with spares and minifigs everything fills'
 );
 select is(
-  (select sum(found_qty)::int from public.adjust_part((select check_id from ctx), '3001', 4, -1)),
+  (select sum(found_qty)::int from public.adjust_part((select set_id from ctx), '3001', 4, -1)),
   4,
   'decrement'
 );
 select is(
-  (select found_qty from public.check_lines where check_id = (select check_id from ctx) and is_spare),
+  (select found_qty from public.set_lines where set_id = (select set_id from ctx) and is_spare),
   0,
   'decrements empty the spare line first'
 );
 select is(
-  (select count(*)::int from public.adjust_part((select check_id from ctx), '3001', 4, 1)),
+  (select count(*)::int from public.adjust_part((select set_id from ctx), '3001', 4, 1)),
   3,
   'adjust_part returns every line of the part'
 );
 select throws_ok(
-  $$ select public.adjust_part((select check_id from ctx), '3001', 4, 10001) $$,
+  $$ select public.adjust_part((select set_id from ctx), '3001', 4, 10001) $$,
   '22023',
   null,
   'huge deltas are rejected'
@@ -111,67 +111,67 @@ select throws_ok(
 -- Membership rules
 ------------------------------------------------------------------------------
 
-delete from public.check_members
-where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000a';
+delete from public.set_members
+where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000a';
 select is(
-  (select count(*)::int from public.check_members where user_id = '00000000-0000-0000-0000-00000000000a' and check_id = (select check_id from ctx)),
+  (select count(*)::int from public.set_members where user_id = '00000000-0000-0000-0000-00000000000a' and set_id = (select set_id from ctx)),
   1,
-  'the owner cannot leave their own check'
+  'the owner cannot leave their own set'
 );
 
 select throws_ok(
-  $$ update public.check_members set role = 'owner'
-     where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c' $$,
+  $$ update public.set_members set role = 'owner'
+     where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c' $$,
   '42501',
   null,
   'nobody can be promoted to owner'
 );
 
-update public.check_members set role = 'helper'
-where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c';
+update public.set_members set role = 'helper'
+where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c';
 select is(
-  (select role::text from public.check_members where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c'),
+  (select role::text from public.set_members where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c'),
   'helper',
   'the owner can change roles'
 );
 
 select pg_temp.login('b');
-update public.check_members set role = 'viewer'
-where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c';
+update public.set_members set role = 'viewer'
+where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c';
 select is(
-  (select role::text from public.check_members where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c'),
+  (select role::text from public.set_members where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c'),
   'helper',
   'a helper cannot change roles'
 );
 
-delete from public.check_members where user_id = '00000000-0000-0000-0000-00000000000a';
+delete from public.set_members where user_id = '00000000-0000-0000-0000-00000000000a';
 select is(
-  (select count(*)::int from public.check_members where check_id = (select check_id from ctx)),
+  (select count(*)::int from public.set_members where set_id = (select set_id from ctx)),
   3,
   'a helper cannot remove the owner'
 );
 
-update public.checks set title = 'Renamed by helper' where id = (select check_id from ctx);
+update public.sets set title = 'Renamed by helper' where id = (select set_id from ctx);
 select is(
-  (select title from public.checks where id = (select check_id from ctx)),
+  (select title from public.sets where id = (select set_id from ctx)),
   'Renamed by helper',
-  'a helper can rename the check'
+  'a helper can rename the set'
 );
 
-delete from public.checks where id = (select check_id from ctx);
+delete from public.sets where id = (select set_id from ctx);
 select is(
-  (select count(*)::int from public.checks where id = (select check_id from ctx)),
+  (select count(*)::int from public.sets where id = (select set_id from ctx)),
   1,
-  'a helper cannot delete the check'
+  'a helper cannot delete the set'
 );
 
 select pg_temp.login('c');
-delete from public.check_members
-where check_id = (select check_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c';
+delete from public.set_members
+where set_id = (select set_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000c';
 select is(
-  (select count(*)::int from public.checks where id = (select check_id from ctx)),
+  (select count(*)::int from public.sets where id = (select set_id from ctx)),
   0,
-  'a member can leave, and then no longer sees the check'
+  'a member can leave, and then no longer sees the set'
 );
 
 ------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ select is(
 
 select pg_temp.login('b');
 select throws_ok(
-  $$ insert into public.check_invites (check_id) select check_id from ctx $$,
+  $$ insert into public.set_invites (set_id) select set_id from ctx $$,
   '42501',
   null,
   'a non-owner cannot create invites'
@@ -188,30 +188,30 @@ select throws_ok(
 
 select pg_temp.login('a');
 select lives_ok(
-  $$ insert into public.check_invites (check_id, role) select check_id, 'viewer' from ctx $$,
+  $$ insert into public.set_invites (set_id, role) select set_id, 'viewer' from ctx $$,
   'the owner can create invites'
 );
 select throws_ok(
-  $$ insert into public.check_invites (check_id, role) select check_id, 'owner' from ctx $$,
+  $$ insert into public.set_invites (set_id, role) select set_id, 'owner' from ctx $$,
   '23514',
   null,
   'invites cannot grant owner'
 );
 select throws_ok(
-  $$ insert into public.check_invites (check_id, token) select check_id, gen_random_uuid() from ctx $$,
+  $$ insert into public.set_invites (set_id, token) select set_id, gen_random_uuid() from ctx $$,
   '42501',
   null,
   'the owner cannot choose the token'
 );
 select throws_ok(
-  $$ insert into public.check_invites (check_id, expires_at) select check_id, now() + interval '1 year' from ctx $$,
+  $$ insert into public.set_invites (set_id, expires_at) select set_id, now() + interval '1 year' from ctx $$,
   '23514',
   null,
   'invites expire within 30 days'
 );
 
 select pg_temp.login('b');
-select is((select count(*)::int from public.check_invites), 0, 'a non-owner cannot read invites');
+select is((select count(*)::int from public.set_invites), 0, 'a non-owner cannot read invites');
 
 ------------------------------------------------------------------------------
 -- Profiles
@@ -235,15 +235,15 @@ select throws_ok(
 ------------------------------------------------------------------------------
 
 select is(
-  (select public.check_id_from_topic('check:' || check_id::text) from ctx),
-  (select check_id from ctx),
-  'topic parses to the check id'
+  (select public.set_id_from_topic('set:' || set_id::text) from ctx),
+  (select set_id from ctx),
+  'topic parses to the set id'
 );
-select is(public.check_id_from_topic('check:not-a-uuid'), null, 'malformed topics map to null');
+select is(public.set_id_from_topic('set:not-a-uuid'), null, 'malformed topics map to null');
 
 select pg_temp.login('d');
 select is(
-  (select public.is_check_member(check_id) from ctx),
+  (select public.is_set_member(set_id) from ctx),
   false,
   'a stranger is not a member, so channel policies deny them'
 );

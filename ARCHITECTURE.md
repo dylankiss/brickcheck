@@ -31,8 +31,8 @@ Browser ──(supabase-js, user JWT)──► Postgres (RLS)        reads, sear
                                          │ service role: import_set()
                                          ▼
                                      set cache (lego_sets, inventory_lines)
-        ◄──(Realtime broadcast, private channel check:<id>)── triggers:
-                 `progress` from check_progress, `changed` from checks / check_members
+        ◄──(Realtime broadcast, private channel set:<id>)── triggers:
+                 `progress` from set_progress, `changed` from sets / set_members
 
 scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickable sets.csv.gz)
 ```
@@ -56,47 +56,47 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    key, summing their quantities (Rebrickable can list the same part and color
    twice). It inserts with `on conflict do nothing` and stamps
    `parts_fetched_at` last. Once a set is imported, its
-   inventory is **immutable**: `check_progress` references `inventory_lines.id`, so
+   inventory is **immutable**: `set_progress` references `inventory_lines.id`, so
    rows are never updated, deleted or re-keyed.
 3. **Checking**: the UI shows one card per **part** (part number + color). A part can be backed
    by several inventory lines: the set's own line, minifig lines, and a spare
-   line. A tap calls `adjust_part(check, part_num, color_id, delta)`. Increments
+   line. A tap calls `adjust_part(set, part_num, color_id, delta)`. Increments
    fill the set line first, then minifig lines, then spares; decrements undo in
    reverse order. The function locks the part's rows, always in `line_id`
    order, so concurrent taps neither lose counts nor deadlock. It returns the
    part's lines as `{line_id, found_qty, updated_at}`, the same fields a
-   broadcast carries (a broadcast adds `updated_by`). Clients never write `check_progress` directly. A retried call
-   applies its delta again, which is accepted for taps. A complete check is
+   broadcast carries (a broadcast adds `updated_by`). Clients never write `set_progress` directly. A retried call
+   applies its delta again, which is accepted for taps. A complete set is
    not frozen: a piece found later can still be counted.
-4. **Live sync**: a trigger on `check_progress` sends a `progress` broadcast
+4. **Live sync**: a trigger on `set_progress` sends a `progress` broadcast
    (`{line_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
-   `check:<id>`. RLS policies on `realtime.messages` let only members of the
-   check receive broadcasts and send presence there. A `changed` broadcast
-   (from triggers on `checks` and `check_members`) tells open pages to refresh
-   the summary. A removed member's page then finds no check and shows "not
+   `set:<id>`. RLS policies on `realtime.messages` let only members of the
+   set receive broadcasts and send presence there. A `changed` broadcast
+   (from triggers on `sets` and `set_members`) tells open pages to refresh
+   the summary. A removed member's page then finds no set and shows "not
    found". There is **one channel per
-   check** in the client: `CheckLayout` (the `/checks/:id` layout route) calls
-   `useCheck` once and shares it with its child pages through `CheckContext`.
-   The inventory (`check_lines`) is loaded once per visit. Phones drop sockets
+   set** in the client: `SetLayout` (the `/sets/:id` layout route) calls
+   `useSet` once and shares it with its child pages through `SetContext`.
+   The inventory (`set_lines`) is loaded once per visit. Phones drop sockets
    when the screen locks, so on (re)subscribe and on `visibilitychange` the
-   client refetches **only** the progress (`check_progress`: id, count,
+   client refetches **only** the progress (`set_progress`: id, count,
    timestamp) and the summary. Overlapping refreshes are merged into one.
 
 ## Data model
 
-| Table / view             | Purpose                                                            | Written by                                                                                          |
-| ------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `profiles`               | display name and avatar per auth user (the email is never exposed) | trigger on `auth.users`, the user themselves                                                        |
-| `lego_sets`              | set catalog and metadata                                           | catalog script, `import_set` (service role)                                                         |
-| `inventory_lines`        | cached inventory lines                                             | `import_set` (service role)                                                                         |
-| `set_import_log`         | Rebrickable fetches per user, for rate limiting                    | `fetch-set` (service role)                                                                          |
-| `checks`                 | one sorting session of one physical copy of a set                  | owner insert; `title` by helpers                                                                    |
-| `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`)          | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member |
-| `check_progress`         | `found_qty` per (check, inventory line); a missing row means 0     | `adjust_part` RPC only                                                                              |
-| `check_invites`          | invite tokens                                                      | the owner                                                                                           |
-| `check_removals`         | who the owner removed, and when                                    | trigger on `check_members` delete                                                                   |
-| `check_lines` (view)     | every line that counts for a check, with `found_qty`               | —                                                                                                   |
-| `check_summaries` (view) | per check: set info, my role, needed, found                        | —                                                                                                   |
+| Table / view           | Purpose                                                               | Written by                                                                                          |
+| ---------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `profiles`             | display name and avatar per auth user (the email is never exposed)    | trigger on `auth.users`, the user themselves                                                        |
+| `lego_sets`            | set catalog and metadata                                              | catalog script, `import_set` (service role)                                                         |
+| `inventory_lines`      | cached inventory lines                                                | `import_set` (service role)                                                                         |
+| `set_import_log`       | Rebrickable fetches per user, for rate limiting                       | `fetch-set` (service role)                                                                          |
+| `sets`                 | one physical set being checked: a copy of a catalog set (GLOSSARY.md) | owner insert; `title` by helpers                                                                    |
+| `set_members`          | who can see or edit a set (`owner`, `helper`, `viewer`)               | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member |
+| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` RPC only                                                                              |
+| `set_invites`          | invite tokens                                                         | the owner                                                                                           |
+| `set_removals`         | who the owner removed, and when                                       | trigger on `set_members` delete                                                                     |
+| `set_lines` (view)     | every line that counts for a set, with `found_qty`                    | —                                                                                                   |
+| `set_summaries` (view) | per set: catalog set info, my role, needed, found                     | —                                                                                                   |
 
 An inventory line (`inventory_lines`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
@@ -105,9 +105,9 @@ minifig, and the quantity is already multiplied by the number of copies of that
 minifig in the set. Lines also store the BrickLink part and color ids for export.
 
 **Counting rule**: `include_spares` and `include_minifigs` are fixed when a
-check is created; there is no update grant on them. The rule that decides which
-lines count is the SQL function `line_counts`. Only `check_lines` and
-`adjust_part` use it. The client never re-implements it: it reads `check_lines`
+set is created; there is no update grant on them. The rule that decides which
+lines count is the SQL function `line_counts`. Only `set_lines` and
+`adjust_part` use it. The client never re-implements it: it reads `set_lines`
 and groups them by part and color.
 
 ## Security rules
@@ -115,22 +115,22 @@ and groups them by part and color.
 - RLS is enabled on every public table. `anon` has no privileges in `public`.
   Default privileges keep it that way for future tables, sequences and
   functions, and a pgTAP test checks it.
-- The membership functions (`my_check_ids()`, `check_role_of`, `is_check_member`,
-  `is_check_helper`, `is_check_owner`, `shares_check_with`) are `security
+- The membership functions (`my_set_ids()`, `set_role_of`, `is_set_member`,
+  `is_set_helper`, `is_set_owner`, `shares_set_with`) are `security
 definer` with `search_path = ''` so that policies don't recurse into
-  `check_members`. Row policies use `check_id in (select my_check_ids())`, which
+  `set_members`. Row policies use `set_id in (select my_set_ids())`, which
   is evaluated once per query rather than once per row.
 - Any logged-in user can read the set cache. Only the service role can write it.
-- `checks`, `check_members`, `check_progress` and the views are readable by
+- `sets`, `set_members`, `set_progress` and the views are readable by
   members only. Views are `security_invoker = true`.
 - `profiles` are readable by the user themselves and by people they share a
-  check with.
-- Column-level grants limit writes: updates to `checks(title)`,
-  `check_members(role)` and `profiles(display_name)`, and inserts
-  to `check_invites(check_id, role, expires_at)`. Invites expire within 30 days.
+  set with.
+- Column-level grants limit writes: updates to `sets(title)`,
+  `set_members(role)` and `profiles(display_name)`, and inserts
+  to `set_invites(set_id, role, expires_at)`. Invites expire within 30 days.
 - Every `security definer` function sets `search_path = ''`, checks permissions
   explicitly, and checks that its input belongs together (for example, that a
-  part belongs to the check's set). Trigger functions get no execute grant.
+  part belongs to the set's catalog set). Trigger functions get no execute grant.
 - The Rebrickable key exists only as an Edge Function secret
   (`REBRICKABLE_API_KEY`). It never appears in `VITE_*` variables or client code.
 - **Realtime limitation**: Realtime checks the channel policies when a client
@@ -153,17 +153,17 @@ definer` with `search_path = ''` so that policies don't recurse into
 
 ## Routes
 
-| Path                  | Page                | Notes                                                                                                |
-| --------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
-| `/login`              | Login               | magic link, 6-digit code, or Google; returns to the requested path                                   |
-| `/`                   | Checks              | my checks; asks email users for a display name once                                                  |
-| `/missing`            | MissingAcrossChecks | every Part still missing in your Checks, where it goes, tick it off there (loaded on open, not live) |
-| `/new`                | NewCheck            | catalog search → `fetch-set` → create check                                                          |
-| `/join/:token`        | Join                | invite preview → `accept_invite`                                                                     |
-| `/checks/:id`         | CheckLayout         | owns `useCheck` (one channel, presence) for its children                                             |
-| `/checks/:id` (index) | Check               | the grid of part cards                                                                               |
-| `/checks/:id/missing` | Missing             | missing list and exports                                                                             |
-| `/checks/:id/people`  | Share               | members, roles, invite links, leave or delete                                                        |
+| Path                | Page              | Notes                                                                                              |
+| ------------------- | ----------------- | -------------------------------------------------------------------------------------------------- |
+| `/login`            | Login             | magic link, 6-digit code, or Google; returns to the requested path                                 |
+| `/`                 | MySets            | my sets; asks email users for a display name once                                                  |
+| `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live) |
+| `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                          |
+| `/join/:token`      | Join              | invite preview → `accept_invite`                                                                   |
+| `/sets/:id`         | SetLayout         | owns `useSet` (one channel, presence) for its children                                             |
+| `/sets/:id` (index) | SetPage           | the grid of part cards                                                                             |
+| `/sets/:id/missing` | Missing           | missing list and exports                                                                           |
+| `/sets/:id/people`  | Share             | members, roles, invite links, leave or delete                                                      |
 
 Everything except `/login` is behind `RequireAuth`.
 
@@ -176,18 +176,18 @@ src/
   lib/types.ts      domain types shared by api, hooks and UI
   lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
   lib/theme.ts      light/dark preference (localStorage) and the `dark` class
-  hooks/            React state built on lib/api and lib/theme (useAuth, useCheck, useTheme, ...)
+  hooks/            React state built on lib/api and lib/theme (useAuth, useSet, useTheme, ...)
   pages/            route components
   components/       presentational components; no data fetching
 ```
 
-- **Presence**: the check channel only tracks the user's id; presence keys are
-  chosen by clients, so they are never trusted for names. `useCheck` loads the
+- **Presence**: the set channel only tracks the user's id; presence keys are
+  chosen by clients, so they are never trusted for names. `useSet` loads the
   member list (again on every `changed` broadcast) and exposes `online` and
   `others` as members whose id is present. A `changed` broadcast also bumps
   `version`, which other views (invites) depend on.
-- **Lost access**: when a refresh finds no check (deleted, or we were removed),
-  `useCheck` shows "not found" and leaves the channel.
+- **Lost access**: when a refresh finds no set (deleted, or we were removed),
+  `useSet` shows "not found" and leaves the channel.
 - **Name first**: `RequireAuth` asks users without a display name for one
   before showing any page, including the join page.
 - **Login**: the login email carries a link and a 6-digit code
@@ -198,7 +198,7 @@ src/
   exception is `AuthProvider`, which holds app-level session state.
 - Database row types are written by hand in `lib/types.ts` for now. Switch to
   `supabase gen types` once a linked project exists.
-- **Recovery** (`useCheck`):
+- **Recovery** (`useSet`):
   - A tap times out after 10 s; a timeout takes the normal failure path.
   - A refresh requested while one runs schedules exactly one more run.
   - A failed first load is redone in full on the next reconnect or
@@ -207,7 +207,7 @@ src/
   - Async results from an earlier mount are discarded (generation counter).
   - A channel that is still leaving is awaited before the same topic is
     joined again.
-- **Optimistic taps** (`useCheck`):
+- **Optimistic taps** (`useSet`):
   - A part's card shows the server's count plus its unacknowledged deltas.
   - Each part has at most one `adjust_part` call in flight. Taps made
     meanwhile are summed and sent next, so +1/−1 corrections apply in order.
@@ -229,7 +229,7 @@ src/
   optionally `VITE_PUBLIC_URL`. Function secrets: `REBRICKABLE_API_KEY`,
   `BRICKCHECK_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated, `*` wildcards).
 - **Theme**: `dark:` styles follow a `dark` class on `<html>`. It follows the
-  system setting unless the user picks Light or Dark (the button on My checks),
+  system setting unless the user picks Light or Dark (the button on My sets),
   a per-device preference in `localStorage`. An inline script in `index.html`
   applies it before the first paint; `lib/theme.ts` keeps it applied.
 - **Errors**: routes have an error page with a Reload button, and a failed
@@ -254,7 +254,7 @@ src/
     only email, because OAuth would finish in Safari, outside the app.
   - Updates use `registerType: 'prompt'`: `UpdatePrompt` asks before
     reloading, because a reload would drop taps in flight.
-  - Routes other than login and My checks are lazy-loaded. React and Supabase
+  - Routes other than login and My sets are lazy-loaded. React and Supabase
     are separate chunks, so an app update only re-downloads app code.
 - Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
   deploy point at production.
@@ -273,13 +273,13 @@ back-off).
 - `accept_invite(token)` (security definer) works only for an unexpired token.
   If the user isn't a member yet, it adds them with the invite's role. If they
   already are, it never changes or downgrades their role, and it can never
-  grant `owner`. It returns the check id.
+  grant `owner`. It returns the set id.
 - `/join/<token>` survives login: the path is kept and passed as
   `emailRedirectTo` / `redirectTo`. Only same-origin paths are accepted.
-- `invite_preview(token)` shows the check, set and inviter before joining.
-- Members can leave a check. The owner can remove members, change their roles,
-  or delete the check.
-- A removal is recorded in `check_removals`. Links created before the removal
+- `invite_preview(token)` shows the set, its catalog set and the inviter before joining.
+- Members can leave a set. The owner can remove members, change their roles,
+  or delete the set.
+- A removal is recorded in `set_removals`. Links created before the removal
   no longer work for that person (neither preview nor accept); a newer link
   does, and accepting it clears the record. Leaving on your own isn't recorded.
 

@@ -1,16 +1,16 @@
-import type { LegoSet } from "../lib/types";
+import type { CatalogSet } from "../lib/types";
 import { PartImage } from "./ui";
 
 interface Props {
   query: string;
   onQueryChange: (query: string) => void;
-  results: LegoSet[];
+  results: CatalogSet[];
   error: string | null;
   noResults: boolean;
-  onSelect: (set: LegoSet) => void;
+  onSelect: (catalogSet: CatalogSet) => void;
 }
 
-export function SetSearch({
+export function CatalogSearch({
   query,
   onQueryChange,
   results,
@@ -31,22 +31,25 @@ export function SetSearch({
       {error && <p className="text-sm text-red-600">{error}</p>}
       {noResults && <p className="text-sm text-neutral-500">No sets found.</p>}
       <ul className="flex flex-col gap-2">
-        {results.map((set) => (
-          <li key={set.set_num}>
+        {results.map((catalogSet) => (
+          <li key={catalogSet.set_num}>
             <button
               type="button"
-              onClick={() => onSelect(set)}
+              onClick={() => onSelect(catalogSet)}
               className="flex w-full items-center gap-3 rounded-2xl bg-white p-2 text-left ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800"
             >
               <PartImage
-                src={set.img_url}
+                src={catalogSet.img_url}
                 alt=""
                 className="size-16 shrink-0 rounded-lg bg-white"
               />
               <span className="min-w-0">
-                <span className="block truncate font-semibold">{set.name}</span>
+                <span className="block truncate font-semibold">
+                  {catalogSet.name}
+                </span>
                 <span className="text-sm text-neutral-500">
-                  {set.set_num} · {set.year} · {set.num_parts} pieces
+                  {catalogSet.set_num} · {catalogSet.year} ·{" "}
+                  {catalogSet.num_parts} pieces
                 </span>
               </span>
             </button>

@@ -11,7 +11,7 @@ if (!PUB || !SECRET)
 const { protocol, hostname } = new globalThis.URL(URL);
 if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
   throw new Error("Refusing to run against a non-local stack");
-const SET = `smoke-${Date.now()}`;
+const SET_NUM = `smoke-${Date.now()}`;
 const admin = createClient(URL, SECRET, { auth: { persistSession: false } });
 const ok = (cond, msg) => {
   console.log(`${cond ? "PASS" : "FAIL"} ${msg}`);
@@ -34,7 +34,7 @@ async function user(email) {
 }
 
 const { error: impErr } = await admin.rpc("import_set", {
-  p_set: { set_num: SET, name: "Smoke set" },
+  p_set: { set_num: SET_NUM, name: "Smoke set" },
   p_parts: [
     {
       part_num: "3001",
@@ -56,7 +56,9 @@ const { error: impErr } = await admin.rpc("import_set", {
 ok(!impErr, `import_set via service role ${impErr?.message ?? ""}`);
 
 const anon = createClient(URL, PUB, { auth: { persistSession: false } });
-let r = await anon.functions.invoke("fetch-set", { body: { set_num: SET } });
+let r = await anon.functions.invoke("fetch-set", {
+  body: { set_num: SET_NUM },
+});
 ok(
   r.error?.context?.status === 401,
   `fetch-set without login -> ${r.error?.context?.status}`,
@@ -69,7 +71,7 @@ ok(
   r.error?.context?.status === 400,
   `invalid set number -> ${r.error?.context?.status}`,
 );
-r = await a.functions.invoke("fetch-set", { body: { set_num: SET } });
+r = await a.functions.invoke("fetch-set", { body: { set_num: SET_NUM } });
 ok(
   r.data?.parts_fetched_at,
   `cached set returned without Rebrickable: ${JSON.stringify(r.data)?.slice(0, 80)}`,
@@ -85,16 +87,16 @@ ok(
   `catalog search works: ${search?.map((s) => s.set_num).join(", ")}`,
 );
 
-const { data: check, error: ce } = await a
-  .from("checks")
-  .insert({ set_num: SET, title: "Smoke" })
+const { data: set, error: ce } = await a
+  .from("sets")
+  .insert({ set_num: SET_NUM, title: "Smoke" })
   .select()
   .single();
-ok(!ce, `create check ${ce?.message ?? ""}`);
+ok(!ce, `create set ${ce?.message ?? ""}`);
 
-// Concurrency: 20 parallel taps, two users' worth of clients sharing a check.
-const { error: ie } = await admin.from("check_members").insert({
-  check_id: check.id,
+// Concurrency: 20 parallel taps, two users' worth of clients sharing a set.
+const { error: ie } = await admin.from("set_members").insert({
+  set_id: set.id,
   user_id: (await b.auth.getUser()).data.user.id,
   role: "helper",
 });
@@ -102,7 +104,7 @@ ok(!ie, `add helper ${ie?.message ?? ""}`);
 const taps = await Promise.all(
   Array.from({ length: 20 }, (_, i) =>
     (i % 2 ? a : b).rpc("adjust_part", {
-      p_check_id: check.id,
+      p_set_id: set.id,
       p_part_num: "3001",
       p_color_id: 4,
       p_delta: 1,
@@ -114,9 +116,9 @@ ok(
   `20 concurrent taps without errors ${taps.find((t) => t.error)?.error?.message ?? ""}`,
 );
 const { data: lines } = await a
-  .from("check_lines")
+  .from("set_lines")
   .select("fig_num,quantity,found_qty")
-  .eq("check_id", check.id);
+  .eq("set_id", set.id);
 ok(
   lines.every((l) => l.found_qty === l.quantity),
   `all lines full and clamped: ${JSON.stringify(lines)}`,
@@ -124,7 +126,7 @@ ok(
 const down = await Promise.all(
   Array.from({ length: 4 }, () =>
     a.rpc("adjust_part", {
-      p_check_id: check.id,
+      p_set_id: set.id,
       p_part_num: "3001",
       p_color_id: 4,
       p_delta: -1,
@@ -132,9 +134,9 @@ const down = await Promise.all(
   ),
 );
 const { data: s } = await a
-  .from("check_summaries")
+  .from("set_summaries")
   .select("needed,found")
-  .eq("id", check.id)
+  .eq("id", set.id)
   .single();
 ok(
   s.needed === 5 && s.found === 1 && down.every((d) => !d.error),
@@ -145,7 +147,7 @@ ok(
 const mixed = await Promise.all(
   Array.from({ length: 40 }, (_, i) =>
     (i % 2 ? a : b).rpc("adjust_part", {
-      p_check_id: check.id,
+      p_set_id: set.id,
       p_part_num: "3001",
       p_color_id: 4,
       p_delta: i % 3 ? 1 : -1,
@@ -157,9 +159,9 @@ ok(
   `40 concurrent mixed taps without deadlock ${mixed.find((t) => t.error)?.error?.message ?? ""}`,
 );
 const { data: s2 } = await a
-  .from("check_summaries")
+  .from("set_summaries")
   .select("needed,found")
-  .eq("id", check.id)
+  .eq("id", set.id)
   .single();
 ok(
   s2.found >= 0 && s2.found <= 5,

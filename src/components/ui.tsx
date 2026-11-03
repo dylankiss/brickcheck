@@ -183,7 +183,7 @@ function BrickIcon({ className = "" }: { className?: string }) {
   );
 }
 
-/** Two people: the link to who is on a Check, shown while nobody else is online. */
+/** Two people: the link to who is on a Set, shown while nobody else is online. */
 export function PeopleIcon({ className = "size-6" }: { className?: string }) {
   return (
     <svg

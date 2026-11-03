@@ -1,4 +1,4 @@
-// Browser end-to-end test of the check flow with two users, against a local
+// Browser end-to-end test of checking a set with two users, against a local
 // stack and `npm run dev`. Uses the installed Google Chrome.
 // Usage: SUPABASE_SECRET_KEY=... node e2e/check-flow.mjs [screenshot-dir]
 import { mkdirSync } from "node:fs";
@@ -24,11 +24,11 @@ const ok = (cond, msg) => {
 const img = (color, part) =>
   `https://cdn.rebrickable.com/media/parts/ldraw/${color}/${part}.png`;
 
-const SET = `demo-${Date.now()}`;
+const SET_NUM = `demo-${Date.now()}`;
 await admin.rpc("import_set", {
   p_set: {
-    set_num: SET,
-    name: `Demo Castle ${SET.slice(-4)}`,
+    set_num: SET_NUM,
+    name: `Demo Castle ${SET_NUM.slice(-4)}`,
     year: 2026,
     num_parts: 12,
     img_url: null,
@@ -137,7 +137,7 @@ async function loginPage(browser, email, { viaCode = false, name } = {}) {
   // New email users are asked for a name first.
   await page.getByPlaceholder("Your name").fill(name);
   await page.getByRole("button", { name: "Save" }).click();
-  await page.getByText("My checks").waitFor();
+  await page.getByText("My sets").waitFor();
   return page;
 }
 
@@ -149,7 +149,7 @@ try {
     deviceScaleFactor: 2,
   });
   const anon = await anonCtx.newPage();
-  await anon.goto(`${APP}/checks/whatever`);
+  await anon.goto(`${APP}/sets/whatever`);
   await anon.getByText("Email me a login link").waitFor();
   await anon.screenshot({ path: `${OUT}/1-login.png` });
   ok(anon.url().endsWith("/login"), "unauthenticated users are sent to /login");
@@ -157,23 +157,23 @@ try {
   const a = await loginPage(browser, `alice${Date.now()}@example.com`, {
     name: "Alice",
   });
-  ok(true, "magic link logs in and lands on My checks");
+  ok(true, "magic link logs in and lands on My sets");
 
-  // New check
-  await a.getByText("+ New check").click();
+  // New set
+  await a.getByText("+ Add a set").click();
   await a
     .getByPlaceholder("Set number or name")
-    .fill("Demo Castle " + SET.slice(-4));
+    .fill("Demo Castle " + SET_NUM.slice(-4));
   await a
-    .getByText(`Demo Castle ${SET.slice(-4)}`)
+    .getByText(`Demo Castle ${SET_NUM.slice(-4)}`)
     .first()
     .click();
-  await a.screenshot({ path: `${OUT}/2-new-check.png` });
+  await a.screenshot({ path: `${OUT}/2-new-set.png` });
   await a.getByText("Start checking").click();
-  await a.waitForURL(/\/checks\/[0-9a-f-]{36}$/);
-  const checkId = a.url().split("/").pop();
+  await a.waitForURL(/\/sets\/[0-9a-f-]{36}$/);
+  const setId = a.url().split("/").pop();
   await a.getByText("0/11").waitFor();
-  ok(true, "check created with 11 needed pieces (spare excluded)");
+  ok(true, "set created with 11 needed pieces (spare excluded)");
 
   // Tap red brick 3 times, then undo once
   // Anchored: the card's own button, not its "Enlarge picture of …" button.
@@ -244,7 +244,7 @@ try {
     .getByRole("link", { name: "People" })
     .locator('[title="Bob Builder"]')
     .waitFor({ timeout: 10000 });
-  ok(true, "Bob's avatar shows as online on Alice's check");
+  ok(true, "Bob's avatar shows as online on Alice's set");
   await b.getByRole("button", { name: /^Minifig Head, Yellow:/ }).click();
   await b.getByRole("button", { name: /^Minifig Head, Yellow:/ }).click();
   await a.getByText("4/11").waitFor({ timeout: 10000 });
@@ -256,7 +256,7 @@ try {
   });
   for (let i = 0; i < 3; i++) await gray.click();
   await a.getByText("7/11").waitFor();
-  await a.screenshot({ path: `${OUT}/3-check.png` });
+  await a.screenshot({ path: `${OUT}/3-set.png` });
   await a.getByRole("button", { name: "Hide found" }).click();
   ok(
     (await a
@@ -302,11 +302,11 @@ try {
   ok(true, "the missing list updates live");
 
   // Alice makes Bob a viewer; his page switches to read-only without reloading
-  await b.goto(`${APP}/checks/${checkId}`);
-  await a.goto(`${APP}/checks/${checkId}/people`);
+  await b.goto(`${APP}/sets/${setId}`);
+  await a.goto(`${APP}/sets/${setId}/people`);
   await a.getByLabel("Role of Bob Builder").selectOption("viewer");
   await b
-    .getByText("You can view this check but not change it.")
+    .getByText("You can view this set but not change it.")
     .waitFor({ timeout: 10000 });
   ok(
     await b.getByRole("button", { name: /^Brick 2 x 4, Red:/ }).isDisabled(),
@@ -316,34 +316,34 @@ try {
   // Alice removes Bob; his page notices
   a.once("dialog", (d) => d.accept());
   await a.getByRole("button", { name: "Remove" }).click();
-  await b.getByText("Check not found").waitFor({ timeout: 10000 });
+  await b.getByText("Set not found").waitFor({ timeout: 10000 });
   ok(true, "a removed member loses access live");
   await b.goto(link);
   await b.getByText("This invite link is invalid or has expired").waitFor();
   ok(true, "a removed member cannot rejoin with the old link");
 
-  // My checks list
+  // My sets list
   await a.goto(`${APP}/`);
   await a.getByText("8/11").waitFor();
-  await a.screenshot({ path: `${OUT}/5-checks.png` });
-  ok(true, "My checks shows progress");
+  await a.screenshot({ path: `${OUT}/5-sets.png` });
+  ok(true, "My sets shows progress");
 
-  // Missing in all checks: see where a found piece goes and tick it off there
+  // Missing in all sets: see where a found piece goes and tick it off there
   await a.getByRole("link", { name: /See where it goes/ }).click();
   const foundOne = a.getByRole("button", {
-    name: `Found one Brick 2 x 4, Red for Demo Castle ${SET.slice(-4)}`,
+    name: `Found one Brick 2 x 4, Red for Demo Castle ${SET_NUM.slice(-4)}`,
   });
   await foundOne.click();
-  // The Check needed one more red brick, so it drops off that part's list.
+  // The Set needed one more red brick, so it drops off that part's list.
   await foundOne.waitFor({ state: "detached" });
-  await a.screenshot({ path: `${OUT}/5b-missing-across-checks.png` });
-  ok(true, "the all-checks overview ticks off a piece in the right check");
+  await a.screenshot({ path: `${OUT}/5b-missing-across-sets.png` });
+  ok(true, "the all-sets overview ticks off a piece in the right set");
 
-  // Dark mode screenshot of the check
+  // Dark mode screenshot of the set
   await a.emulateMedia({ colorScheme: "dark" });
-  await a.goto(`${APP}/checks/${checkId}`);
+  await a.goto(`${APP}/sets/${setId}`);
   await a.getByText("9/11").waitFor();
-  await a.screenshot({ path: `${OUT}/6-check-dark.png` });
+  await a.screenshot({ path: `${OUT}/6-set-dark.png` });
 } finally {
   await browser.close();
 }

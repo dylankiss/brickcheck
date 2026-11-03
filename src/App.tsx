@@ -11,16 +11,16 @@ import { NamePrompt } from "./components/NamePrompt";
 import { Spinner } from "./components/ui";
 import { UpdatePrompt } from "./components/UpdatePrompt";
 import { useAuth } from "./hooks/useAuth";
-import Checks from "./pages/Checks";
+import MySets from "./pages/MySets";
 import Login from "./pages/Login";
 
 // The landing pages load with the app; the rest on first use.
-const Check = lazy(() => import("./pages/Check"));
-const CheckLayout = lazy(() => import("./pages/CheckLayout"));
+const SetPage = lazy(() => import("./pages/SetPage"));
+const SetLayout = lazy(() => import("./pages/SetLayout"));
 const Join = lazy(() => import("./pages/Join"));
 const Missing = lazy(() => import("./pages/Missing"));
-const MissingAcrossChecks = lazy(() => import("./pages/MissingAcrossChecks"));
-const NewCheck = lazy(() => import("./pages/NewCheck"));
+const MissingAcrossSets = lazy(() => import("./pages/MissingAcrossSets"));
+const AddSet = lazy(() => import("./pages/AddSet"));
 const Share = lazy(() => import("./pages/Share"));
 
 function RequireAuth() {
@@ -68,15 +68,15 @@ const router = createBrowserRouter([
     element: <RequireAuth />,
     errorElement: <RouteError />,
     children: [
-      { path: "/", element: <Checks /> },
-      { path: "/new", element: <NewCheck /> },
-      { path: "/missing", element: <MissingAcrossChecks /> },
+      { path: "/", element: <MySets /> },
+      { path: "/new", element: <AddSet /> },
+      { path: "/missing", element: <MissingAcrossSets /> },
       { path: "/join/:token", element: <Join /> },
       {
-        path: "/checks/:checkId",
-        element: <CheckLayout />,
+        path: "/sets/:setId",
+        element: <SetLayout />,
         children: [
-          { index: true, element: <Check /> },
+          { index: true, element: <SetPage /> },
           { path: "missing", element: <Missing /> },
           { path: "people", element: <Share /> },
         ],

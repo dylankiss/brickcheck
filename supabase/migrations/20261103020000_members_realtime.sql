@@ -1,43 +1,43 @@
 -- Phase 2: membership changes reach open pages, and a global cap on imports.
 
 ------------------------------------------------------------------------------
--- Changes to a check or its members are broadcast on the check's channel, so
--- open pages refresh (a removed member's page then finds no check and stops).
+-- Changes to a set or its members are broadcast on the set's channel, so
+-- open pages refresh (a removed member's page then finds no set and stops).
 ------------------------------------------------------------------------------
 
-create function public.check_change_broadcast()
+create function public.set_change_broadcast()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_check_id uuid;
+  v_set_id uuid;
 begin
-  if tg_table_name = 'checks' then
-    v_check_id := coalesce(new.id, old.id);
+  if tg_table_name = 'sets' then
+    v_set_id := coalesce(new.id, old.id);
   else
-    v_check_id := coalesce(new.check_id, old.check_id);
+    v_set_id := coalesce(new.set_id, old.set_id);
   end if;
   perform realtime.send(
     jsonb_build_object('table', tg_table_name, 'op', tg_op),
     'changed',
-    'check:' || v_check_id::text,
+    'set:' || v_set_id::text,
     true
   );
   return null;
 end;
 $$;
 
-create trigger check_members_broadcast
-  after insert or update or delete on public.check_members
-  for each row execute function public.check_change_broadcast();
+create trigger set_members_broadcast
+  after insert or update or delete on public.set_members
+  for each row execute function public.set_change_broadcast();
 
-create trigger checks_broadcast
-  after update on public.checks
-  for each row execute function public.check_change_broadcast();
+create trigger sets_broadcast
+  after update on public.sets
+  for each row execute function public.set_change_broadcast();
 
-revoke execute on function public.check_change_broadcast() from public, anon, authenticated;
+revoke execute on function public.set_change_broadcast() from public, anon, authenticated;
 
 ------------------------------------------------------------------------------
 -- claim_import: add a global hourly cap so the shared Rebrickable key cannot

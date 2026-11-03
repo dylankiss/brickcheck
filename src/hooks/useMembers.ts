@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createInvite,
-  deleteCheck,
+  deleteSet,
   deleteInvite,
   listInvites,
   removeMember,
@@ -10,12 +10,12 @@ import {
 import type { Invite } from "../lib/types";
 
 /**
- * Invites and membership actions for a check. The member list itself lives in
- * useCheck (it also names the people online). `version` comes from useCheck
- * and changes whenever the check's channel reports a change.
+ * Invites and membership actions for a set. The member list itself lives in
+ * useSet (it also names the people online). `version` comes from useSet
+ * and changes whenever the set's channel reports a change.
  */
 export function useMembers(
-  checkId: string,
+  setId: string,
   myUserId: string,
   isOwner: boolean,
   version: number,
@@ -29,12 +29,12 @@ export function useMembers(
     if (!isOwner) return;
     const current = ++request.current;
     try {
-      const list = await listInvites(checkId);
+      const list = await listInvites(setId);
       if (current === request.current) setInvites(list);
     } catch (e) {
       setError((e as Error).message);
     }
-  }, [checkId, isOwner]);
+  }, [setId, isOwner]);
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- refreshInvites only sets state after awaiting the fetch
@@ -60,7 +60,7 @@ export function useMembers(
     invite: async (role: Invite["role"]) => {
       let created: Invite | null = null;
       await run(async () => {
-        created = await createInvite(checkId, role);
+        created = await createInvite(setId, role);
         await refreshInvites();
       });
       return created as Invite | null;
@@ -68,10 +68,10 @@ export function useMembers(
     revokeInvite: (token: string) =>
       run(() => deleteInvite(token).then(refreshInvites)),
     setRole: (userId: string, role: Invite["role"]) =>
-      run(() => setMemberRole(checkId, userId, role).then(reloadMembers)),
+      run(() => setMemberRole(setId, userId, role).then(reloadMembers)),
     remove: (userId: string) =>
-      run(() => removeMember(checkId, userId).then(reloadMembers)),
-    leave: () => run(() => removeMember(checkId, myUserId)),
-    deleteCheck: () => run(() => deleteCheck(checkId)),
+      run(() => removeMember(setId, userId).then(reloadMembers)),
+    leave: () => run(() => removeMember(setId, myUserId)),
+    deleteSet: () => run(() => deleteSet(setId)),
   };
 }

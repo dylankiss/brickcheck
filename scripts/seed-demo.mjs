@@ -7,7 +7,7 @@
 //   - "Little House": partly found, with Sam as a Helper and an open Invite
 //   - "Little House (second copy)": complete
 //   - "Sam's house": owned by Sam, where you are a Helper
-// Running it again replaces the demo Checks. Log in as the given email
+// Running it again replaces the demo Sets. Log in as the given email
 // afterwards (the login email lands in Mailpit, http://127.0.0.1:54324).
 import { createClient } from "@supabase/supabase-js";
 
@@ -167,10 +167,10 @@ async function signIn(email, name) {
   return { client, id: user.id };
 }
 
-async function createCheck(owner, title, { includeSpares = false } = {}) {
+async function createSet(owner, title, { includeSpares = false } = {}) {
   const row = must(
     await owner.client
-      .from("checks")
+      .from("sets")
       .insert({
         set_num: SET_NUM,
         title,
@@ -184,11 +184,11 @@ async function createCheck(owner, title, { includeSpares = false } = {}) {
 }
 
 /** Ticks off `found` pieces of a part (part number + color) through adjust_part, as the app does. */
-async function tickOff(user, checkId, partNum, colorId, found) {
+async function tickOff(user, setId, partNum, colorId, found) {
   if (found > 0)
     must(
       await user.client.rpc("adjust_part", {
-        p_check_id: checkId,
+        p_set_id: setId,
         p_part_num: partNum,
         p_color_id: colorId,
         p_delta: found,
@@ -196,12 +196,12 @@ async function tickOff(user, checkId, partNum, colorId, found) {
     );
 }
 
-/** Adds `member` to `owner`'s Check through an Invite, as the join page does. */
-async function join(owner, member, checkId, role) {
+/** Adds `member` to `owner`'s Set through an Invite, as the join page does. */
+async function join(owner, member, setId, role) {
   const invite = must(
     await owner.client
-      .from("check_invites")
-      .insert({ check_id: checkId, role })
+      .from("set_invites")
+      .insert({ set_id: setId, role })
       .select("token")
       .single(),
   );
@@ -230,11 +230,11 @@ must(
 const me = await signIn(EMAIL, EMAIL.split("@")[0]);
 const sam = await signIn(SAM_EMAIL, "Sam");
 
-// Replace earlier demo Checks of both users (the Owner may delete; members go with the Check).
+// Replace earlier demo Sets of both users (the Owner may delete; members go with the Set).
 for (const user of [me, sam]) {
   must(
     await user.client
-      .from("checks")
+      .from("sets")
       .delete()
       .eq("owner_id", user.id)
       .eq("set_num", SET_NUM),
@@ -242,7 +242,7 @@ for (const user of [me, sam]) {
 }
 
 // 1. Partly found, with a Helper and an open Invite for viewers.
-const house = await createCheck(me, "Little House");
+const house = await createSet(me, "Little House");
 await join(me, sam, house, "helper");
 const progress = {
   "3001|15": 8,
@@ -268,13 +268,11 @@ for (const [key, found] of Object.entries(progress)) {
   );
 }
 must(
-  await me.client
-    .from("check_invites")
-    .insert({ check_id: house, role: "viewer" }),
+  await me.client.from("set_invites").insert({ set_id: house, role: "viewer" }),
 );
 
 // 2. Complete (spares included, all found).
-const done = await createCheck(me, "Little House (second copy)", {
+const done = await createSet(me, "Little House (second copy)", {
   includeSpares: true,
 });
 const totals = new Map();
@@ -287,14 +285,14 @@ for (const [key, needed] of totals) {
   await tickOff(me, done, partNum, Number(colorId), needed);
 }
 
-// 3. Sam's Check, where you are a Helper.
-const samsHouse = await createCheck(sam, "Sam's house");
+// 3. Sam's Set, where you are a Helper.
+const samsHouse = await createSet(sam, "Sam's house");
 await join(sam, me, samsHouse, "helper");
 await tickOff(sam, samsHouse, "3001", 15, 3);
 await tickOff(sam, samsHouse, "3039", 4, 8);
 
 console.log(
-  `Seeded demo data for ${EMAIL}: 3 Checks of "${SET_NUM}" (one partly found, one complete, one shared by Sam).`,
+  `Seeded demo data for ${EMAIL}: 3 Sets of "${SET_NUM}" (one partly found, one complete, one shared by Sam).`,
 );
 console.log(
   "Log in at http://localhost:5173 as that email; the login email lands in Mailpit at http://127.0.0.1:54324.",

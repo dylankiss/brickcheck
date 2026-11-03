@@ -23,4 +23,4 @@ the browser tests yourself.
 5. `npx supabase functions serve` and `npm run dev`, then open http://localhost:5173.
    Magic-link emails land in Mailpit at http://127.0.0.1:54324.
 6. Optional, to try the UI without a Rebrickable key: `SUPABASE_SECRET_KEY=<secret key> npm run seed-demo -- you@example.com`
-   adds a demo set and three Checks (partly found, complete, shared by a demo user Sam). Then log in as that email.
+   adds a demo catalog set and three Sets of it (partly found, complete, shared by a demo user Sam). Then log in as that email.

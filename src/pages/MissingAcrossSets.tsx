@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { EnlargeableThumbnail, EnlargedPart } from "../components/EnlargedPart";
 import { ColorChips } from "../components/ColorChips";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
-import { useMissingAcrossChecks } from "../hooks/useMissingAcrossChecks";
+import { useMissingAcrossSets } from "../hooks/useMissingAcrossSets";
 import {
   partColors,
   partLabel,
@@ -12,10 +12,10 @@ import {
   type Part,
 } from "../lib/parts";
 
-/** Every Part still missing in your Checks: find a piece, see where it goes, tick it off there. */
-export default function MissingAcrossChecks() {
+/** Every Part still missing in your Sets: find a piece, see where it goes, tick it off there. */
+export default function MissingAcrossSets() {
   const { missing, error, clearError, isBusy, tickOff } =
-    useMissingAcrossChecks();
+    useMissingAcrossSets();
   const [query, setQuery] = useState("");
   const [colorId, setColorId] = useState<number | null>(null);
   const [enlarged, setEnlarged] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function MissingAcrossChecks() {
 
   return (
     <>
-      <Header title="Missing in all checks" back="/">
+      <Header title="Missing in all sets" back="/">
         <div className="flex flex-col gap-2 pb-3">
           <input
             type="search"
@@ -64,15 +64,14 @@ export default function MissingAcrossChecks() {
         {!missing && !error && <Spinner />}
         {missing?.length === 0 && (
           <p className="py-12 text-center text-neutral-500">
-            Nothing is missing in any of your checks. 🎉
+            Nothing is missing in any of your sets. 🎉
           </p>
         )}
         {all && all.parts.length > 0 && (
           <p className="text-sm text-neutral-500">
             {all.pieces} {all.pieces === 1 ? "piece" : "pieces"} in{" "}
             {all.parts.length} {all.parts.length === 1 ? "part" : "parts"} still
-            to find, across {all.checks} {all.checks === 1 ? "check" : "checks"}
-            .
+            to find, across {all.sets} {all.sets === 1 ? "set" : "sets"}.
           </p>
         )}
         {missing && missing.length > 0 && shown.length === 0 && (
@@ -107,8 +106,8 @@ function MissingAcrossItem({
   onEnlarge,
 }: {
   entry: MissingAcross;
-  isBusy: (checkId: string, part: Part) => boolean;
-  onTickOff: (checkId: string, part: Part) => void;
+  isBusy: (setId: string, part: Part) => boolean;
+  onTickOff: (setId: string, part: Part) => void;
   onEnlarge: (key: string) => void;
 }) {
   const { part } = entry;
@@ -132,10 +131,10 @@ function MissingAcrossItem({
         <span className="text-lg font-bold tabular-nums">×{entry.missing}</span>
       </div>
       <ul className="mt-2 flex flex-col divide-y divide-neutral-100 border-t border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
-        {entry.checks.map((c) => (
-          <li key={c.checkId} className="flex items-center gap-2 pt-1 pl-1">
+        {entry.sets.map((c) => (
+          <li key={c.setId} className="flex items-center gap-2 pt-1 pl-1">
             <Link
-              to={`/checks/${c.checkId}`}
+              to={`/sets/${c.setId}`}
               className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-sm"
             >
               <span className="truncate">{c.label}</span>
@@ -146,8 +145,8 @@ function MissingAcrossItem({
             {c.canTickOff && (
               <button
                 type="button"
-                onClick={() => onTickOff(c.checkId, part)}
-                disabled={isBusy(c.checkId, part)}
+                onClick={() => onTickOff(c.setId, part)}
+                disabled={isBusy(c.setId, part)}
                 className="min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold text-brick ring-1 ring-brick disabled:opacity-50"
                 aria-label={`Found one ${partLabel(part)} for ${c.label}`}
               >

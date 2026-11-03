@@ -1,11 +1,6 @@
-// Pure logic for Checks: lines -> parts, filtering, sorting, missing lists (one Check or all), exports.
-// Which lines count is decided in SQL (check_lines); nothing here re-implements it.
-import type {
-  CheckRole,
-  CheckSummary,
-  InventoryLine,
-  LineProgress,
-} from "./types";
+// Pure logic for Sets: lines -> parts, filtering, sorting, missing lists (one Set or all), exports.
+// Which lines count is decided in SQL (set_lines); nothing here re-implements it.
+import type { SetRole, SetSummary, InventoryLine, LineProgress } from "./types";
 
 /** One part (part number + color), summed over its inventory lines. */
 export interface Part {
@@ -207,55 +202,55 @@ export function missingParts(parts: Part[]): MissingPart[] {
     .map((part) => ({ part, missing: part.needed - part.found }));
 }
 
-/** A Check is complete when nothing is missing (GLOSSARY.md). */
-export const isComplete = (check: Pick<CheckSummary, "found" | "needed">) =>
-  check.found >= check.needed;
+/** A Set is complete when nothing is missing (GLOSSARY.md). */
+export const isComplete = (set: Pick<SetSummary, "found" | "needed">) =>
+  set.found >= set.needed;
 
 /** Owners and Helpers tick off parts; Viewers only follow along. */
-export const canTickOff = (role: CheckRole | null) =>
+export const canTickOff = (role: SetRole | null) =>
   role === "owner" || role === "helper";
 
-/** A Check a missing Part goes to, and how many it still needs there. */
-export interface MissingInCheck {
-  checkId: string;
-  /** The Check's title, with its start date when another Check has the same title. */
+/** A Set a missing Part goes to, and how many it still needs there. */
+export interface MissingInSet {
+  setId: string;
+  /** The Set's title, with its start date when another Set has the same title. */
   label: string;
   missing: number;
   canTickOff: boolean;
 }
 
-/** A Part missing in one or more Checks. */
+/** A Part missing in one or more Sets. */
 export interface MissingAcross {
-  /** The Part, with needed and found summed over the Checks listed. */
+  /** The Part, with needed and found summed over the Sets listed. */
   part: Part;
   missing: number;
-  checks: MissingInCheck[];
+  sets: MissingInSet[];
 }
 
 /**
- * Every Part still missing in any of `checks`, with where it goes. Lines are
- * grouped per Check first: two Checks of the same Set share line ids.
+ * Every Part still missing in any of `sets`, with where it goes. Lines are
+ * grouped per Set first: two Sets of the same Catalog set share line ids.
  */
-export function missingAcrossChecks(
-  checks: CheckSummary[],
+export function missingAcrossSets(
+  sets: SetSummary[],
   lines: InventoryLine[],
 ): MissingAcross[] {
-  const linesByCheck = new Map<string, InventoryLine[]>();
+  const linesBySet = new Map<string, InventoryLine[]>();
   for (const l of lines) {
-    const list = linesByCheck.get(l.check_id) ?? [];
+    const list = linesBySet.get(l.set_id) ?? [];
     list.push(l);
-    linesByCheck.set(l.check_id, list);
+    linesBySet.set(l.set_id, list);
   }
   const titleCount = new Map<string, number>();
-  for (const c of checks)
+  for (const c of sets)
     titleCount.set(c.title, (titleCount.get(c.title) ?? 0) + 1);
-  const label = (c: CheckSummary) =>
+  const label = (c: SetSummary) =>
     titleCount.get(c.title)! > 1
       ? `${c.title} (started ${startDate.format(new Date(c.created_at))})`
       : c.title;
   const result = new Map<string, MissingAcross>();
-  for (const c of checks) {
-    for (const part of groupParts(toLineMap(linesByCheck.get(c.id) ?? []))) {
+  for (const c of sets) {
+    for (const part of groupParts(toLineMap(linesBySet.get(c.id) ?? []))) {
       const missing = part.needed - part.found;
       if (missing <= 0) continue;
       let entry = result.get(part.key);
@@ -263,15 +258,15 @@ export function missingAcrossChecks(
         entry = {
           part: { ...part, needed: 0, found: 0 },
           missing: 0,
-          checks: [],
+          sets: [],
         };
         result.set(part.key, entry);
       }
       entry.part.needed += part.needed;
       entry.part.found += part.found;
       entry.missing += missing;
-      entry.checks.push({
-        checkId: c.id,
+      entry.sets.push({
+        setId: c.id,
         label: label(c),
         missing,
         canTickOff: canTickOff(c.my_role),
@@ -279,7 +274,7 @@ export function missingAcrossChecks(
     }
   }
   for (const entry of result.values())
-    entry.checks.sort((x, y) => y.missing - x.missing);
+    entry.sets.sort((x, y) => y.missing - x.missing);
   return sortParts(
     [...result.values()].map((entry) => entry.part),
     "color",
@@ -295,7 +290,7 @@ const startDate = new Intl.DateTimeFormat("en-GB", {
 export function searchMissingAcross(
   missing: MissingAcross[],
   { query, colorId }: Pick<PartFilter, "query" | "colorId">,
-): { parts: MissingAcross[]; pieces: number; checks: number } {
+): { parts: MissingAcross[]; pieces: number; sets: number } {
   const keys = new Set(
     filterParts(
       missing.map((m) => m.part),
@@ -306,20 +301,20 @@ export function searchMissingAcross(
   return {
     parts,
     pieces: parts.reduce((sum, m) => sum + m.missing, 0),
-    checks: new Set(parts.flatMap((m) => m.checks.map((c) => c.checkId))).size,
+    sets: new Set(parts.flatMap((m) => m.sets.map((c) => c.setId))).size,
   };
 }
 
-/** Applies server progress (an adjust_part result) to the lines of one Check, leaving other Checks alone. */
-export function applyCheckProgress(
+/** Applies server progress (an adjust_part result) to the lines of one Set, leaving other Sets alone. */
+export function applySetProgress(
   lines: InventoryLine[],
-  checkId: string,
+  setId: string,
   updates: LineProgress[],
 ): InventoryLine[] {
-  const own = toLineMap(lines.filter((l) => l.check_id === checkId));
+  const own = toLineMap(lines.filter((l) => l.set_id === setId));
   const next = applyProgress(own, updates);
   if (next === own) return lines;
-  return lines.map((l) => (l.check_id === checkId ? next.get(l.line_id)! : l));
+  return lines.map((l) => (l.set_id === setId ? next.get(l.line_id)! : l));
 }
 
 /** Rebrickable's CSV import format (Part, Color, Quantity with Rebrickable ids). */

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { SetSearch } from "../components/SetSearch";
+import { CatalogSearch } from "../components/CatalogSearch";
 import {
   Button,
   ErrorBanner,
@@ -8,41 +8,41 @@ import {
   PartImage,
   Spinner,
 } from "../components/ui";
-import { useSetSearch } from "../hooks/useSetSearch";
-import { createCheck, fetchSet } from "../lib/api";
-import type { LegoSet } from "../lib/types";
+import { useCatalogSearch } from "../hooks/useCatalogSearch";
+import { createSet, fetchCatalogSet } from "../lib/api";
+import type { CatalogSet } from "../lib/types";
 
-export default function NewCheck() {
+export default function AddSet() {
   const navigate = useNavigate();
-  const search = useSetSearch();
-  const [set, setSet] = useState<LegoSet | null>(null);
+  const search = useCatalogSearch();
+  const [catalogSet, setCatalogSet] = useState<CatalogSet | null>(null);
   const [title, setTitle] = useState("");
   const [includeSpares, setIncludeSpares] = useState(false);
   const [includeMinifigs, setIncludeMinifigs] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function choose(chosen: LegoSet) {
-    setSet(chosen);
+  function choose(chosen: CatalogSet) {
+    setCatalogSet(chosen);
     setTitle(chosen.name);
     setError(null);
   }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!set) return;
+    if (!catalogSet) return;
     setBusy(true);
     setError(null);
     try {
-      // The first check of a set imports its inventory from Rebrickable (a few seconds).
-      await fetchSet(set.set_num);
-      const id = await createCheck({
-        set_num: set.set_num,
-        title: title.trim() || set.name,
+      // Adding the first Set of a Catalog set imports its inventory from Rebrickable (a few seconds).
+      await fetchCatalogSet(catalogSet.set_num);
+      const id = await createSet({
+        set_num: catalogSet.set_num,
+        title: title.trim() || catalogSet.name,
         include_spares: includeSpares,
         include_minifigs: includeMinifigs,
       });
-      navigate(`/checks/${id}`, { replace: true });
+      navigate(`/sets/${id}`, { replace: true });
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -51,11 +51,11 @@ export default function NewCheck() {
 
   return (
     <>
-      <Header title="New check" back="/" />
+      <Header title="Add a set" back="/" />
       {error && <ErrorBanner message={error} onClose={() => setError(null)} />}
       <main className="mx-auto max-w-2xl p-4">
-        {!set ? (
-          <SetSearch
+        {!catalogSet ? (
+          <CatalogSearch
             query={search.query}
             onQueryChange={search.setQuery}
             results={search.results}
@@ -66,8 +66,8 @@ export default function NewCheck() {
         ) : busy ? (
           <Spinner
             label={
-              set.parts_fetched_at
-                ? "Creating check…"
+              catalogSet.parts_fetched_at
+                ? "Adding set…"
                 : "Loading the parts list from Rebrickable…"
             }
           />
@@ -75,19 +75,20 @@ export default function NewCheck() {
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
               <PartImage
-                src={set.img_url}
+                src={catalogSet.img_url}
                 alt=""
                 className="size-20 shrink-0 rounded-lg bg-white"
               />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">{set.name}</p>
+                <p className="font-semibold">{catalogSet.name}</p>
                 <p className="text-sm text-neutral-500">
-                  {set.set_num} · {set.year} · {set.num_parts} pieces
+                  {catalogSet.set_num} · {catalogSet.year} ·{" "}
+                  {catalogSet.num_parts} pieces
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setSet(null)}
+                onClick={() => setCatalogSet(null)}
                 className="min-h-11 px-2 text-sm text-brick"
               >
                 Change

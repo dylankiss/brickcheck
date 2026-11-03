@@ -54,17 +54,17 @@ select is(
 );
 
 -- adjust_part returns the part's lines; tests compare the part total.
-create function pg_temp.tap(p_check_id uuid, p_part_num text, p_color_id int, p_delta int)
+create function pg_temp.tap(p_set_id uuid, p_part_num text, p_color_id int, p_delta int)
 returns int language sql as $$
-  select sum(found_qty)::int from public.adjust_part(p_check_id, p_part_num, p_color_id, p_delta)
+  select sum(found_qty)::int from public.adjust_part(p_set_id, p_part_num, p_color_id, p_delta)
 $$;
 
-create temporary table ctx (check_id uuid, spares_check_id uuid);
+create temporary table ctx (set_id uuid, spares_set_id uuid);
 insert into ctx values (null, null);
 grant all on ctx to authenticated;
 
 ------------------------------------------------------------------------------
--- Alice creates checks
+-- Alice creates sets
 ------------------------------------------------------------------------------
 
 set local role authenticated;
@@ -78,40 +78,40 @@ select throws_ok(
 );
 
 with created as (
-  insert into public.checks (set_num, title) values ('t1-1', 'My first check') returning id
+  insert into public.sets (set_num, title) values ('t1-1', 'My first set') returning id
 )
-update ctx set check_id = (select id from created);
+update ctx set set_id = (select id from created);
 
 with created as (
-  insert into public.checks (set_num, title, include_spares) values ('t1-1', 'With spares', true) returning id
+  insert into public.sets (set_num, title, include_spares) values ('t1-1', 'With spares', true) returning id
 )
-update ctx set spares_check_id = (select id from created);
+update ctx set spares_set_id = (select id from created);
 
-select isnt((select check_id from ctx), null, 'insert ... returning works for the owner');
+select isnt((select set_id from ctx), null, 'insert ... returning works for the owner');
 
 select is(
-  (select role::text from public.check_members where check_id = (select check_id from ctx)),
+  (select role::text from public.set_members where set_id = (select set_id from ctx)),
   'owner',
   'owner membership is created by trigger'
 );
 
 select throws_ok(
-  $$ insert into public.checks (set_num, title) values ('t2-1', 'Too early') $$,
+  $$ insert into public.sets (set_num, title) values ('t2-1', 'Too early') $$,
   '23503',
   null,
-  'cannot create a check for a set without cached inventory'
+  'cannot add a set of a catalog set without cached inventory'
 );
 
 select throws_ok(
-  $$ insert into public.checks (owner_id, set_num, title)
+  $$ insert into public.sets (owner_id, set_num, title)
      values ('00000000-0000-0000-0000-00000000000b', 't1-1', 'Spoofed') $$,
   '42501',
   null,
-  'cannot create a check owned by someone else'
+  'cannot create a set owned by someone else'
 );
 
 select throws_ok(
-  $$ update public.checks set include_spares = true $$,
+  $$ update public.sets set include_spares = true $$,
   '42501',
   null,
   'include flags cannot change after creation'
@@ -125,11 +125,11 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.check_progress (check_id, line_id, found_qty)
-     select check_id, (select id from public.inventory_lines limit 1), 3 from ctx $$,
+  $$ insert into public.set_progress (set_id, line_id, found_qty)
+     select set_id, (select id from public.inventory_lines limit 1), 3 from ctx $$,
   '42501',
   null,
-  'users cannot write check_progress directly'
+  'users cannot write set_progress directly'
 );
 
 ------------------------------------------------------------------------------
@@ -137,46 +137,46 @@ select throws_ok(
 ------------------------------------------------------------------------------
 
 select is(
-  (select count(*)::int from public.check_lines where check_id = (select check_id from ctx)),
+  (select count(*)::int from public.set_lines where set_id = (select set_id from ctx)),
   3,
-  'check_lines excludes spares when include_spares is false'
+  'set_lines excludes spares when include_spares is false'
 );
 
-select is((select pg_temp.tap(check_id, '3001', 4, 1) from ctx), 1, 'first tap counts 1');
-select is((select pg_temp.tap(check_id, '3001', 4, 2) from ctx), 3, 'taps accumulate');
+select is((select pg_temp.tap(set_id, '3001', 4, 1) from ctx), 1, 'first tap counts 1');
+select is((select pg_temp.tap(set_id, '3001', 4, 2) from ctx), 3, 'taps accumulate');
 select is(
-  (select found_qty from public.check_lines where check_id = (select check_id from ctx) and part_num = '3001' and fig_num is null),
+  (select found_qty from public.set_lines where set_id = (select set_id from ctx) and part_num = '3001' and fig_num is null),
   3,
   'the set line fills first'
 );
-select is((select pg_temp.tap(check_id, '3001', 4, 1) from ctx), 4, 'then the minifig line');
-select is((select pg_temp.tap(check_id, '3001', 4, 50) from ctx), 4, 'total is clamped to what is needed');
-select is((select pg_temp.tap(check_id, '3001', 4, -1) from ctx), 3, 'decrement');
+select is((select pg_temp.tap(set_id, '3001', 4, 1) from ctx), 4, 'then the minifig line');
+select is((select pg_temp.tap(set_id, '3001', 4, 50) from ctx), 4, 'total is clamped to what is needed');
+select is((select pg_temp.tap(set_id, '3001', 4, -1) from ctx), 3, 'decrement');
 select is(
-  (select found_qty from public.check_lines where check_id = (select check_id from ctx) and part_num = '3001' and fig_num is not null),
+  (select found_qty from public.set_lines where set_id = (select set_id from ctx) and part_num = '3001' and fig_num is not null),
   0,
   'decrements empty the minifig line before the set line'
 );
-select is((select pg_temp.tap(check_id, '3001', 4, -50) from ctx), 0, 'total is clamped to zero');
-select is((select pg_temp.tap(spares_check_id, '3001', 4, 5) from ctx), 5, 'spares count when included');
+select is((select pg_temp.tap(set_id, '3001', 4, -50) from ctx), 0, 'total is clamped to zero');
+select is((select pg_temp.tap(spares_set_id, '3001', 4, 5) from ctx), 5, 'spares count when included');
 
 select throws_ok(
-  $$ select pg_temp.tap(check_id, '3002', 1, 1) from ctx $$,
+  $$ select pg_temp.tap(set_id, '3002', 1, 1) from ctx $$,
   '22023',
   null,
   'a part from another set is rejected'
 );
 
 select throws_ok(
-  $$ select pg_temp.tap(check_id, '3001', 4, 0) from ctx $$,
+  $$ select pg_temp.tap(set_id, '3001', 4, 0) from ctx $$,
   '22023',
   null,
   'zero delta is rejected'
 );
 
-select pg_temp.tap(check_id, '3001', 4, 2) from ctx;
+select pg_temp.tap(set_id, '3001', 4, 2) from ctx;
 select results_eq(
-  $$ select needed, found from public.check_summaries where id = (select check_id from ctx) $$,
+  $$ select needed, found from public.set_summaries where id = (select set_id from ctx) $$,
   $$ values (5, 2) $$,
   'summary counts needed (no spares) and found'
 );
@@ -187,15 +187,15 @@ select results_eq(
 
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-00000000000b", "role": "authenticated"}', true);
 
-select is((select count(*)::int from public.checks), 0, 'stranger sees no checks');
-select is((select count(*)::int from public.check_lines), 0, 'stranger sees no lines');
+select is((select count(*)::int from public.sets), 0, 'stranger sees no sets');
+select is((select count(*)::int from public.set_lines), 0, 'stranger sees no lines');
 select is(
   (select count(*)::int from public.profiles where id = '00000000-0000-0000-0000-00000000000a'),
   0,
   'stranger cannot read the owner profile'
 );
 select throws_ok(
-  $$ select pg_temp.tap(check_id, '3001', 4, 1) from ctx $$,
+  $$ select pg_temp.tap(set_id, '3001', 4, 1) from ctx $$,
   '42501',
   null,
   'stranger cannot adjust counts'
@@ -206,27 +206,27 @@ select throws_ok(
 ------------------------------------------------------------------------------
 
 reset role;
-insert into public.check_members (check_id, user_id, role)
-select check_id, '00000000-0000-0000-0000-00000000000b'::uuid, 'viewer'::public.check_role from ctx
+insert into public.set_members (set_id, user_id, role)
+select set_id, '00000000-0000-0000-0000-00000000000b'::uuid, 'viewer'::public.set_role from ctx
 union all
-select check_id, '00000000-0000-0000-0000-00000000000c'::uuid, 'helper'::public.check_role from ctx;
+select set_id, '00000000-0000-0000-0000-00000000000c'::uuid, 'helper'::public.set_role from ctx;
 set local role authenticated;
 
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-00000000000b", "role": "authenticated"}', true);
 
-select is((select count(*)::int from public.checks), 1, 'viewer sees the shared check only');
+select is((select count(*)::int from public.sets), 1, 'viewer sees the shared set only');
 select throws_ok(
-  $$ select pg_temp.tap(check_id, '3001', 4, 1) from ctx $$,
+  $$ select pg_temp.tap(set_id, '3001', 4, 1) from ctx $$,
   '42501',
   null,
   'viewer cannot adjust counts'
 );
-update public.checks set title = 'Hijacked';
+update public.sets set title = 'Hijacked';
 
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-00000000000c", "role": "authenticated"}', true);
 
-select is((select pg_temp.tap(check_id, '3626', 14, 1) from ctx), 1, 'helper can adjust counts');
-select is((select title from public.checks), 'My first check', 'viewer could not rename the check');
+select is((select pg_temp.tap(set_id, '3626', 14, 1) from ctx), 1, 'helper can adjust counts');
+select is((select title from public.sets), 'My first set', 'viewer could not rename the set');
 select is(
   (select display_name from public.profiles where id = '00000000-0000-0000-0000-00000000000a'),
   'Alice',
