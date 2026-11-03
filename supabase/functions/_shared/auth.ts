@@ -4,9 +4,9 @@ import { HttpError } from "./http.ts";
 /** Service-role client: bypasses RLS, only for writes the architecture assigns to functions. */
 export function adminClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");
-  // Prefer a new-style secret key (set as a function secret); fall back to the legacy service role JWT.
+  // Prefer a new-style secret key (function secret; the SUPABASE_ prefix is reserved); fall back to the legacy service role JWT.
   const key =
-    Deno.env.get("SUPABASE_SECRET_KEY") ??
+    Deno.env.get("BRICKCHECK_SECRET_KEY") ??
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) throw new Error("Supabase environment is not configured");
   return createClient(url, key, {

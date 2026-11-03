@@ -30,7 +30,7 @@ export const PartTile = memo(
           <PartImage
             src={tile.img_url}
             alt=""
-            className="aspect-square w-full"
+            className="aspect-square w-full rounded-xl bg-white p-1"
           />
           <div className="mt-1 flex items-center gap-1.5">
             <ColorSwatch rgb={tile.color_rgb} trans={tile.is_trans} />

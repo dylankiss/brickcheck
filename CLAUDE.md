@@ -15,6 +15,8 @@ Read `ARCHITECTURE.md` before changing anything; keep it up to date.
 - `npm run import-catalog`: seed `lego_sets` from Rebrickable's CSV (needs `SUPABASE_URL`, `SUPABASE_SECRET_KEY`)
 - `npm run smoke`: API smoke test against the local stack
 - `npm run e2e`: browser test of the check flow (local stack + `npm run dev`, uses Google Chrome)
+- `npm run test:pwa`: PWA test (manifest, service worker, offline) against `npx vite preview --port 4173`
+- Deploying: see `DEPLOY.md`
 
 ## Rules
 

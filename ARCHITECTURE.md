@@ -12,7 +12,7 @@ deliberately departs from it, update this document in the same commit.
 | Layer     | Choice                                                        |
 | --------- | ------------------------------------------------------------- |
 | Frontend  | React + Vite + TypeScript, Tailwind CSS v4, react-router      |
-| PWA       | `vite-plugin-pwa` (phase 3)                                   |
+| PWA       | `vite-plugin-pwa` (installable, offline app shell)            |
 | Hosting   | Cloudflare Pages (static, SPA fallback is built in)           |
 | Backend   | Supabase: Postgres, Auth, Realtime, Edge Functions (Deno)     |
 | LEGO data | Rebrickable: CSV dump for the catalog, API v3 for inventories |
@@ -143,8 +143,9 @@ definer` with `search_path = ''` so that policies don't recurse into
   authenticated, non-anonymous user. With asymmetric JWTs the check is local, so
   a signed-out token stays valid until it expires. `fetch-set` limits each user
   to 30 Rebrickable imports per hour (`claim_import`, `set_import_log`).
-- Functions prefer a new-style secret key (`SUPABASE_SECRET_KEY` function
-  secret) and fall back to the legacy `SUPABASE_SERVICE_ROLE_KEY`.
+- Functions prefer a new-style secret key (`BRICKCHECK_SECRET_KEY` function
+  secret; the `SUPABASE_` prefix is reserved) and fall back to the legacy
+  `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Routes
 
@@ -219,8 +220,19 @@ src/
   server's `max_rows`.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- The PWA service worker (phase 3) must not cache Supabase API or auth callback
-  URLs.
+- **PWA** (`vite.config.ts`):
+  - The service worker precaches the app shell, and every navigation falls
+    back to `index.html`, so deep links and invite links open offline.
+  - Only `cdn.rebrickable.com` images are cached at runtime (cache-first,
+    3,000 entries, 60 days). Supabase (API, auth, realtime) is never cached.
+    Login uses the implicit flow (tokens in the URL hash), which the fallback
+    leaves alone.
+  - Updates use `registerType: 'prompt'`: `UpdatePrompt` asks before
+    reloading, because a reload would drop taps in flight.
+  - Routes other than login and My checks are lazy-loaded. React and Supabase
+    are separate chunks, so an app update only re-downloads app code.
+- Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
+  deploy point at production.
 
 ## Edge Functions
 
@@ -247,6 +259,8 @@ back-off).
   does, and accepting it clears the record. Leaving on your own isn't recorded.
 
 ## Deployment notes
+
+Step-by-step instructions are in `DEPLOY.md`.
 
 - **Hosted Realtime**: turn off "Allow public access" (private channels only).
 - **Hosted auth**: set `site_url` to the Pages domain. Add the Pages domain and

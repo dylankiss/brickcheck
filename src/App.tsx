@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -5,18 +6,21 @@ import {
   RouterProvider,
   useLocation,
 } from "react-router";
-import { Spinner } from "./components/ui";
 import { AuthProvider } from "./components/AuthProvider";
 import { NamePrompt } from "./components/NamePrompt";
+import { Spinner } from "./components/ui";
+import { UpdatePrompt } from "./components/UpdatePrompt";
 import { useAuth } from "./hooks/useAuth";
-import Check from "./pages/Check";
-import CheckLayout from "./pages/CheckLayout";
 import Checks from "./pages/Checks";
-import Join from "./pages/Join";
 import Login from "./pages/Login";
-import Missing from "./pages/Missing";
-import NewCheck from "./pages/NewCheck";
-import Share from "./pages/Share";
+
+// The landing pages load with the app; the rest on first use.
+const Check = lazy(() => import("./pages/Check"));
+const CheckLayout = lazy(() => import("./pages/CheckLayout"));
+const Join = lazy(() => import("./pages/Join"));
+const Missing = lazy(() => import("./pages/Missing"));
+const NewCheck = lazy(() => import("./pages/NewCheck"));
+const Share = lazy(() => import("./pages/Share"));
 
 function RequireAuth() {
   const { session, profile, loading } = useAuth();
@@ -32,7 +36,11 @@ function RequireAuth() {
     );
   // Ask for a name before anything else (also before joining via an invite).
   if (profile && !profile.display_name) return <NamePrompt />;
-  return <Outlet />;
+  return (
+    <Suspense fallback={<Spinner />}>
+      <Outlet />
+    </Suspense>
+  );
 }
 
 const router = createBrowserRouter([
@@ -61,6 +69,7 @@ export default function App() {
   return (
     <AuthProvider>
       <RouterProvider router={router} />
+      <UpdatePrompt />
     </AuthProvider>
   );
 }
