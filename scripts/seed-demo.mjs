@@ -1,7 +1,8 @@
 // Seeds demo data into the LOCAL stack so the UI can be explored without a
 // Rebrickable API key. Usage: SUPABASE_SECRET_KEY=... npm run seed-demo -- you@example.com
 //
-// Creates a fictional Set with a cached inventory, then acts as real users
+// Creates a fictional Set with a cached inventory (every image URL checked to
+// exist on Rebrickable's CDN), then acts as real users
 // (signed in with one-time codes) through the same RPCs and RLS as the app:
 //   - "Little House": partly found, with Sam as a Helper and an open Invite
 //   - "Little House (second copy)": complete
@@ -63,8 +64,8 @@ const line = (
   color_name,
   color_rgb,
   quantity,
-  img_url: extra.fig_num ? null : img(color_id, part_num),
-  bricklink_part_id: extra.fig_num ? null : part_num,
+  img_url: img(color_id, part_num),
+  bricklink_part_id: part_num,
   ...extra,
 });
 const FIG = "fig-demo-01";
@@ -91,7 +92,7 @@ const INVENTORY = [
   line("3020", "Plate 2 x 4", 2, "Green", "237841", 4, {
     bricklink_color_id: 6,
   }),
-  line("3023", "Plate 1 x 2", 72, "Dark Bluish Gray", "6C6E68", 6, {
+  line("3710", "Plate 1 x 4", 72, "Dark Bluish Gray", "6C6E68", 6, {
     bricklink_color_id: 85,
   }),
   line("3068b", "Tile 2 x 2", 19, "Tan", "E4CD9E", 4, {
@@ -116,9 +117,18 @@ const INVENTORY = [
     is_trans: true,
     is_spare: true,
   }),
-  line("3626c", "Minifig Head", 14, "Yellow", "F2CD37", 1, { fig_num: FIG }),
-  line("973c00", "Torso Plain", 1, "Blue", "0055BF", 1, { fig_num: FIG }),
-  line("970c00", "Legs", 1, "Blue", "0055BF", 1, { fig_num: FIG }),
+  line("3626c", "Minifig Head", 14, "Yellow", "F2CD37", 1, {
+    fig_num: FIG,
+    bricklink_color_id: 3,
+  }),
+  line("973", "Torso Plain", 1, "Blue", "0055BF", 1, {
+    fig_num: FIG,
+    bricklink_color_id: 7,
+  }),
+  line("970c00", "Legs", 1, "Blue", "0055BF", 1, {
+    fig_num: FIG,
+    bricklink_color_id: 7,
+  }),
 ];
 
 /** Signs in as `email` (created if needed) with a one-time code; returns a client and the user id. */
@@ -198,7 +208,8 @@ async function join(owner, member, checkId, role) {
   must(await member.client.rpc("accept_invite", { p_token: invite.token }));
 }
 
-// The Set and its inventory (import_set does nothing if it is already cached).
+// The Set and its inventory. import_set does nothing if the Set is already
+// cached, so changes here need `npx supabase db reset` first.
 const pieces = INVENTORY.filter((l) => !l.is_spare).reduce(
   (n, l) => n + l.quantity,
   0,
@@ -241,7 +252,7 @@ const progress = {
   "3004|71": 6,
   "3039|4": 3,
   "3020|2": 4,
-  "3023|72": 2,
+  "3710|72": 2,
   "4073|27": 5,
   "3626c|14": 1,
 };
