@@ -14,14 +14,14 @@ insert into auth.users (id, email, raw_user_meta_data, aud, role) values
   ('00000000-0000-0000-0000-00000000000c', 'carol@example.com', '{}', 'authenticated', 'authenticated');
 
 insert into public.lego_sets (set_num, name, num_parts) values
-  ('2-1', 'Not fetched yet', 1);
+  ('t2-1', 'Not fetched yet', 1);
 
 -- Inventory for 1-1: red 2x4 brick appears as a set line (3), a minifig line (1)
 -- and a spare (1); a yellow head only in a minifig; 9-1 is another set.
 set local role service_role;
 select lives_ok(
   $$ select public.import_set(
-       '{"set_num": "1-1", "name": "Test set", "year": 2024, "num_parts": 5}',
+       '{"set_num": "t1-1", "name": "Test set", "year": 2024, "num_parts": 5}',
        '[
          {"part_num": "3001", "part_name": "Brick 2 x 4", "color_id": 4, "color_name": "Red", "quantity": 3},
          {"part_num": "3001", "part_name": "Brick 2 x 4", "color_id": 4, "color_name": "Red", "quantity": 1, "fig_num": "fig-000001"},
@@ -33,19 +33,19 @@ select lives_ok(
 );
 select lives_ok(
   $$ select public.import_set(
-       '{"set_num": "1-1", "name": "Changed name"}',
+       '{"set_num": "t1-1", "name": "Changed name"}',
        '[{"part_num": "9999", "part_name": "Intruder", "color_id": 0, "color_name": "Black", "quantity": 7}]'
      ) $$,
   're-importing an imported set is a no-op'
 );
 select public.import_set(
-  '{"set_num": "9-1", "name": "Other set"}',
+  '{"set_num": "t9-1", "name": "Other set"}',
   '[{"part_num": "3002", "part_name": "Brick 2 x 3", "color_id": 1, "color_name": "White", "quantity": 1}]'
 );
 reset role;
 
-select is((select count(*)::int from public.set_parts where set_num = '1-1'), 4, 'inventory is immutable after import');
-select is((select name from public.lego_sets where set_num = '1-1'), 'Test set', 'set metadata is untouched by re-import');
+select is((select count(*)::int from public.set_parts where set_num = 't1-1'), 4, 'inventory is immutable after import');
+select is((select name from public.lego_sets where set_num = 't1-1'), 'Test set', 'set metadata is untouched by re-import');
 
 select is(
   (select display_name from public.profiles where id = '00000000-0000-0000-0000-00000000000a'),
@@ -71,19 +71,19 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-00000000000a", "role": "authenticated"}', true);
 
 select throws_ok(
-  $$ select public.import_set('{"set_num": "x-1"}', '[{}]') $$,
+  $$ select public.import_set('{"set_num": "tx-1"}', '[{}]') $$,
   '42501',
   null,
   'users cannot call import_set'
 );
 
 with created as (
-  insert into public.checks (set_num, title) values ('1-1', 'My first check') returning id
+  insert into public.checks (set_num, title) values ('t1-1', 'My first check') returning id
 )
 update ctx set check_id = (select id from created);
 
 with created as (
-  insert into public.checks (set_num, title, include_spares) values ('1-1', 'With spares', true) returning id
+  insert into public.checks (set_num, title, include_spares) values ('t1-1', 'With spares', true) returning id
 )
 update ctx set spares_check_id = (select id from created);
 
@@ -96,7 +96,7 @@ select is(
 );
 
 select throws_ok(
-  $$ insert into public.checks (set_num, title) values ('2-1', 'Too early') $$,
+  $$ insert into public.checks (set_num, title) values ('t2-1', 'Too early') $$,
   '23503',
   null,
   'cannot create a check for a set without cached inventory'
@@ -104,7 +104,7 @@ select throws_ok(
 
 select throws_ok(
   $$ insert into public.checks (owner_id, set_num, title)
-     values ('00000000-0000-0000-0000-00000000000b', '1-1', 'Spoofed') $$,
+     values ('00000000-0000-0000-0000-00000000000b', 't1-1', 'Spoofed') $$,
   '42501',
   null,
   'cannot create a check owned by someone else'
@@ -118,7 +118,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.lego_sets (set_num, name) values ('x-1', 'Nope') $$,
+  $$ insert into public.lego_sets (set_num, name) values ('tx-1', 'Nope') $$,
   '42501',
   null,
   'users cannot write the set cache'

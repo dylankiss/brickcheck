@@ -16,7 +16,7 @@ insert into auth.users (id, email, aud, role) values
   ('00000000-0000-0000-0000-00000000000d', 'dave@example.com', 'authenticated', 'authenticated');
 
 select public.import_set(
-  '{"set_num": "1-1", "name": "Test set"}',
+  '{"set_num": "t1-1", "name": "Test set"}',
   '[
     {"part_num": "3001", "part_name": "Brick", "color_id": 4, "color_name": "Red", "quantity": 2, "element_id": "300121"},
     {"part_num": "3001", "part_name": "Brick", "color_id": 4, "color_name": "Red", "quantity": 1, "element_id": "4211"},
@@ -26,13 +26,13 @@ select public.import_set(
 );
 
 select is(
-  (select quantity from public.set_parts where set_num = '1-1' and not is_spare and fig_num is null),
+  (select quantity from public.set_parts where set_num = 't1-1' and not is_spare and fig_num is null),
   3,
   'import_set merges duplicate part + color rows instead of dropping them'
 );
 
 select throws_ok(
-  $$ select public.import_set('{"set_num": "x-1"}', '[]') $$,
+  $$ select public.import_set('{"set_num": "tx-1"}', '[]') $$,
   '22023',
   null,
   'import_set rejects an empty inventory'
@@ -50,9 +50,9 @@ $$;
 
 set local role authenticated;
 select pg_temp.login('a');
-with c as (insert into public.checks (set_num, title, include_spares) values ('1-1', 'Shared', true) returning id)
+with c as (insert into public.checks (set_num, title, include_spares) values ('t1-1', 'Shared', true) returning id)
 update ctx set check_id = (select id from c);
-with c as (insert into public.checks (set_num, title, include_minifigs) values ('1-1', 'No figs', false) returning id)
+with c as (insert into public.checks (set_num, title, include_minifigs) values ('t1-1', 'No figs', false) returning id)
 update ctx set no_figs_check_id = (select id from c);
 
 reset role;
@@ -276,24 +276,24 @@ select is(
   'objects created by later migrations are not granted to anon'
 );
 select is(
-  public.claim_import('00000000-0000-0000-0000-00000000000a', 'z-1', 1),
+  public.claim_import('00000000-0000-0000-0000-00000000000a', 'tz-1', 1),
   'ok',
   'first import claim succeeds'
 );
 select is(
-  public.claim_import('00000000-0000-0000-0000-00000000000b', 'z-1', 5),
+  public.claim_import('00000000-0000-0000-0000-00000000000b', 'tz-1', 5),
   'in_progress',
   'a concurrent import of the same set is refused'
 );
 select is(
-  public.claim_import('00000000-0000-0000-0000-00000000000a', 'z-2', 1),
+  public.claim_import('00000000-0000-0000-0000-00000000000a', 'tz-2', 1),
   'rate_limited',
   'the per-user hourly limit applies'
 );
 set local role authenticated;
 select pg_temp.login('a');
 select throws_ok(
-  $$ select public.claim_import('00000000-0000-0000-0000-00000000000a', 'z-3', 100) $$,
+  $$ select public.claim_import('00000000-0000-0000-0000-00000000000a', 'tz-3', 100) $$,
   '42501',
   null,
   'users cannot call claim_import'
