@@ -2,6 +2,7 @@
 // Usage: SUPABASE_URL=... SUPABASE_SECRET_KEY=... node scripts/import-catalog.mjs [sets.csv.gz]
 // Only catalog columns are upserted; parts_fetched_at and inventories are never touched.
 import { readFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { gunzipSync } from "node:zlib";
 import { createClient } from "@supabase/supabase-js";
 
@@ -48,10 +49,11 @@ export function parseCsv(text) {
 }
 
 async function loadCsv(path) {
-  const gz = path
-    ? await readFile(path)
-    : Buffer.from(await (await fetch(CSV_URL)).arrayBuffer());
-  return gunzipSync(gz).toString("utf8");
+  if (path) return gunzipSync(await readFile(path)).toString("utf8");
+  const res = await fetch(CSV_URL);
+  if (!res.ok)
+    throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  return gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8");
 }
 
 async function main() {
@@ -96,7 +98,7 @@ async function main() {
   process.stdout.write("\n");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     console.error(error);
     process.exit(1);

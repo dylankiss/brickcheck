@@ -4,14 +4,21 @@ import { HttpError } from "./http.ts";
 /** Service-role client: bypasses RLS, only for writes the architecture assigns to functions. */
 export function adminClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // Prefer a new-style secret key (set as a function secret); fall back to the legacy service role JWT.
+  const key =
+    Deno.env.get("SUPABASE_SECRET_KEY") ??
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) throw new Error("Supabase environment is not configured");
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
-/** Returns the calling user's id, or throws 401 unless the caller is a logged-in user. */
+/**
+ * Returns the calling user's id, or throws 401 unless the caller is a logged-in,
+ * non-anonymous user. With asymmetric JWTs getClaims verifies locally, so a
+ * signed-out token stays valid until it expires (at most jwt_expiry).
+ */
 export async function requireUser(
   req: Request,
   admin: SupabaseClient,
@@ -21,7 +28,13 @@ export async function requireUser(
 
   const { data, error } = await admin.auth.getClaims(token);
   const claims = data?.claims;
-  if (error || !claims || claims.role !== "authenticated" || !claims.sub) {
+  if (
+    error ||
+    !claims ||
+    claims.role !== "authenticated" ||
+    !claims.sub ||
+    claims.is_anonymous
+  ) {
     throw new HttpError(401, "Not logged in");
   }
   return claims.sub;

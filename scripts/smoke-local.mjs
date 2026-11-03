@@ -164,3 +164,11 @@ ok(
   s2.found >= 0 && s2.found <= 5,
   `total stays within bounds: ${JSON.stringify(s2)}`,
 );
+
+r = await a.functions.invoke("fetch-set", {
+  body: { set_num: "not-in-catalog-1" },
+});
+ok(
+  r.error?.context?.status === 404,
+  `set outside the catalog -> ${r.error?.context?.status} (no Rebrickable call)`,
+);

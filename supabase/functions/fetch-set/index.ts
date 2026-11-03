@@ -68,40 +68,42 @@ serve(async (req) => {
   if (!SET_NUM_PATTERN.test(setNum))
     throw new HttpError(400, "Invalid set number");
 
+  // Only sets from the catalog can be imported, so typos never reach Rebrickable
+  // and the catalog's set_num is the canonical cache key.
   const { data: cached, error: cachedError } = await admin
     .from("lego_sets")
     .select("*")
     .eq("set_num", setNum)
     .maybeSingle();
   if (cachedError) throw cachedError;
-  if (cached?.parts_fetched_at) return json(cached);
+  if (!cached) throw new HttpError(404, "Unknown set");
+  if (cached.parts_fetched_at) return json(cached);
 
-  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count, error: countError } = await admin
-    .from("set_import_log")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", since);
-  if (countError) throw countError;
-  if ((count ?? 0) >= IMPORTS_PER_HOUR) {
+  const { data: claim, error: claimError } = await admin.rpc("claim_import", {
+    p_user_id: userId,
+    p_set_num: cached.set_num,
+    p_per_hour: IMPORTS_PER_HOUR,
+  });
+  if (claimError) throw claimError;
+  if (claim === "rate_limited")
     throw new HttpError(
       429,
       "Too many new sets imported, try again in an hour",
     );
-  }
-  const { error: logError } = await admin
-    .from("set_import_log")
-    .insert({ user_id: userId, set_num: setNum });
-  if (logError) throw logError;
+  if (claim === "in_progress")
+    throw new HttpError(
+      409,
+      "This set is being imported right now, try again in a minute",
+    );
 
   // Read everything first, then write once (import_set is atomic).
   const rb = Rebrickable.fromEnv();
-  const set = await rb.getSet(setNum);
+  const set = await rb.getSet(cached.set_num);
   const lines = new Map<string, ImportLine>();
-  addLines(lines, await rb.getSetParts(setNum), null, 1);
+  addLines(lines, await rb.getSetParts(cached.set_num), null, 1);
 
   const figCopies = new Map<string, number>();
-  for (const fig of await rb.getSetMinifigs(setNum)) {
+  for (const fig of await rb.getSetMinifigs(cached.set_num)) {
     figCopies.set(
       fig.set_num,
       (figCopies.get(fig.set_num) ?? 0) + fig.quantity,
@@ -111,12 +113,13 @@ serve(async (req) => {
     addLines(lines, await rb.getMinifigParts(figNum), figNum, copies);
   }
 
+  // Not cached: retrying an empty set costs quota, but such sets are rare and the claim limits retries.
   if (lines.size === 0)
     throw new HttpError(422, "Rebrickable has no inventory for this set");
 
   const { error: importError } = await admin.rpc("import_set", {
     p_set: {
-      set_num: set.set_num,
+      set_num: cached.set_num,
       name: set.name,
       year: set.year,
       theme_id: set.theme_id,
@@ -130,7 +133,7 @@ serve(async (req) => {
   const { data: imported, error: importedError } = await admin
     .from("lego_sets")
     .select("*")
-    .eq("set_num", set.set_num)
+    .eq("set_num", cached.set_num)
     .single();
   if (importedError) throw importedError;
   return json(imported);

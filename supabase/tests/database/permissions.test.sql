@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(31);
+select plan(36);
 
 ------------------------------------------------------------------------------
 -- Fixtures: Alice owns a check on 1-1 (with include_minifigs = false),
@@ -265,6 +265,40 @@ select is(
   0,
   'anon cannot execute any public function'
 );
+select is(
+  (select count(*)::int from pg_default_acl d
+   cross join lateral aclexplode(d.defaclacl) acl
+   join pg_namespace n on n.oid = d.defaclnamespace
+   where n.nspname = 'public' and acl.grantee = 'anon'::regrole
+     -- Migrations run as postgres; supabase_admin's defaults only cover platform objects.
+     and d.defaclrole = 'postgres'::regrole),
+  0,
+  'objects created by later migrations are not granted to anon'
+);
+select is(
+  public.claim_import('00000000-0000-0000-0000-00000000000a', 'z-1', 1),
+  'ok',
+  'first import claim succeeds'
+);
+select is(
+  public.claim_import('00000000-0000-0000-0000-00000000000b', 'z-1', 5),
+  'in_progress',
+  'a concurrent import of the same set is refused'
+);
+select is(
+  public.claim_import('00000000-0000-0000-0000-00000000000a', 'z-2', 1),
+  'rate_limited',
+  'the per-user hourly limit applies'
+);
+set local role authenticated;
+select pg_temp.login('a');
+select throws_ok(
+  $$ select public.claim_import('00000000-0000-0000-0000-00000000000a', 'z-3', 100) $$,
+  '42501',
+  null,
+  'users cannot call claim_import'
+);
+reset role;
 set local role anon;
 select throws_ok(
   $$ select public.adjust_part(gen_random_uuid(), '3001', 4, 1) $$,

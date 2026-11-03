@@ -37,8 +37,13 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    (`scripts/import-catalog.mjs`; rerun it now and then to pick up new sets).
    Search is a plain Postgres query (trigram index on `name`, prefix on
    `set_num`), so it uses none of the Rebrickable API quota.
-2. **Set import**: `fetch-set` returns at once if the inventory is cached
-   (`lego_sets.parts_fetched_at` set). Otherwise it reads everything from the API
+2. **Set import**: `fetch-set` only accepts sets that are in the catalog (404
+   otherwise, without calling Rebrickable). It returns at once if the inventory
+   is cached (`lego_sets.parts_fetched_at` set). Before calling Rebrickable it
+   calls `claim_import`, which atomically applies the per-user hourly limit and
+   refuses a second import of the same set within 3 minutes. Each Rebrickable
+   request has a 10 s timeout, and the whole import has a 110 s budget (free
+   Edge Functions stop at 150 s). Otherwise it reads everything from the API
    first: the set, its parts, its minifigs, and each minifig's parts. Then it
    writes it all in **one** `import_set(set, parts)` call (service role only).
    `import_set` takes a per-set advisory lock and merges rows that share a line
@@ -53,8 +58,8 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    fill the set line first, then minifig lines, then spares; decrements undo in
    reverse order. The function locks the tile's rows, always in `set_part_id`
    order, so concurrent taps neither lose counts nor deadlock. It returns the
-   tile's lines as `{set_part_id, found_qty, updated_at}`, the same shape as a
-   broadcast. Clients never write `check_progress` directly. A retried call
+   tile's lines as `{set_part_id, found_qty, updated_at}`, the same fields a
+   broadcast carries (a broadcast adds `updated_by`). Clients never write `check_progress` directly. A retried call
    applies its delta again, which is accepted for taps. A complete check is
    not frozen: a piece found later can still be counted.
 4. **Live sync**: a trigger on `check_progress` sends a `progress` broadcast
@@ -116,8 +121,11 @@ definer` with `search_path = ''` so that policies don't recurse into
   (`REBRICKABLE_API_KEY`). It never appears in `VITE_*` variables or client code.
 - Edge Functions run with `verify_jwt = false` and verify the caller in code
   (`_shared/auth.ts`, `auth.getClaims()`), rejecting anyone who isn't an
-  authenticated user. `fetch-set` limits each user to 30 Rebrickable imports per
-  hour (`set_import_log`).
+  authenticated, non-anonymous user. With asymmetric JWTs the check is local, so
+  a signed-out token stays valid until it expires. `fetch-set` limits each user
+  to 30 Rebrickable imports per hour (`claim_import`, `set_import_log`).
+- Functions prefer a new-style secret key (`SUPABASE_SECRET_KEY` function
+  secret) and fall back to the legacy `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Frontend conventions
 
@@ -179,6 +187,12 @@ back-off).
   URL to `additional_redirect_urls` so magic links work on the phone.
 
 ## Known limitations
+
+- Rebrickable throttling is per function invocation. Imports of different sets
+  running at the same time can briefly exceed 1 req/s on the shared key. That
+  is fine at hobby scale; a queue would fix it.
+- Sets for which Rebrickable has no inventory are not cached, so asking again
+  costs one API call.
 
 - Sets that contain other sets (Rebrickable `/sets/{id}/sets/`) only import the
   parent set's own parts and minifigs.

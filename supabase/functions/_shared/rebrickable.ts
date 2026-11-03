@@ -3,7 +3,11 @@ import { HttpError } from "./http.ts";
 const BASE_URL = "https://rebrickable.com/api/v3/lego";
 // Rebrickable allows roughly one request per second.
 const MIN_INTERVAL_MS = 1000;
-const MAX_RETRIES = 4;
+const MAX_RETRIES = 3;
+const MAX_RETRY_WAIT_MS = 5000;
+const REQUEST_TIMEOUT_MS = 10_000;
+// Free-tier Edge Functions are stopped after 150 s; stop well before that.
+const TIME_BUDGET_MS = 110_000;
 
 export interface RbSet {
   set_num: string;
@@ -48,6 +52,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class Rebrickable {
   private lastRequestAt = 0;
+  private readonly deadline = Date.now() + TIME_BUDGET_MS;
 
   constructor(private readonly apiKey: string) {}
 
@@ -58,12 +63,16 @@ export class Rebrickable {
   }
 
   getSet(setNum: string): Promise<RbSet> {
-    return this.get(`${BASE_URL}/sets/${encodeURIComponent(setNum)}/`);
+    return this.get(
+      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/`,
+      "Set not found on Rebrickable",
+    );
   }
 
+  // inc_part_details=1 is needed for part.external_ids (BrickLink ids).
   getSetParts(setNum: string): Promise<RbInventoryPart[]> {
     return this.getAll(
-      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/parts/?page_size=1000`,
+      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/parts/?page_size=1000&inc_part_details=1`,
     );
   }
 
@@ -75,7 +84,7 @@ export class Rebrickable {
 
   getMinifigParts(figNum: string): Promise<RbInventoryPart[]> {
     return this.getAll(
-      `${BASE_URL}/minifigs/${encodeURIComponent(figNum)}/parts/?page_size=1000`,
+      `${BASE_URL}/minifigs/${encodeURIComponent(figNum)}/parts/?page_size=1000&inc_part_details=1`,
     );
   }
 
@@ -90,28 +99,42 @@ export class Rebrickable {
     return results;
   }
 
-  private async get<T>(url: string): Promise<T> {
+  /** `notFoundMessage` turns a 404 into a 404 for the caller; otherwise it is a 502. */
+  private async get<T>(url: string, notFoundMessage?: string): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const wait = this.lastRequestAt + MIN_INTERVAL_MS - Date.now();
       if (wait > 0) await sleep(wait);
+      if (Date.now() + REQUEST_TIMEOUT_MS > this.deadline) {
+        throw new HttpError(
+          503,
+          "Importing this set is taking too long, try again in a few minutes",
+        );
+      }
       this.lastRequestAt = Date.now();
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `key ${this.apiKey}`,
-          Accept: "application/json",
-        },
-      });
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          headers: {
+            Authorization: `key ${this.apiKey}`,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch (error) {
+        console.error(`Rebrickable request failed for ${url}:`, error);
+        throw new HttpError(502, "Rebrickable is unavailable, try again later");
+      }
       if (res.ok) return (await res.json()) as T;
-      if (res.status === 404)
-        throw new HttpError(404, "Set not found on Rebrickable");
+      if (res.status === 404 && notFoundMessage)
+        throw new HttpError(404, notFoundMessage);
       if (res.status === 429 && attempt < MAX_RETRIES) {
-        const retryAfter = Number(res.headers.get("Retry-After"));
-        await sleep(
+        const retryAfter = Number(res.headers.get("Retry-After")) * 1000;
+        const backoff =
           Number.isFinite(retryAfter) && retryAfter > 0
-            ? retryAfter * 1000
-            : 2 ** attempt * 1000,
-        );
+            ? retryAfter
+            : 2 ** attempt * 1000;
+        await sleep(Math.min(backoff, MAX_RETRY_WAIT_MS));
         continue;
       }
       console.error(

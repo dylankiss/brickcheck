@@ -332,6 +332,43 @@ end;
 $$;
 
 ------------------------------------------------------------------------------
+-- Import claims (service role only, called by fetch-set before it calls Rebrickable)
+-- Atomically enforces the per-user hourly limit and refuses a second
+-- concurrent import of the same set. Returns 'ok', 'rate_limited' or 'in_progress'.
+------------------------------------------------------------------------------
+
+create function public.claim_import(p_user_id uuid, p_set_num text, p_per_hour int)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform pg_advisory_xact_lock(hashtext('claim_import'));
+
+  if (
+    select count(*) from public.set_import_log
+    where user_id = p_user_id and created_at > now() - interval '1 hour'
+  ) >= p_per_hour then
+    return 'rate_limited';
+  end if;
+
+  -- fetch-set gives up after ~2 minutes, so an older claim is abandoned.
+  if exists (
+    select 1 from public.set_import_log
+    where set_num = p_set_num and created_at > now() - interval '3 minutes'
+  ) then
+    return 'in_progress';
+  end if;
+
+  insert into public.set_import_log (user_id, set_num) values (p_user_id, p_set_num);
+  return 'ok';
+end;
+$$;
+
+create index set_import_log_set_created_idx on public.set_import_log (set_num, created_at);
+
+------------------------------------------------------------------------------
 -- Check lifecycle triggers
 ------------------------------------------------------------------------------
 
@@ -705,8 +742,14 @@ revoke execute on function
 from public, anon, authenticated;
 
 -- Service role only.
-revoke execute on function public.import_set(jsonb, jsonb) from public, anon, authenticated;
-grant execute on function public.import_set(jsonb, jsonb) to service_role;
+revoke execute on function
+  public.import_set(jsonb, jsonb),
+  public.claim_import(uuid, text, int)
+from public, anon, authenticated;
+grant execute on function
+  public.import_set(jsonb, jsonb),
+  public.claim_import(uuid, text, int)
+to service_role;
 
 -- Logged-in users only.
 revoke execute on function
