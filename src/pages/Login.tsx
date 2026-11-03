@@ -8,8 +8,11 @@ export default function Login() {
   const { session } = useAuth();
   const location = useLocation();
   // Where to return after login, e.g. an invite link (ARCHITECTURE.md, "Invites").
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
-  const redirectTo = new URL(from, window.location.origin).href;
+  // Only same-origin paths: "//evil.com" would be read as another host.
+  const requested = (location.state as { from?: string } | null)?.from;
+  const from =
+    requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/";
+  const redirectTo = window.location.origin + from;
 
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);

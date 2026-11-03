@@ -1,14 +1,6 @@
 import { useMemo } from "react";
-import { useParams } from "react-router";
-import {
-  Button,
-  ColorSwatch,
-  ErrorBanner,
-  Header,
-  PartImage,
-  Spinner,
-} from "../components/ui";
-import { useCheck } from "../hooks/useCheck";
+import { Button, ColorSwatch, Header, PartImage } from "../components/ui";
+import { useCheckContext } from "../hooks/useCheckContext";
 import { missingParts, toBrickLinkXml, toRebrickableCsv } from "../lib/tiles";
 
 function download(filename: string, content: string, type: string) {
@@ -20,26 +12,12 @@ function download(filename: string, content: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function MissingRoute() {
-  const { checkId = "" } = useParams();
-  return <Missing key={checkId} checkId={checkId} />;
-}
-
-function Missing({ checkId }: { checkId: string }) {
-  const { summary, tiles, status, error } = useCheck(checkId);
+export default function Missing() {
+  const { checkId, summary: check, tiles } = useCheckContext();
+  const summary = check!;
   const missing = useMemo(() => missingParts(tiles), [tiles]);
   const bricklink = useMemo(() => toBrickLinkXml(missing), [missing]);
   const total = missing.reduce((sum, m) => sum + m.missing, 0);
-
-  if (status === "loading") return <Spinner label="Loading parts…" />;
-  if (!summary) {
-    return (
-      <>
-        <Header title="Missing pieces" back="/" />
-        <ErrorBanner message={error ?? "Could not load this check"} />
-      </>
-    );
-  }
 
   const base = `${summary.set_num}-missing`;
   return (

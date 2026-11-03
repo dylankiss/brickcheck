@@ -9,13 +9,32 @@ import type {
   NewCheck,
 } from "./types";
 
-// PostgREST returns at most this many rows per request.
+// Rows requested per page; the server may return fewer (its max_rows).
 const PAGE_SIZE = 1000;
 
 export class ApiError extends Error {}
 
 function fail(error: { message: string } | null): never {
   throw new ApiError(error?.message ?? "Something went wrong");
+}
+
+/** Fetches every row, page by page, until a page comes back empty. */
+async function fetchAll<T>(
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (;;) {
+    const { data, error } = await page(
+      rows.length,
+      rows.length + PAGE_SIZE - 1,
+    );
+    if (error || !data) fail(error);
+    if (data.length === 0) return rows;
+    rows.push(...data);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -147,19 +166,28 @@ export async function deleteCheck(checkId: string): Promise<void> {
   if (error) fail(error);
 }
 
-export async function getCheckLines(checkId: string): Promise<CheckLine[]> {
-  const lines: CheckLine[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await supabase
+/** The check's full inventory with progress; loaded once per visit. */
+export function getCheckLines(checkId: string): Promise<CheckLine[]> {
+  return fetchAll((from, to) =>
+    supabase
       .from("check_lines")
       .select("*")
       .eq("check_id", checkId)
       .order("set_part_id")
-      .range(from, from + PAGE_SIZE - 1);
-    if (error) fail(error);
-    lines.push(...data);
-    if (data.length < PAGE_SIZE) return lines;
-  }
+      .range(from, to),
+  );
+}
+
+/** Only the progress numbers, for cheap refreshes after reconnecting. */
+export function getCheckProgress(checkId: string): Promise<LineProgress[]> {
+  return fetchAll((from, to) =>
+    supabase
+      .from("check_progress")
+      .select("set_part_id, found_qty, updated_at")
+      .eq("check_id", checkId)
+      .order("set_part_id")
+      .range(from, to),
+  );
 }
 
 /** Adds `delta` found pieces of one part + color; returns that tile's lines. */

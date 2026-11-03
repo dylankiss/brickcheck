@@ -65,9 +65,13 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 4. **Live sync**: a trigger on `check_progress` sends a `progress` broadcast
    (`{set_part_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
    `check:<id>`. RLS policies on `realtime.messages` let only members of the
-   check receive broadcasts and send presence there. Phones drop sockets when
-   the screen locks, so clients refetch all lines on (re)subscribe and on
-   `visibilitychange`.
+   check receive broadcasts and send presence there. There is **one channel per
+   check** in the client: `CheckLayout` (the `/checks/:id` layout route) calls
+   `useCheck` once and shares it with its child pages through `CheckContext`.
+   The inventory (`check_lines`) is loaded once per visit. Phones drop sockets
+   when the screen locks, so on (re)subscribe and on `visibilitychange` the
+   client refetches **only** the progress (`check_progress`: id, count,
+   timestamp) and the summary. Overlapping refreshes are merged into one.
 
 ## Data model
 
@@ -145,10 +149,22 @@ src/
   exception is `AuthProvider`, which holds app-level session state.
 - Database row types are written by hand in `lib/types.ts` for now. Switch to
   `supabase gen types` once a linked project exists.
-- **Optimistic taps**: a tile shows the server's count plus the deltas still in
-  flight. Server values are kept per line together with `updated_at`. An RPC
-  result, a broadcast or a refetch replaces a line only if it is not older than
-  what is held. A delta leaves the pending list once its own RPC call returns.
+- **Optimistic taps** (`useCheck`):
+  - A tile shows the server's count plus its unacknowledged deltas.
+  - Each tile has at most one `adjust_part` call in flight. Taps made
+    meanwhile are summed and sent next, so +1/−1 corrections apply in order.
+  - While a tile's call is in flight, server values for that tile (broadcasts,
+    refetches) are held back. They are applied together with the call's
+    result, so a delta is never counted twice.
+  - Server values are kept per line with `updated_at`. A value older than the
+    one held is ignored.
+  - A failed call drops its delta, shows the error and refetches progress.
+- **Stable layout**: the grid's order and filtering are computed from a
+  snapshot of the tiles, which is refreshed 1.5 s after the last change, or at
+  once when the filter or sort changes. Tiles don't jump under your thumb while
+  you tap. `PartTile` re-renders only when its counts change.
+- Every list read is paginated until a page comes back empty, whatever the
+  server's `max_rows`.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
 - The PWA service worker (phase 3) must not cache Supabase API or auth callback

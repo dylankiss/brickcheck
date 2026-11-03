@@ -52,11 +52,13 @@ export interface CheckLine {
   updated_at: string | null;
 }
 
-/** Server progress for one line: returned by adjust_part and sent as broadcasts. */
+/** Server progress for one line: returned by adjust_part, refetched, and sent as broadcasts. */
 export interface LineProgress {
   set_part_id: number;
   found_qty: number;
   updated_at: string;
+  /** Only present on broadcasts. */
+  updated_by?: string | null;
 }
 
 export interface NewCheck {

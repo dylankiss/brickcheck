@@ -4,7 +4,6 @@ import {
   buildTiles,
   compareTimestamps,
   filterTiles,
-  mergeFetchedLines,
   missingParts,
   sortTiles,
   tileKey,
@@ -99,14 +98,6 @@ describe("progress merging", () => {
       },
     ]);
     expect(next.get(l.set_part_id)!.found_qty).toBe(3);
-  });
-
-  it("keeps newer held values when a refetch returns stale data", () => {
-    const l = line({ found_qty: 2, updated_at: t2 });
-    const merged = mergeFetchedLines(toLineMap([l]), [
-      { ...l, found_qty: 1, updated_at: t1 },
-    ]);
-    expect(merged.get(l.set_part_id)!.found_qty).toBe(2);
   });
 });
 

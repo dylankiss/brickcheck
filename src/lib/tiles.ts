@@ -32,6 +32,8 @@ export interface TileFilter {
 export const tileKey = (partNum: string, colorId: number) =>
   `${partNum}|${colorId}`;
 
+const collator = new Intl.Collator(undefined, { numeric: true });
+
 export type LineMap = ReadonlyMap<number, CheckLine>;
 
 /**
@@ -78,28 +80,6 @@ export function applyProgress(
     });
   }
   return next ?? lines;
-}
-
-/**
- * Merges a full refetch into the held lines, keeping held values that are
- * newer than the fetched ones (a broadcast may arrive while the fetch runs).
- */
-export function mergeFetchedLines(
-  lines: LineMap,
-  fetched: CheckLine[],
-): LineMap {
-  return new Map(
-    fetched.map((line) => {
-      const held = lines.get(line.set_part_id);
-      const keepHeld = held && isNewer(held.updated_at, line.updated_at);
-      return [
-        line.set_part_id,
-        keepHeld
-          ? { ...line, found_qty: held.found_qty, updated_at: held.updated_at }
-          : line,
-      ];
-    }),
-  );
 }
 
 /** Groups lines into tiles; `pending` holds unacknowledged deltas per tile key. */
@@ -172,10 +152,11 @@ export function filterTiles(tiles: Tile[], filter: TileFilter): Tile[] {
 
 export function sortTiles(tiles: Tile[], mode: SortMode): Tile[] {
   const byPart = (a: Tile, b: Tile) =>
-    a.part_num.localeCompare(b.part_num, undefined, { numeric: true }) ||
-    a.color_name.localeCompare(b.color_name);
+    collator.compare(a.part_num, b.part_num) ||
+    collator.compare(a.color_name, b.color_name);
   const compare: Record<SortMode, (a: Tile, b: Tile) => number> = {
-    color: (a, b) => a.color_name.localeCompare(b.color_name) || byPart(a, b),
+    color: (a, b) =>
+      collator.compare(a.color_name, b.color_name) || byPart(a, b),
     part: byPart,
     remaining: (a, b) =>
       b.needed - b.found - (a.needed - a.found) || byPart(a, b),
@@ -201,7 +182,7 @@ export function tileColors(
       name: t.color_name,
       rgb: t.color_rgb,
     });
-  return [...colors.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...colors.values()].sort((a, b) => collator.compare(a.name, b.name));
 }
 
 export interface MissingPart {

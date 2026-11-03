@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import {
   ErrorBanner,
@@ -7,16 +6,11 @@ import {
   ProgressBar,
   Spinner,
 } from "../components/ui";
-import { listChecks, signOut } from "../lib/api";
-import type { CheckSummary } from "../lib/types";
+import { useChecks } from "../hooks/useChecks";
+import { signOut } from "../lib/api";
 
 export default function Checks() {
-  const [checks, setChecks] = useState<CheckSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    listChecks().then(setChecks, (e: Error) => setError(e.message));
-  }, []);
+  const { checks, error } = useChecks();
 
   return (
     <>

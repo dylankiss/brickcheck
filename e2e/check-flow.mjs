@@ -149,6 +149,25 @@ try {
   await a.getByText("2/11").waitFor();
   ok(true, "taps and undo update the counter optimistically");
 
+  // A quick tap + undo burst must end where it started (taps are sent in order).
+  // Both clicks fire synchronously, before the first request can return.
+  await a.evaluate(() => {
+    const tile = [...document.querySelectorAll("button")].find((b) =>
+      b.getAttribute("aria-label")?.startsWith("Brick 2 x 4, Red"),
+    );
+    const undo = [...document.querySelectorAll("button")].find(
+      (b) => b.getAttribute("aria-label") === "Remove one Brick 2 x 4",
+    );
+    for (let i = 0; i < 3; i++) {
+      tile.click();
+      undo.click();
+    }
+  });
+  await a.waitForTimeout(1500);
+  await a.reload();
+  await a.getByText("2/11").waitFor();
+  ok(true, "a +1/−1 burst is applied in order and persisted");
+
   // Second user joins as helper and taps; Alice should see it live
   const bobEmail = `bob${Date.now()}@example.com`;
   const b = await loginPage(browser, bobEmail);
@@ -200,6 +219,13 @@ try {
     `CSV export: ${JSON.stringify(csv)}`,
   );
 
+  // Missing page updates live from the shared channel
+  await b.getByRole("button", { name: /Brick 2 x 4, Red/ }).click();
+  await a
+    .getByText("3 pieces in 2 parts still to find.")
+    .waitFor({ timeout: 10000 });
+  ok(true, "the missing list updates live");
+
   // Viewer cannot tap
   await admin
     .from("check_members")
@@ -215,14 +241,14 @@ try {
 
   // My checks list
   await a.goto(`${APP}/`);
-  await a.getByText("7/11").waitFor();
+  await a.getByText("8/11").waitFor();
   await a.screenshot({ path: `${OUT}/5-checks.png` });
   ok(true, "My checks shows progress");
 
   // Dark mode screenshot of the check
   await a.emulateMedia({ colorScheme: "dark" });
   await a.goto(`${APP}/checks/${checkId}`);
-  await a.getByText("7/11").waitFor();
+  await a.getByText("8/11").waitFor();
   await a.screenshot({ path: `${OUT}/6-check-dark.png` });
 } finally {
   await browser.close();

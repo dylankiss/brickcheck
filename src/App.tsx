@@ -9,6 +9,7 @@ import { Spinner } from "./components/ui";
 import { AuthProvider } from "./components/AuthProvider";
 import { useAuth } from "./hooks/useAuth";
 import Check from "./pages/Check";
+import CheckLayout from "./pages/CheckLayout";
 import Checks from "./pages/Checks";
 import Login from "./pages/Login";
 import Missing from "./pages/Missing";
@@ -36,8 +37,14 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Checks /> },
       { path: "/new", element: <NewCheck /> },
-      { path: "/checks/:checkId", element: <Check /> },
-      { path: "/checks/:checkId/missing", element: <Missing /> },
+      {
+        path: "/checks/:checkId",
+        element: <CheckLayout />,
+        children: [
+          { index: true, element: <Check /> },
+          { path: "missing", element: <Missing /> },
+        ],
+      },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },
