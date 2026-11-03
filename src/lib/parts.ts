@@ -1,9 +1,9 @@
-// Pure logic for the check screen: lines -> tiles, filtering, sorting, exports.
+// Pure logic for the check screen: lines -> parts, filtering, sorting, exports.
 // Which lines count is decided in SQL (check_lines); nothing here re-implements it.
-import type { CheckLine, LineProgress } from "./types";
+import type { InventoryLine, LineProgress } from "./types";
 
-/** All lines of one part + color, as shown on one tile. */
-export interface Tile {
+/** One part (part number + color), summed over its inventory lines. */
+export interface Part {
   key: string;
   part_num: string;
   part_name: string;
@@ -21,20 +21,20 @@ export interface Tile {
   has_spare_lines: boolean;
 }
 
-export type SortMode = "color" | "part" | "remaining";
+export type SortMode = "color" | "part" | "missing";
 
-export interface TileFilter {
+export interface PartFilter {
   query: string;
   colorId: number | null;
-  hideComplete: boolean;
+  hideFound: boolean;
 }
 
-export const tileKey = (partNum: string, colorId: number) =>
+export const partKey = (partNum: string, colorId: number) =>
   `${partNum}|${colorId}`;
 
 const collator = new Intl.Collator(undefined, { numeric: true });
 
-export type LineMap = ReadonlyMap<number, CheckLine>;
+export type LineMap = ReadonlyMap<number, InventoryLine>;
 
 /**
  * Orders Postgres timestamps (e.g. "2026-11-03T13:22:11.12+00:00") with
@@ -49,8 +49,8 @@ export function compareTimestamps(a: string, b: string): number {
 const isNewer = (a: string | null, b: string | null) =>
   a !== null && (b === null || compareTimestamps(a, b) > 0);
 
-export function toLineMap(lines: CheckLine[]): LineMap {
-  return new Map(lines.map((line) => [line.set_part_id, line]));
+export function toLineMap(lines: InventoryLine[]): LineMap {
+  return new Map(lines.map((line) => [line.line_id, line]));
 }
 
 /**
@@ -62,9 +62,9 @@ export function applyProgress(
   lines: LineMap,
   updates: LineProgress[],
 ): LineMap {
-  let next: Map<number, CheckLine> | null = null;
+  let next: Map<number, InventoryLine> | null = null;
   for (const update of updates) {
-    const line = (next ?? lines).get(update.set_part_id);
+    const line = (next ?? lines).get(update.line_id);
     if (!line) continue;
     if (isNewer(line.updated_at, update.updated_at)) continue;
     if (
@@ -73,7 +73,7 @@ export function applyProgress(
     )
       continue;
     next ??= new Map(lines);
-    next.set(update.set_part_id, {
+    next.set(update.line_id, {
       ...line,
       found_qty: update.found_qty,
       updated_at: update.updated_at,
@@ -82,17 +82,17 @@ export function applyProgress(
   return next ?? lines;
 }
 
-/** Groups lines into tiles; `pending` holds unacknowledged deltas per tile key. */
-export function buildTiles(
+/** Groups lines into parts; `pending` holds unacknowledged deltas per part key. */
+export function groupParts(
   lines: LineMap,
   pending: ReadonlyMap<string, number> = new Map(),
-): Tile[] {
-  const tiles = new Map<string, Tile>();
+): Part[] {
+  const parts = new Map<string, Part>();
   for (const line of lines.values()) {
-    const key = tileKey(line.part_num, line.color_id);
-    let tile = tiles.get(key);
-    if (!tile) {
-      tile = {
+    const key = partKey(line.part_num, line.color_id);
+    let part = parts.get(key);
+    if (!part) {
+      part = {
         key,
         part_num: line.part_num,
         part_name: line.part_name,
@@ -109,25 +109,25 @@ export function buildTiles(
         has_minifig_lines: false,
         has_spare_lines: false,
       };
-      tiles.set(key, tile);
+      parts.set(key, part);
     }
-    tile.needed += line.quantity;
-    tile.found += line.found_qty;
-    tile.img_url ??= line.img_url;
-    tile.has_minifig_lines ||= line.fig_num !== null;
-    tile.has_spare_lines ||= line.is_spare;
+    part.needed += line.quantity;
+    part.found += line.found_qty;
+    part.img_url ??= line.img_url;
+    part.has_minifig_lines ||= line.fig_num !== null;
+    part.has_spare_lines ||= line.is_spare;
   }
   for (const [key, delta] of pending) {
-    const tile = tiles.get(key);
-    if (tile)
-      tile.found = Math.min(tile.needed, Math.max(0, tile.found + delta));
+    const part = parts.get(key);
+    if (part)
+      part.found = Math.min(part.needed, Math.max(0, part.found + delta));
   }
-  return [...tiles.values()];
+  return [...parts.values()];
 }
 
-export function totals(tiles: Tile[]): { needed: number; found: number } {
-  return tiles.reduce(
-    (sum, t) => ({ needed: sum.needed + t.needed, found: sum.found + t.found }),
+export function totals(parts: Part[]): { needed: number; found: number } {
+  return parts.reduce(
+    (sum, p) => ({ needed: sum.needed + p.needed, found: sum.found + p.found }),
     {
       needed: 0,
       found: 0,
@@ -135,72 +135,72 @@ export function totals(tiles: Tile[]): { needed: number; found: number } {
   );
 }
 
-export const isComplete = (tile: Tile) => tile.found >= tile.needed;
+export const isAllFound = (part: Part) => part.found >= part.needed;
 
-export function filterTiles(tiles: Tile[], filter: TileFilter): Tile[] {
+export function filterParts(parts: Part[], filter: PartFilter): Part[] {
   const query = filter.query.trim().toLowerCase();
-  return tiles.filter(
-    (t) =>
-      (!filter.hideComplete || !isComplete(t)) &&
-      (filter.colorId === null || t.color_id === filter.colorId) &&
+  return parts.filter(
+    (p) =>
+      (!filter.hideFound || !isAllFound(p)) &&
+      (filter.colorId === null || p.color_id === filter.colorId) &&
       (!query ||
-        t.part_num.toLowerCase().includes(query) ||
-        t.part_name.toLowerCase().includes(query) ||
-        t.color_name.toLowerCase().includes(query)),
+        p.part_num.toLowerCase().includes(query) ||
+        p.part_name.toLowerCase().includes(query) ||
+        p.color_name.toLowerCase().includes(query)),
   );
 }
 
-export function sortTiles(tiles: Tile[], mode: SortMode): Tile[] {
-  const byPart = (a: Tile, b: Tile) =>
+export function sortParts(parts: Part[], mode: SortMode): Part[] {
+  const byPart = (a: Part, b: Part) =>
     collator.compare(a.part_num, b.part_num) ||
     collator.compare(a.color_name, b.color_name);
-  const compare: Record<SortMode, (a: Tile, b: Tile) => number> = {
+  const compare: Record<SortMode, (a: Part, b: Part) => number> = {
     color: (a, b) =>
       collator.compare(a.color_name, b.color_name) || byPart(a, b),
     part: byPart,
-    remaining: (a, b) =>
+    missing: (a, b) =>
       b.needed - b.found - (a.needed - a.found) || byPart(a, b),
   };
-  // Completed tiles always sink to the bottom.
-  return [...tiles].sort(
+  // Fully found parts always sink to the bottom.
+  return [...parts].sort(
     (a, b) =>
-      Number(isComplete(a)) - Number(isComplete(b)) || compare[mode](a, b),
+      Number(isAllFound(a)) - Number(isAllFound(b)) || compare[mode](a, b),
   );
 }
 
-/** Distinct colors present in the tiles, for the color filter. */
-export function tileColors(
-  tiles: Tile[],
+/** Distinct colors present in the parts, for the color filter. */
+export function partColors(
+  parts: Part[],
 ): { id: number; name: string; rgb: string | null }[] {
   const colors = new Map<
     number,
     { id: number; name: string; rgb: string | null }
   >();
-  for (const t of tiles)
-    colors.set(t.color_id, {
-      id: t.color_id,
-      name: t.color_name,
-      rgb: t.color_rgb,
+  for (const p of parts)
+    colors.set(p.color_id, {
+      id: p.color_id,
+      name: p.color_name,
+      rgb: p.color_rgb,
     });
   return [...colors.values()].sort((a, b) => collator.compare(a.name, b.name));
 }
 
 export interface MissingPart {
-  tile: Tile;
+  part: Part;
   missing: number;
 }
 
-export function missingParts(tiles: Tile[]): MissingPart[] {
-  return sortTiles(tiles, "color")
-    .filter((tile) => !isComplete(tile))
-    .map((tile) => ({ tile, missing: tile.needed - tile.found }));
+export function missingParts(parts: Part[]): MissingPart[] {
+  return sortParts(parts, "color")
+    .filter((part) => !isAllFound(part))
+    .map((part) => ({ part, missing: part.needed - part.found }));
 }
 
 /** Rebrickable's CSV import format (Part, Color, Quantity with Rebrickable ids). */
 export function toRebrickableCsv(missing: MissingPart[]): string {
   const rows = missing.map(
-    ({ tile, missing: qty }) =>
-      `${csvField(tile.part_num)},${tile.color_id},${qty}`,
+    ({ part, missing: qty }) =>
+      `${csvField(part.part_num)},${part.color_id},${qty}`,
   );
   return ["Part,Color,Quantity", ...rows].join("\n") + "\n";
 }
@@ -219,16 +219,16 @@ export function toBrickLinkXml(missing: MissingPart[]): {
   const skipped: MissingPart[] = [];
   const items: string[] = [];
   for (const entry of missing) {
-    const { tile, missing: qty } = entry;
-    if (!tile.bricklink_part_id || tile.bricklink_color_id === null) {
+    const { part, missing: qty } = entry;
+    if (!part.bricklink_part_id || part.bricklink_color_id === null) {
       skipped.push(entry);
       continue;
     }
     items.push(
       "  <ITEM>\n" +
         "    <ITEMTYPE>P</ITEMTYPE>\n" +
-        `    <ITEMID>${xmlEscape(tile.bricklink_part_id)}</ITEMID>\n` +
-        `    <COLOR>${tile.bricklink_color_id}</COLOR>\n` +
+        `    <ITEMID>${xmlEscape(part.bricklink_part_id)}</ITEMID>\n` +
+        `    <COLOR>${part.bricklink_color_id}</COLOR>\n` +
         `    <MINQTY>${qty}</MINQTY>\n` +
         "  </ITEM>",
     );

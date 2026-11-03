@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
   applyProgress,
-  buildTiles,
+  groupParts,
   compareTimestamps,
-  filterTiles,
+  filterParts,
   missingParts,
-  sortTiles,
-  tileKey,
+  sortParts,
+  partKey,
   toBrickLinkXml,
   toLineMap,
   toRebrickableCsv,
-} from "./tiles";
-import type { CheckLine } from "./types";
+} from "./parts";
+import type { InventoryLine } from "./types";
 
 let nextId = 1;
-function line(overrides: Partial<CheckLine>): CheckLine {
+function line(overrides: Partial<InventoryLine>): InventoryLine {
   return {
     check_id: "c1",
-    set_part_id: nextId++,
+    line_id: nextId++,
     part_num: "3001",
     part_name: "Brick 2 x 4",
     part_cat_id: 11,
@@ -38,7 +38,7 @@ function line(overrides: Partial<CheckLine>): CheckLine {
   };
 }
 
-describe("buildTiles", () => {
+describe("groupParts", () => {
   it("merges set, minifig and spare lines of one part + color", () => {
     const lines = toLineMap([
       line({ quantity: 3, found_qty: 1 }),
@@ -51,9 +51,9 @@ describe("buildTiles", () => {
         quantity: 1,
       }),
     ]);
-    const tiles = buildTiles(lines);
-    expect(tiles).toHaveLength(2);
-    const red = tiles.find((t) => t.key === tileKey("3001", 4))!;
+    const parts = groupParts(lines);
+    expect(parts).toHaveLength(2);
+    const red = parts.find((p) => p.key === partKey("3001", 4))!;
     expect(red).toMatchObject({
       needed: 5,
       found: 1,
@@ -62,13 +62,13 @@ describe("buildTiles", () => {
     });
   });
 
-  it("adds pending deltas, clamped to the tile", () => {
+  it("adds pending deltas, clamped to the part", () => {
     const lines = toLineMap([line({ quantity: 2, found_qty: 1 })]);
-    expect(buildTiles(lines, new Map([[tileKey("3001", 4), 5]]))[0].found).toBe(
+    expect(groupParts(lines, new Map([[partKey("3001", 4), 5]]))[0].found).toBe(
       2,
     );
     expect(
-      buildTiles(lines, new Map([[tileKey("3001", 4), -5]]))[0].found,
+      groupParts(lines, new Map([[partKey("3001", 4), -5]]))[0].found,
     ).toBe(0);
   });
 });
@@ -87,22 +87,22 @@ describe("progress merging", () => {
     const lines = toLineMap([l]);
     expect(
       applyProgress(lines, [
-        { set_part_id: l.set_part_id, found_qty: 1, updated_at: t1 },
+        { line_id: l.line_id, found_qty: 1, updated_at: t1 },
       ]),
     ).toBe(lines);
     const next = applyProgress(lines, [
       {
-        set_part_id: l.set_part_id,
+        line_id: l.line_id,
         found_qty: 3,
         updated_at: "2026-11-03T10:00:01+00:00",
       },
     ]);
-    expect(next.get(l.set_part_id)!.found_qty).toBe(3);
+    expect(next.get(l.line_id)!.found_qty).toBe(3);
   });
 });
 
 describe("filter and sort", () => {
-  const tiles = buildTiles(
+  const parts = groupParts(
     toLineMap([
       line({ part_num: "3001", quantity: 2, found_qty: 2 }),
       line({
@@ -122,42 +122,42 @@ describe("filter and sort", () => {
     ]),
   );
 
-  it("hides complete tiles and searches name, number and color", () => {
+  it("hides fully found parts and searches name, number and color", () => {
     expect(
-      filterTiles(tiles, { query: "", colorId: null, hideComplete: true }).map(
-        (t) => t.part_num,
+      filterParts(parts, { query: "", colorId: null, hideFound: true }).map(
+        (p) => p.part_num,
       ),
     ).toEqual(["3004", "3010"]);
     expect(
-      filterTiles(tiles, { query: "blue", colorId: null, hideComplete: false }),
+      filterParts(parts, { query: "blue", colorId: null, hideFound: false }),
     ).toHaveLength(1);
     expect(
-      filterTiles(tiles, { query: "", colorId: 4, hideComplete: false }),
+      filterParts(parts, { query: "", colorId: 4, hideFound: false }),
     ).toHaveLength(2);
   });
 
-  it("sorts complete tiles last", () => {
-    expect(sortTiles(tiles, "remaining").map((t) => t.part_num)).toEqual([
+  it("sorts fully found parts last", () => {
+    expect(sortParts(parts, "missing").map((p) => p.part_num)).toEqual([
       "3004",
       "3010",
       "3001",
     ]);
-    expect(sortTiles(tiles, "part").at(-1)!.part_num).toBe("3001");
+    expect(sortParts(parts, "part").at(-1)!.part_num).toBe("3001");
   });
 });
 
 describe("exports", () => {
-  const tiles = buildTiles(
+  const parts = groupParts(
     toLineMap([
       line({ part_num: "3001", quantity: 3, found_qty: 1 }),
       line({ part_num: "x<1>", bricklink_part_id: null, quantity: 1 }),
       line({ part_num: "3002", quantity: 1, found_qty: 1 }),
     ]),
   );
-  const missing = missingParts(tiles);
+  const missing = missingParts(parts);
 
   it("lists only what is missing", () => {
-    expect(missing.map((m) => [m.tile.part_num, m.missing])).toEqual([
+    expect(missing.map((m) => [m.part.part_num, m.missing])).toEqual([
       ["3001", 2],
       ["x<1>", 1],
     ]);
@@ -174,6 +174,6 @@ describe("exports", () => {
     expect(xml).toContain("<ITEMID>3001</ITEMID>");
     expect(xml).toContain("<COLOR>5</COLOR>");
     expect(xml).toContain("<MINQTY>2</MINQTY>");
-    expect(skipped.map((s) => s.tile.part_num)).toEqual(["x<1>"]);
+    expect(skipped.map((s) => s.part.part_num)).toEqual(["x<1>"]);
   });
 });

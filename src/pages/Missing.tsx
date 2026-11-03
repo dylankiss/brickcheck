@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Button, ColorSwatch, Header, PartImage } from "../components/ui";
 import { useCheckContext } from "../hooks/useCheckContext";
-import { missingParts, toBrickLinkXml, toRebrickableCsv } from "../lib/tiles";
+import { missingParts, toBrickLinkXml, toRebrickableCsv } from "../lib/parts";
 
 function download(filename: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -13,9 +13,9 @@ function download(filename: string, content: string, type: string) {
 }
 
 export default function Missing() {
-  const { checkId, summary: check, tiles } = useCheckContext();
+  const { checkId, summary: check, parts } = useCheckContext();
   const summary = check!;
-  const missing = useMemo(() => missingParts(tiles), [tiles]);
+  const missing = useMemo(() => missingParts(parts), [parts]);
   const bricklink = useMemo(() => toBrickLinkXml(missing), [missing]);
   const total = missing.reduce((sum, m) => sum + m.missing, 0);
 
@@ -62,27 +62,27 @@ export default function Missing() {
               </p>
             )}
             <ul className="flex flex-col gap-2">
-              {missing.map(({ tile, missing: qty }) => (
+              {missing.map(({ part, missing: qty }) => (
                 <li
-                  key={tile.key}
+                  key={part.key}
                   className="flex items-center gap-3 rounded-2xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800"
                 >
                   <PartImage
-                    src={tile.img_url}
+                    src={part.img_url}
                     alt=""
                     className="size-14 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      {tile.part_name}
+                      {part.part_name}
                     </p>
                     <p className="flex items-center gap-1.5 text-xs text-neutral-500">
                       <ColorSwatch
-                        rgb={tile.color_rgb}
-                        trans={tile.is_trans}
+                        rgb={part.color_rgb}
+                        trans={part.is_trans}
                         className="size-3"
                       />
-                      {tile.color_name} · {tile.part_num}
+                      {part.color_name} · {part.part_num}
                     </p>
                   </div>
                   <span className="text-lg font-bold tabular-nums">×{qty}</span>

@@ -26,7 +26,7 @@ select public.import_set(
 );
 
 select is(
-  (select quantity from public.set_parts where set_num = 't1-1' and not is_spare and fig_num is null),
+  (select quantity from public.inventory_lines where set_num = 't1-1' and not is_spare and fig_num is null),
   3,
   'import_set merges duplicate part + color rows instead of dropping them'
 );
@@ -77,7 +77,7 @@ select is(
 select is(
   (select sum(found_qty)::int from public.adjust_part((select no_figs_check_id from ctx), '3001', 4, 9)),
   3,
-  'without minifigs the tile is capped at the set line'
+  'without minifigs the part is capped at the set line'
 );
 
 select is(
@@ -98,7 +98,7 @@ select is(
 select is(
   (select count(*)::int from public.adjust_part((select check_id from ctx), '3001', 4, 1)),
   3,
-  'adjust_part returns every line of the tile'
+  'adjust_part returns every line of the part'
 );
 select throws_ok(
   $$ select public.adjust_part((select check_id from ctx), '3001', 4, 10001) $$,

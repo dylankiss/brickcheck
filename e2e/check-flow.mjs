@@ -184,14 +184,14 @@ try {
   // A quick tap + undo burst must end where it started (taps are sent in order).
   // Both clicks fire synchronously, before the first request can return.
   await a.evaluate(() => {
-    const tile = [...document.querySelectorAll("button")].find((b) =>
+    const part = [...document.querySelectorAll("button")].find((b) =>
       b.getAttribute("aria-label")?.startsWith("Brick 2 x 4, Red"),
     );
     const undo = [...document.querySelectorAll("button")].find(
       (b) => b.getAttribute("aria-label") === "Remove one Brick 2 x 4",
     );
     for (let i = 0; i < 3; i++) {
-      tile.click();
+      part.click();
       undo.click();
     }
   });
@@ -245,7 +245,7 @@ try {
     (await a
       .getByRole("button", { name: /Light Bluish Gray: 3 of 3/ })
       .count()) === 0,
-    "Hide found hides completed tiles",
+    "Hide found hides fully found parts",
   );
   await a.getByRole("button", { name: "Hide found" }).click();
 

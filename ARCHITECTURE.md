@@ -30,7 +30,7 @@ Browser ──(supabase-js, user JWT)──► Postgres (RLS)        reads, sear
         ──(functions.invoke)───────► fetch-set ──► Rebrickable API v3
                                          │ service role: import_set()
                                          ▼
-                                     set cache (lego_sets, set_parts)
+                                     set cache (lego_sets, inventory_lines)
         ◄──(Realtime broadcast, private channel check:<id>)── triggers:
                  `progress` from check_progress, `changed` from checks / check_members
 
@@ -56,20 +56,20 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    key, summing their quantities (Rebrickable can list the same part and color
    twice). It inserts with `on conflict do nothing` and stamps
    `parts_fetched_at` last. Once a set is imported, its
-   inventory is **immutable**: `check_progress` references `set_parts.id`, so
+   inventory is **immutable**: `check_progress` references `inventory_lines.id`, so
    rows are never updated, deleted or re-keyed.
-3. **Checking**: the UI shows one tile per **part + color**. A tile can be backed
+3. **Checking**: the UI shows one card per **part** (part number + color). A part can be backed
    by several inventory lines: the set's own line, minifig lines, and a spare
    line. A tap calls `adjust_part(check, part_num, color_id, delta)`. Increments
    fill the set line first, then minifig lines, then spares; decrements undo in
-   reverse order. The function locks the tile's rows, always in `set_part_id`
+   reverse order. The function locks the part's rows, always in `line_id`
    order, so concurrent taps neither lose counts nor deadlock. It returns the
-   tile's lines as `{set_part_id, found_qty, updated_at}`, the same fields a
+   part's lines as `{line_id, found_qty, updated_at}`, the same fields a
    broadcast carries (a broadcast adds `updated_by`). Clients never write `check_progress` directly. A retried call
    applies its delta again, which is accepted for taps. A complete check is
    not frozen: a piece found later can still be counted.
 4. **Live sync**: a trigger on `check_progress` sends a `progress` broadcast
-   (`{set_part_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
+   (`{line_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
    `check:<id>`. RLS policies on `realtime.messages` let only members of the
    check receive broadcasts and send presence there. A `changed` broadcast
    (from triggers on `checks` and `check_members`) tells open pages to refresh
@@ -88,17 +88,17 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 | ------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
 | `profiles`               | display name and avatar per auth user (the email is never exposed) | trigger on `auth.users`, the user themselves                                                        |
 | `lego_sets`              | set catalog and metadata                                           | catalog script, `import_set` (service role)                                                         |
-| `set_parts`              | cached inventory lines                                             | `import_set` (service role)                                                                         |
+| `inventory_lines`        | cached inventory lines                                             | `import_set` (service role)                                                                         |
 | `set_import_log`         | Rebrickable fetches per user, for rate limiting                    | `fetch-set` (service role)                                                                          |
 | `checks`                 | one sorting session of one physical copy of a set                  | owner insert; `title` by helpers                                                                    |
 | `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`)          | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member |
-| `check_progress`         | `found_qty` per (check, set_part); a missing row means 0           | `adjust_part` RPC only                                                                              |
+| `check_progress`         | `found_qty` per (check, inventory line); a missing row means 0     | `adjust_part` RPC only                                                                              |
 | `check_invites`          | invite tokens                                                      | the owner                                                                                           |
 | `check_removals`         | who the owner removed, and when                                    | trigger on `check_members` delete                                                                   |
 | `check_lines` (view)     | every line that counts for a check, with `found_qty`               | —                                                                                                   |
 | `check_summaries` (view) | per check: set info, my role, needed, found                        | —                                                                                                   |
 
-An inventory line (`set_parts`) is unique on
+An inventory line (`inventory_lines`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
 `fig_num` is null for the set's own parts. For minifig parts it holds the
 minifig, and the quantity is already multiplied by the number of copies of that
@@ -160,7 +160,7 @@ definer` with `search_path = ''` so that policies don't recurse into
 | `/new`                | NewCheck    | catalog search → `fetch-set` → create check                        |
 | `/join/:token`        | Join        | invite preview → `accept_invite`                                   |
 | `/checks/:id`         | CheckLayout | owns `useCheck` (one channel, presence) for its children           |
-| `/checks/:id` (index) | Check       | the tile grid                                                      |
+| `/checks/:id` (index) | Check       | the grid of part cards                                             |
 | `/checks/:id/missing` | Missing     | missing list and exports                                           |
 | `/checks/:id/people`  | Share       | members, roles, invite links, leave or delete                      |
 
@@ -173,7 +173,7 @@ src/
   lib/supabase.ts   the one supabase client
   lib/api.ts        ALL data access (queries, RPCs, function calls, realtime)
   lib/types.ts      domain types shared by api, hooks and UI
-  lib/tiles.ts      pure logic: grouping lines into tiles, missing list, exports (unit-tested)
+  lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
   hooks/            React state built on lib/api (useAuth, useCheck, ...)
   pages/            route components
   components/       presentational components; no data fetching
@@ -206,20 +206,20 @@ src/
   - A channel that is still leaving is awaited before the same topic is
     joined again.
 - **Optimistic taps** (`useCheck`):
-  - A tile shows the server's count plus its unacknowledged deltas.
-  - Each tile has at most one `adjust_part` call in flight. Taps made
+  - A part's card shows the server's count plus its unacknowledged deltas.
+  - Each part has at most one `adjust_part` call in flight. Taps made
     meanwhile are summed and sent next, so +1/−1 corrections apply in order.
-  - While a tile's call is in flight, server values for that tile (broadcasts,
+  - While a part's call is in flight, server values for that part (broadcasts,
     refetches) are held back. They are applied together with the call's
     result, so a delta is never counted twice.
   - Server values are kept per line with `updated_at`. A value older than the
     one held is ignored.
   - A failed call drops its delta, shows the error and refetches progress.
 - **Stable layout**: the grid's order and filtering are computed from a
-  snapshot of the tiles, which is refreshed 1.5 s after the last change (at
+  snapshot of the parts, which is refreshed 1.5 s after the last change (at
   most 5 s after the first deferred one), or at once when the filter or sort
-  changes. Tiles don't jump under your thumb while
-  you tap. `PartTile` re-renders only when its counts change.
+  changes. Cards don't jump under your thumb while
+  you tap. `PartCard` re-renders only when its counts change.
 - Every list read is paginated until a page comes back empty, whatever the
   server's `max_rows`.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.

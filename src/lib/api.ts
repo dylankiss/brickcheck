@@ -2,7 +2,7 @@
 import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type {
-  CheckLine,
+  InventoryLine,
   CheckRole,
   CheckSummary,
   Invite,
@@ -214,13 +214,13 @@ export async function deleteCheck(checkId: string): Promise<void> {
 }
 
 /** The check's full inventory with progress; loaded once per visit. */
-export function getCheckLines(checkId: string): Promise<CheckLine[]> {
+export function getCheckLines(checkId: string): Promise<InventoryLine[]> {
   return fetchAll((from, to) =>
     supabase
       .from("check_lines")
       .select("*")
       .eq("check_id", checkId)
-      .order("set_part_id")
+      .order("line_id")
       .range(from, to),
   );
 }
@@ -230,14 +230,14 @@ export function getCheckProgress(checkId: string): Promise<LineProgress[]> {
   return fetchAll((from, to) =>
     supabase
       .from("check_progress")
-      .select("set_part_id, found_qty, updated_at")
+      .select("line_id, found_qty, updated_at")
       .eq("check_id", checkId)
-      .order("set_part_id")
+      .order("line_id")
       .range(from, to),
   );
 }
 
-/** Adds `delta` found pieces of one part + color; returns that tile's lines. */
+/** Adds `delta` found pieces of one part + color; returns that part's lines. */
 export async function adjustPart(
   checkId: string,
   partNum: string,

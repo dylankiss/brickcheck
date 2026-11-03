@@ -140,7 +140,7 @@ ok(
   `4 concurrent decrements -> ${JSON.stringify(s)}`,
 );
 
-// Deadlock check: mixed concurrent +1/-1 on a multi-line tile.
+// Deadlock check: mixed concurrent +1/-1 on a multi-line part.
 const mixed = await Promise.all(
   Array.from({ length: 40 }, (_, i) =>
     (i % 2 ? a : b).rpc("adjust_part", {

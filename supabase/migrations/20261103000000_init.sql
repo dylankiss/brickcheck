@@ -48,7 +48,7 @@ create trigger on_auth_user_created
 ------------------------------------------------------------------------------
 -- Shared set cache
 --   lego_sets: catalog, seeded from Rebrickable's CSV dump (scripts/import-catalog.mjs)
---   set_parts: inventories, imported on demand by the fetch-set Edge Function
+--   inventory_lines: inventories, imported on demand by the fetch-set Edge Function
 ------------------------------------------------------------------------------
 
 create table public.lego_sets (
@@ -66,7 +66,7 @@ create table public.lego_sets (
 create index lego_sets_name_trgm_idx on public.lego_sets using gin (name extensions.gin_trgm_ops);
 create index lego_sets_set_num_pattern_idx on public.lego_sets (set_num text_pattern_ops);
 
-create table public.set_parts (
+create table public.inventory_lines (
   id bigint generated always as identity primary key,
   set_num text not null references public.lego_sets (set_num) on delete restrict,
   part_num text not null,
@@ -84,7 +84,7 @@ create table public.set_parts (
   is_spare boolean not null default false,
   -- Null for the set's own parts; the minifig (e.g. fig-001234) for minifig parts.
   fig_num text,
-  constraint set_parts_line_key unique nulls not distinct (set_num, part_num, color_id, is_spare, fig_num)
+  constraint inventory_lines_line_key unique nulls not distinct (set_num, part_num, color_id, is_spare, fig_num)
 );
 
 -- Cache misses that hit Rebrickable, for per-user rate limiting in fetch-set.
@@ -129,11 +129,11 @@ create index check_members_user_id_idx on public.check_members (user_id);
 
 create table public.check_progress (
   check_id uuid not null references public.checks (id) on delete cascade,
-  set_part_id bigint not null references public.set_parts (id) on delete restrict,
+  line_id bigint not null references public.inventory_lines (id) on delete restrict,
   found_qty int not null default 0 check (found_qty >= 0),
   updated_by uuid references public.profiles (id) on delete set null,
   updated_at timestamptz not null default now(),
-  primary key (check_id, set_part_id)
+  primary key (check_id, line_id)
 );
 
 create index check_progress_updated_by_idx on public.check_progress (updated_by);
@@ -307,7 +307,7 @@ begin
         num_parts = excluded.num_parts,
         img_url = excluded.img_url;
 
-  insert into public.set_parts (
+  insert into public.inventory_lines (
     set_num, part_num, part_name, part_cat_id, color_id, color_name, color_rgb, is_trans,
     img_url, element_id, bricklink_part_id, bricklink_color_id, quantity, is_spare, fig_num
   )
@@ -325,7 +325,7 @@ begin
     fig_num text
   )
   group by p.part_num, p.color_id, coalesce(p.is_spare, false), p.fig_num
-  on conflict on constraint set_parts_line_key do nothing;
+  on conflict on constraint inventory_lines_line_key do nothing;
 
   update public.lego_sets set parts_fetched_at = now() where set_num = v_set_num;
 end;
@@ -422,27 +422,27 @@ with (security_invoker = true)
 as
 select
   c.id as check_id,
-  sp.id as set_part_id,
-  sp.part_num,
-  sp.part_name,
-  sp.part_cat_id,
-  sp.color_id,
-  sp.color_name,
-  sp.color_rgb,
-  sp.is_trans,
-  sp.img_url,
-  sp.element_id,
-  sp.bricklink_part_id,
-  sp.bricklink_color_id,
-  sp.quantity,
-  sp.is_spare,
-  sp.fig_num,
+  il.id as line_id,
+  il.part_num,
+  il.part_name,
+  il.part_cat_id,
+  il.color_id,
+  il.color_name,
+  il.color_rgb,
+  il.is_trans,
+  il.img_url,
+  il.element_id,
+  il.bricklink_part_id,
+  il.bricklink_color_id,
+  il.quantity,
+  il.is_spare,
+  il.fig_num,
   coalesce(cp.found_qty, 0) as found_qty,
   cp.updated_at
 from public.checks c
-join public.set_parts sp on sp.set_num = c.set_num
-left join public.check_progress cp on cp.check_id = c.id and cp.set_part_id = sp.id
-where public.line_counts(c.include_spares, c.include_minifigs, sp.is_spare, sp.fig_num);
+join public.inventory_lines il on il.set_num = c.set_num
+left join public.check_progress cp on cp.check_id = c.id and cp.line_id = il.id
+where public.line_counts(c.include_spares, c.include_minifigs, il.is_spare, il.fig_num);
 
 create view public.check_summaries
 with (security_invoker = true)
@@ -472,11 +472,11 @@ left join lateral (
 
 ------------------------------------------------------------------------------
 -- RPC: adjust the found count of one part + color in a check.
--- One tile in the UI can be backed by several lines (the set's own line,
+-- One part in the UI can be backed by several lines (the set's own line,
 -- minifig lines, a spare line). Increments fill set line -> minifig lines ->
--- spares; decrements undo in reverse. Rows are always locked in set_part_id
+-- spares; decrements undo in reverse. Rows are always locked in line_id
 -- order, so concurrent increments and decrements cannot deadlock.
--- Returns the tile's lines with their new counts (same shape as broadcasts).
+-- Returns the part's lines with their new counts (same shape as broadcasts).
 -- Not idempotent: a retried call applies its delta again (accepted for taps).
 ------------------------------------------------------------------------------
 
@@ -486,7 +486,7 @@ create function public.adjust_part(
   p_color_id int,
   p_delta int
 )
-returns table (set_part_id bigint, found_qty int, updated_at timestamptz)
+returns table (line_id bigint, found_qty int, updated_at timestamptz)
 language plpgsql
 security definer
 set search_path = ''
@@ -505,13 +505,13 @@ begin
     raise exception 'Not allowed to edit this check' using errcode = '42501';
   end if;
 
-  select coalesce(array_agg(sp.id order by sp.id), '{}') into v_ids
+  select coalesce(array_agg(il.id order by il.id), '{}') into v_ids
   from public.checks c
-  join public.set_parts sp on sp.set_num = c.set_num
+  join public.inventory_lines il on il.set_num = c.set_num
   where c.id = p_check_id
-    and sp.part_num = p_part_num
-    and sp.color_id = p_color_id
-    and public.line_counts(c.include_spares, c.include_minifigs, sp.is_spare, sp.fig_num);
+    and il.part_num = p_part_num
+    and il.color_id = p_color_id
+    and public.line_counts(c.include_spares, c.include_minifigs, il.is_spare, il.fig_num);
 
   if cardinality(v_ids) = 0 then
     raise exception 'Part %/% is not part of this check', p_part_num, p_color_id
@@ -519,25 +519,25 @@ begin
   end if;
 
   -- Make sure every line has a progress row, then lock them in a fixed order.
-  insert into public.check_progress (check_id, set_part_id, found_qty, updated_by)
+  insert into public.check_progress (check_id, line_id, found_qty, updated_by)
   select p_check_id, id, 0, (select auth.uid())
   from unnest(v_ids) as id
   on conflict on constraint check_progress_pkey do nothing;
 
   perform 1
   from public.check_progress cp
-  where cp.check_id = p_check_id and cp.set_part_id = any (v_ids)
-  order by cp.set_part_id
+  where cp.check_id = p_check_id and cp.line_id = any (v_ids)
+  order by cp.line_id
   for update;
 
   for v_line in
-    select cp.set_part_id, sp.quantity, cp.found_qty
+    select cp.line_id, il.quantity, cp.found_qty
     from public.check_progress cp
-    join public.set_parts sp on sp.id = cp.set_part_id
-    where cp.check_id = p_check_id and cp.set_part_id = any (v_ids)
+    join public.inventory_lines il on il.id = cp.line_id
+    where cp.check_id = p_check_id and cp.line_id = any (v_ids)
     order by
-      sign(p_delta) * (case when sp.is_spare then 2 when sp.fig_num is not null then 1 else 0 end),
-      sign(p_delta) * sp.id
+      sign(p_delta) * (case when il.is_spare then 2 when il.fig_num is not null then 1 else 0 end),
+      sign(p_delta) * il.id
   loop
     exit when v_remaining = 0;
     if p_delta > 0 then
@@ -550,16 +550,16 @@ begin
       set found_qty = cp.found_qty + sign(p_delta)::int * v_step,
           updated_by = (select auth.uid()),
           updated_at = clock_timestamp()
-      where cp.check_id = p_check_id and cp.set_part_id = v_line.set_part_id;
+      where cp.check_id = p_check_id and cp.line_id = v_line.line_id;
       v_remaining := v_remaining - v_step;
     end if;
   end loop;
 
   return query
-  select cp.set_part_id, cp.found_qty, cp.updated_at
+  select cp.line_id, cp.found_qty, cp.updated_at
   from public.check_progress cp
-  where cp.check_id = p_check_id and cp.set_part_id = any (v_ids)
-  order by cp.set_part_id;
+  where cp.check_id = p_check_id and cp.line_id = any (v_ids)
+  order by cp.line_id;
 end;
 $$;
 
@@ -584,7 +584,7 @@ begin
   end if;
   perform realtime.send(
     jsonb_build_object(
-      'set_part_id', new.set_part_id,
+      'line_id', new.line_id,
       'found_qty', new.found_qty,
       'updated_at', new.updated_at,
       'updated_by', new.updated_by
@@ -621,7 +621,7 @@ create policy "check channels: members send presence" on realtime.messages
 
 alter table public.profiles enable row level security;
 alter table public.lego_sets enable row level security;
-alter table public.set_parts enable row level security;
+alter table public.inventory_lines enable row level security;
 alter table public.set_import_log enable row level security;
 alter table public.checks enable row level security;
 alter table public.check_members enable row level security;
@@ -649,10 +649,10 @@ grant update (display_name, avatar_url) on public.profiles to authenticated;
 create policy "lego_sets: read" on public.lego_sets
   for select to authenticated using (true);
 
-create policy "set_parts: read" on public.set_parts
+create policy "inventory_lines: read" on public.inventory_lines
   for select to authenticated using (true);
 
-revoke insert, update, delete on public.lego_sets, public.set_parts from authenticated;
+revoke insert, update, delete on public.lego_sets, public.inventory_lines from authenticated;
 
 -- set_import_log: service role only (no policies)
 revoke all on public.set_import_log from authenticated;

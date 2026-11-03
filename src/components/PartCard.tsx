@@ -1,73 +1,73 @@
 import { memo } from "react";
-import { isComplete, type Tile } from "../lib/tiles";
+import { isAllFound, type Part } from "../lib/parts";
 import { ColorSwatch, PartImage } from "./ui";
 
 interface Props {
-  tile: Tile;
+  part: Part;
   canEdit: boolean;
-  onTap: (tile: Tile, delta: 1 | -1) => void;
+  onTap: (part: Part, delta: 1 | -1) => void;
 }
 
-/** Tap the tile to count one found piece; the "−" button undoes one. */
-export const PartTile = memo(
-  function PartTile({ tile, canEdit, onTap }: Props) {
-    const complete = isComplete(tile);
+/** Tap the card to count one found piece; the "−" button undoes one. */
+export const PartCard = memo(
+  function PartCard({ part, canEdit, onTap }: Props) {
+    const allFound = isAllFound(part);
     return (
       <div
         className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_14rem] [content-visibility:auto] dark:bg-neutral-900 ${
-          complete
+          allFound
             ? "opacity-50 ring-green-600"
             : "ring-neutral-200 dark:ring-neutral-800"
         }`}
       >
         <button
           type="button"
-          disabled={!canEdit || complete}
-          onClick={() => onTap(tile, 1)}
+          disabled={!canEdit || allFound}
+          onClick={() => onTap(part, 1)}
           className="flex flex-1 flex-col items-stretch p-2 text-left active:scale-[0.97] disabled:active:scale-100"
-          aria-label={`${tile.part_name}, ${tile.color_name}: ${tile.found} of ${tile.needed} found. Tap to add one.`}
+          aria-label={`${part.part_name}, ${part.color_name}: ${part.found} of ${part.needed} found. Tap to add one.`}
         >
           <PartImage
-            src={tile.img_url}
+            src={part.img_url}
             alt=""
             className="aspect-square w-full rounded-xl bg-white p-1"
           />
           <div className="mt-1 flex items-center gap-1.5">
-            <ColorSwatch rgb={tile.color_rgb} trans={tile.is_trans} />
+            <ColorSwatch rgb={part.color_rgb} trans={part.is_trans} />
             <span className="truncate text-xs text-neutral-500">
-              {tile.color_name}
+              {part.color_name}
             </span>
           </div>
-          <span className="truncate text-xs font-medium" title={tile.part_name}>
-            {tile.part_name}
+          <span className="truncate text-xs font-medium" title={part.part_name}>
+            {part.part_name}
           </span>
           <span className="mt-1 text-xl font-bold tabular-nums">
-            {complete ? "✓ " : ""}
-            {tile.found}
+            {allFound ? "✓ " : ""}
+            {part.found}
             <span className="text-sm font-normal text-neutral-500">
               {" "}
-              / {tile.needed}
+              / {part.needed}
             </span>
           </span>
         </button>
-        {canEdit && tile.found > 0 && (
+        {canEdit && part.found > 0 && (
           <button
             type="button"
-            onClick={() => onTap(tile, -1)}
+            onClick={() => onTap(part, -1)}
             className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full bg-neutral-100/90 text-xl font-bold opacity-100 dark:bg-neutral-800/90"
-            aria-label={`Remove one ${tile.part_name}`}
+            aria-label={`Remove one ${part.part_name}`}
           >
             −
           </button>
         )}
-        {(tile.has_minifig_lines || tile.has_spare_lines) && (
+        {(part.has_minifig_lines || part.has_spare_lines) && (
           <div className="absolute top-2 left-2 flex gap-1 text-[10px] font-semibold uppercase">
-            {tile.has_minifig_lines && (
+            {part.has_minifig_lines && (
               <span className="rounded bg-yellow-300 px-1 text-yellow-950">
                 minifig
               </span>
             )}
-            {tile.has_spare_lines && (
+            {part.has_spare_lines && (
               <span className="rounded bg-sky-200 px-1 text-sky-950">
                 spare
               </span>
@@ -77,11 +77,11 @@ export const PartTile = memo(
       </div>
     );
   },
-  // Tiles are rebuilt on every change; re-render only when what they show changed.
+  // Parts are rebuilt on every change; re-render only when what they show changed.
   (a, b) =>
-    a.tile.key === b.tile.key &&
-    a.tile.found === b.tile.found &&
-    a.tile.needed === b.tile.needed &&
+    a.part.key === b.part.key &&
+    a.part.found === b.part.found &&
+    a.part.needed === b.part.needed &&
     a.canEdit === b.canEdit &&
     a.onTap === b.onTap,
 );

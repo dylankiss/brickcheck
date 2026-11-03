@@ -9,12 +9,12 @@ import {
 } from "../lib/api";
 import {
   applyProgress,
-  buildTiles,
-  tileKey,
+  groupParts,
+  partKey,
   toLineMap,
   type LineMap,
-  type Tile,
-} from "../lib/tiles";
+  type Part,
+} from "../lib/parts";
 import type { CheckSummary, LineProgress, Member } from "../lib/types";
 
 export type CheckStatus = "loading" | "ready" | "not-found" | "error";
@@ -25,9 +25,9 @@ export type CheckStatus = "loading" | "ready" | "not-found" | "error";
  *
  * - The inventory is loaded once; reconnects and visibility changes refetch
  *   only the progress numbers (or redo the full load if it had failed).
- * - Taps on a tile are sent one request at a time; taps made while a request
+ * - Taps on a part are sent one request at a time; taps made while a request
  *   is in flight are summed into the next one, so they apply in order.
- * - While a tile has a request in flight, server values for it (broadcasts,
+ * - While a part has a request in flight, server values for it (broadcasts,
  *   refetches) are held back and applied together with the request's result,
  *   so the optimistic delta is never counted twice.
  */
@@ -45,7 +45,7 @@ export function useCheck(checkId: string, myUserId: string) {
   const [version, setVersion] = useState(0);
 
   // Bookkeeping read and written outside render.
-  const tileOfLine = useRef(new Map<number, string>());
+  const partOfLine = useRef(new Map<number, string>());
   const queued = useRef(new Map<string, number>());
   const inFlight = useRef(new Set<string>());
   const heldBack = useRef(new Map<string, LineProgress[]>());
@@ -75,11 +75,11 @@ export function useCheck(checkId: string, myUserId: string) {
     }
   }, [checkId]);
 
-  /** Applies server values, holding back those for tiles with a request in flight. */
+  /** Applies server values, holding back those for parts with a request in flight. */
   const receive = useCallback((updates: LineProgress[]) => {
     const now: LineProgress[] = [];
     for (const update of updates) {
-      const key = tileOfLine.current.get(update.set_part_id);
+      const key = partOfLine.current.get(update.line_id);
       if (key && inFlight.current.has(key)) {
         heldBack.current.set(key, [
           ...(heldBack.current.get(key) ?? []),
@@ -105,8 +105,8 @@ export function useCheck(checkId: string, myUserId: string) {
         lostAccess();
         return false;
       }
-      tileOfLine.current = new Map(
-        fetched.map((l) => [l.set_part_id, tileKey(l.part_num, l.color_id)]),
+      partOfLine.current = new Map(
+        fetched.map((l) => [l.line_id, partKey(l.part_num, l.color_id)]),
       );
       setSummary(check);
       setLines(toLineMap(fetched));
@@ -195,7 +195,7 @@ export function useCheck(checkId: string, myUserId: string) {
     };
   }, [checkId, myUserId, load, loadMembers, receive, refresh]);
 
-  const tiles = useMemo(() => buildTiles(lines, pending), [lines, pending]);
+  const parts = useMemo(() => groupParts(lines, pending), [lines, pending]);
 
   const canEdit = summary?.my_role === "owner" || summary?.my_role === "helper";
 
@@ -209,9 +209,9 @@ export function useCheck(checkId: string, myUserId: string) {
     });
   }, []);
 
-  /** Sends the tile's queued taps, unless a request for it is already in flight. */
+  /** Sends the part's queued taps, unless a request for it is already in flight. */
   const flush = useCallback(
-    function flushTile(key: string, partNum: string, colorId: number) {
+    function flushPart(key: string, partNum: string, colorId: number) {
       if (inFlight.current.has(key)) return;
       const delta = queued.current.get(key) ?? 0;
       queued.current.delete(key);
@@ -230,7 +230,7 @@ export function useCheck(checkId: string, myUserId: string) {
           // Same tick, so React renders the server value and the settled delta together.
           setLines((lines) => applyProgress(lines, [...progress, ...held]));
           settle(key, delta);
-          flushTile(key, partNum, colorId);
+          flushPart(key, partNum, colorId);
         },
         (e: Error) => {
           const held = release();
@@ -238,7 +238,7 @@ export function useCheck(checkId: string, myUserId: string) {
           settle(key, delta);
           setError(e.message);
           refresh();
-          flushTile(key, partNum, colorId);
+          flushPart(key, partNum, colorId);
         },
       );
     },
@@ -246,15 +246,15 @@ export function useCheck(checkId: string, myUserId: string) {
   );
 
   const tap = useCallback(
-    (tile: Tile, delta: 1 | -1) => {
+    (part: Part, delta: 1 | -1) => {
       if (!canEdit) return;
-      if (delta > 0 ? tile.found >= tile.needed : tile.found <= 0) return;
+      if (delta > 0 ? part.found >= part.needed : part.found <= 0) return;
       navigator.vibrate?.(10);
-      queued.current.set(tile.key, (queued.current.get(tile.key) ?? 0) + delta);
+      queued.current.set(part.key, (queued.current.get(part.key) ?? 0) + delta);
       setPending((map) =>
-        new Map(map).set(tile.key, (map.get(tile.key) ?? 0) + delta),
+        new Map(map).set(part.key, (map.get(part.key) ?? 0) + delta),
       );
-      flush(tile.key, tile.part_num, tile.color_id);
+      flush(part.key, part.part_num, part.color_id);
     },
     [canEdit, flush],
   );
@@ -274,7 +274,7 @@ export function useCheck(checkId: string, myUserId: string) {
   return {
     checkId,
     summary,
-    tiles,
+    parts,
     status,
     error,
     clearError,

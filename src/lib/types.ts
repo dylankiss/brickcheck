@@ -31,9 +31,9 @@ export interface CheckSummary {
 }
 
 /** Row of the `check_lines` view: one inventory line that counts for a check. */
-export interface CheckLine {
+export interface InventoryLine {
   check_id: string;
-  set_part_id: number;
+  line_id: number;
   part_num: string;
   part_name: string;
   part_cat_id: number | null;
@@ -54,7 +54,7 @@ export interface CheckLine {
 
 /** Server progress for one line: returned by adjust_part, refetched, and sent as broadcasts. */
 export interface LineProgress {
-  set_part_id: number;
+  line_id: number;
   found_qty: number;
   updated_at: string;
   /** Only present on broadcasts. */

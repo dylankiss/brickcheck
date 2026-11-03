@@ -2,38 +2,38 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
-import { PartTile } from "../components/PartTile";
+import { PartCard } from "../components/PartCard";
 import { ErrorBanner, Header, ProgressBar } from "../components/ui";
 import { useCheckContext } from "../hooks/useCheckContext";
 import {
-  filterTiles,
-  sortTiles,
-  tileColors,
+  filterParts,
+  sortParts,
+  partColors,
   totals,
   type SortMode,
-  type Tile,
-  type TileFilter,
-} from "../lib/tiles";
+  type Part,
+  type PartFilter,
+} from "../lib/parts";
 
-// Tiles keep their place while you tap; the grid re-sorts and re-filters this
-// long after the last change, so a tile never moves under your thumb. Steady
+// Cards keep their place while you tap; the grid re-sorts and re-filters this
+// long after the last change, so a card never moves under your thumb. Steady
 // activity (a busy collaborator) defers it at most MAX_DEFER_MS.
 const SETTLE_MS = 1500;
 const MAX_DEFER_MS = 5000;
 
 export default function Check() {
-  const { checkId, summary, tiles, error, clearError, canEdit, tap, others } =
+  const { checkId, summary, parts, error, clearError, canEdit, tap, others } =
     useCheckContext();
-  const [filter, setFilter] = useState<TileFilter>({
+  const [filter, setFilter] = useState<PartFilter>({
     query: "",
     colorId: null,
-    hideComplete: false,
+    hideFound: false,
   });
   const [sort, setSort] = useState<SortMode>("color");
 
-  // The tiles the current layout was computed from: refreshed after a quiet
+  // The parts the current layout was computed from: refreshed after a quiet
   // period, and right away when the filter or sort changes.
-  const [basis, setBasis] = useState<Tile[]>(tiles);
+  const [basis, setBasis] = useState<Part[]>(parts);
   const deferredSince = useRef<number | null>(null);
   useEffect(() => {
     const now = Date.now();
@@ -44,26 +44,26 @@ export default function Check() {
     );
     const timer = setTimeout(() => {
       deferredSince.current = null;
-      setBasis(tiles);
+      setBasis(parts);
     }, delay);
     return () => clearTimeout(timer);
-  }, [tiles]);
-  const layoutBasis = basis.length === tiles.length ? basis : tiles;
-  const changeFilter = (next: TileFilter) => {
+  }, [parts]);
+  const layoutBasis = basis.length === parts.length ? basis : parts;
+  const changeFilter = (next: PartFilter) => {
     setFilter(next);
-    setBasis(tiles);
+    setBasis(parts);
   };
   const changeSort = (next: SortMode) => {
     setSort(next);
-    setBasis(tiles);
+    setBasis(parts);
   };
   const order = useMemo(
-    () => sortTiles(filterTiles(layoutBasis, filter), sort).map((t) => t.key),
+    () => sortParts(filterParts(layoutBasis, filter), sort).map((p) => p.key),
     [layoutBasis, filter, sort],
   );
-  const byKey = useMemo(() => new Map(tiles.map((t) => [t.key, t])), [tiles]);
-  const colors = useMemo(() => tileColors(tiles), [tiles]);
-  const { found, needed } = totals(tiles);
+  const byKey = useMemo(() => new Map(parts.map((p) => [p.key, p])), [parts]);
+  const colors = useMemo(() => partColors(parts), [parts]);
+  const { found, needed } = totals(parts);
 
   return (
     <>
@@ -109,9 +109,9 @@ export default function Check() {
       )}
       <main className="grid grid-cols-2 gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {order.map((key) => (
-          <PartTile
+          <PartCard
             key={key}
-            tile={byKey.get(key)!}
+            part={byKey.get(key)!}
             canEdit={canEdit}
             onTap={tap}
           />

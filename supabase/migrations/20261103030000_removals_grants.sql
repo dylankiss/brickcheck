@@ -141,7 +141,7 @@ grant usage on schema public to authenticated;
 grant select on
   public.profiles,
   public.lego_sets,
-  public.set_parts,
+  public.inventory_lines,
   public.checks,
   public.check_members,
   public.check_progress,

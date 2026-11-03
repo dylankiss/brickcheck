@@ -44,7 +44,7 @@ select public.import_set(
 );
 reset role;
 
-select is((select count(*)::int from public.set_parts where set_num = 't1-1'), 4, 'inventory is immutable after import');
+select is((select count(*)::int from public.inventory_lines where set_num = 't1-1'), 4, 'inventory is immutable after import');
 select is((select name from public.lego_sets where set_num = 't1-1'), 'Test set', 'set metadata is untouched by re-import');
 
 select is(
@@ -53,7 +53,7 @@ select is(
   'profile is created from auth metadata'
 );
 
--- adjust_part returns the tile's lines; tests compare the tile total.
+-- adjust_part returns the part's lines; tests compare the part total.
 create function pg_temp.tap(p_check_id uuid, p_part_num text, p_color_id int, p_delta int)
 returns int language sql as $$
   select sum(found_qty)::int from public.adjust_part(p_check_id, p_part_num, p_color_id, p_delta)
@@ -125,8 +125,8 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.check_progress (check_id, set_part_id, found_qty)
-     select check_id, (select id from public.set_parts limit 1), 3 from ctx $$,
+  $$ insert into public.check_progress (check_id, line_id, found_qty)
+     select check_id, (select id from public.inventory_lines limit 1), 3 from ctx $$,
   '42501',
   null,
   'users cannot write check_progress directly'
