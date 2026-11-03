@@ -153,16 +153,17 @@ definer` with `search_path = ''` so that policies don't recurse into
 
 ## Routes
 
-| Path                  | Page        | Notes                                                              |
-| --------------------- | ----------- | ------------------------------------------------------------------ |
-| `/login`              | Login       | magic link, 6-digit code, or Google; returns to the requested path |
-| `/`                   | Checks      | my checks; asks email users for a display name once                |
-| `/new`                | NewCheck    | catalog search → `fetch-set` → create check                        |
-| `/join/:token`        | Join        | invite preview → `accept_invite`                                   |
-| `/checks/:id`         | CheckLayout | owns `useCheck` (one channel, presence) for its children           |
-| `/checks/:id` (index) | Check       | the grid of part cards                                             |
-| `/checks/:id/missing` | Missing     | missing list and exports                                           |
-| `/checks/:id/people`  | Share       | members, roles, invite links, leave or delete                      |
+| Path                  | Page                | Notes                                                                                                |
+| --------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/login`              | Login               | magic link, 6-digit code, or Google; returns to the requested path                                   |
+| `/`                   | Checks              | my checks; asks email users for a display name once                                                  |
+| `/missing`            | MissingAcrossChecks | every Part still missing in your Checks, where it goes, tick it off there (loaded on open, not live) |
+| `/new`                | NewCheck            | catalog search → `fetch-set` → create check                                                          |
+| `/join/:token`        | Join                | invite preview → `accept_invite`                                                                     |
+| `/checks/:id`         | CheckLayout         | owns `useCheck` (one channel, presence) for its children                                             |
+| `/checks/:id` (index) | Check               | the grid of part cards                                                                               |
+| `/checks/:id/missing` | Missing             | missing list and exports                                                                             |
+| `/checks/:id/people`  | Share               | members, roles, invite links, leave or delete                                                        |
 
 Everything except `/login` is behind `RequireAuth`.
 

@@ -9,6 +9,7 @@ import {
 } from "../lib/api";
 import {
   applyProgress,
+  canTickOff,
   groupParts,
   partKey,
   toLineMap,
@@ -197,7 +198,7 @@ export function useCheck(checkId: string, myUserId: string) {
 
   const parts = useMemo(() => groupParts(lines, pending), [lines, pending]);
 
-  const canEdit = summary?.my_role === "owner" || summary?.my_role === "helper";
+  const canEdit = canTickOff(summary?.my_role ?? null);
 
   const settle = useCallback((key: string, delta: number) => {
     setPending((map) => {

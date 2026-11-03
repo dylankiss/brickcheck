@@ -1,6 +1,11 @@
-// Pure logic for the check screen: lines -> parts, filtering, sorting, exports.
+// Pure logic for Checks: lines -> parts, filtering, sorting, missing lists (one Check or all), exports.
 // Which lines count is decided in SQL (check_lines); nothing here re-implements it.
-import type { InventoryLine, LineProgress } from "./types";
+import type {
+  CheckRole,
+  CheckSummary,
+  InventoryLine,
+  LineProgress,
+} from "./types";
 
 /** One part (part number + color), summed over its inventory lines. */
 export interface Part {
@@ -198,6 +203,121 @@ export function missingParts(parts: Part[]): MissingPart[] {
   return sortParts(parts, "color")
     .filter((part) => !isAllFound(part))
     .map((part) => ({ part, missing: part.needed - part.found }));
+}
+
+/** A Check is complete when nothing is missing (GLOSSARY.md). */
+export const isComplete = (check: Pick<CheckSummary, "found" | "needed">) =>
+  check.found >= check.needed;
+
+/** Owners and Helpers tick off parts; Viewers only follow along. */
+export const canTickOff = (role: CheckRole | null) =>
+  role === "owner" || role === "helper";
+
+/** A Check a missing Part goes to, and how many it still needs there. */
+export interface MissingInCheck {
+  checkId: string;
+  /** The Check's title, with its start date when another Check has the same title. */
+  label: string;
+  missing: number;
+  canTickOff: boolean;
+}
+
+/** A Part missing in one or more Checks. */
+export interface MissingAcross {
+  /** The Part, with needed and found summed over the Checks listed. */
+  part: Part;
+  missing: number;
+  checks: MissingInCheck[];
+}
+
+/**
+ * Every Part still missing in any of `checks`, with where it goes. Lines are
+ * grouped per Check first: two Checks of the same Set share line ids.
+ */
+export function missingAcrossChecks(
+  checks: CheckSummary[],
+  lines: InventoryLine[],
+): MissingAcross[] {
+  const linesByCheck = new Map<string, InventoryLine[]>();
+  for (const l of lines) {
+    const list = linesByCheck.get(l.check_id) ?? [];
+    list.push(l);
+    linesByCheck.set(l.check_id, list);
+  }
+  const titleCount = new Map<string, number>();
+  for (const c of checks)
+    titleCount.set(c.title, (titleCount.get(c.title) ?? 0) + 1);
+  const label = (c: CheckSummary) =>
+    titleCount.get(c.title)! > 1
+      ? `${c.title} (started ${startDate.format(new Date(c.created_at))})`
+      : c.title;
+  const result = new Map<string, MissingAcross>();
+  for (const c of checks) {
+    for (const part of groupParts(toLineMap(linesByCheck.get(c.id) ?? []))) {
+      const missing = part.needed - part.found;
+      if (missing <= 0) continue;
+      let entry = result.get(part.key);
+      if (!entry) {
+        entry = {
+          part: { ...part, needed: 0, found: 0 },
+          missing: 0,
+          checks: [],
+        };
+        result.set(part.key, entry);
+      }
+      entry.part.needed += part.needed;
+      entry.part.found += part.found;
+      entry.missing += missing;
+      entry.checks.push({
+        checkId: c.id,
+        label: label(c),
+        missing,
+        canTickOff: canTickOff(c.my_role),
+      });
+    }
+  }
+  for (const entry of result.values())
+    entry.checks.sort((x, y) => y.missing - x.missing);
+  return sortParts(
+    [...result.values()].map((entry) => entry.part),
+    "color",
+  ).map((part) => result.get(part.key)!);
+}
+
+const startDate = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+});
+
+/** The missing Parts matching a search (name, number or color), with totals over them. */
+export function searchMissingAcross(
+  missing: MissingAcross[],
+  query: string,
+): { parts: MissingAcross[]; pieces: number; checks: number } {
+  const keys = new Set(
+    filterParts(
+      missing.map((m) => m.part),
+      { query, colorId: null, hideFound: false },
+    ).map((p) => p.key),
+  );
+  const parts = missing.filter((m) => keys.has(m.part.key));
+  return {
+    parts,
+    pieces: parts.reduce((sum, m) => sum + m.missing, 0),
+    checks: new Set(parts.flatMap((m) => m.checks.map((c) => c.checkId))).size,
+  };
+}
+
+/** Applies server progress (an adjust_part result) to the lines of one Check, leaving other Checks alone. */
+export function applyCheckProgress(
+  lines: InventoryLine[],
+  checkId: string,
+  updates: LineProgress[],
+): InventoryLine[] {
+  const own = toLineMap(lines.filter((l) => l.check_id === checkId));
+  const next = applyProgress(own, updates);
+  if (next === own) return lines;
+  return lines.map((l) => (l.check_id === checkId ? next.get(l.line_id)! : l));
 }
 
 /** Rebrickable's CSV import format (Part, Color, Quantity with Rebrickable ids). */

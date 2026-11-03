@@ -19,6 +19,7 @@ const Check = lazy(() => import("./pages/Check"));
 const CheckLayout = lazy(() => import("./pages/CheckLayout"));
 const Join = lazy(() => import("./pages/Join"));
 const Missing = lazy(() => import("./pages/Missing"));
+const MissingAcrossChecks = lazy(() => import("./pages/MissingAcrossChecks"));
 const NewCheck = lazy(() => import("./pages/NewCheck"));
 const Share = lazy(() => import("./pages/Share"));
 
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Checks /> },
       { path: "/new", element: <NewCheck /> },
+      { path: "/missing", element: <MissingAcrossChecks /> },
       { path: "/join/:token", element: <Join /> },
       {
         path: "/checks/:checkId",

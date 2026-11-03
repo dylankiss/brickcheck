@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
-import { EnlargedPart, MagnifierBadge } from "../components/EnlargedPart";
-import { Button, ColorSwatch, Header, PartImage } from "../components/ui";
+import { EnlargeableThumbnail, EnlargedPart } from "../components/EnlargedPart";
+import { Button, ColorSwatch, Header } from "../components/ui";
 import { useCheckContext } from "../hooks/useCheckContext";
 import {
   missingParts,
-  partLabel,
   toBrickLinkXml,
   toRebrickableCsv,
   type Part,
@@ -100,28 +99,9 @@ function MissingItem({
   missing: number;
   onEnlarge: (key: string) => void;
 }) {
-  const [noPicture, setNoPicture] = useState(!part.img_url);
   return (
     <li className="flex items-center gap-3 rounded-2xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
-      <button
-        type="button"
-        onClick={() => onEnlarge(part.key)}
-        disabled={noPicture}
-        className="relative shrink-0 rounded-lg"
-        aria-label={`Enlarge picture of ${partLabel(part)}`}
-      >
-        <PartImage
-          src={part.img_url}
-          alt=""
-          onError={() => setNoPicture(true)}
-          className="size-14"
-        />
-        {!noPicture && (
-          <span className="absolute -right-1 -bottom-1 scale-75">
-            <MagnifierBadge />
-          </span>
-        )}
-      </button>
+      <EnlargeableThumbnail part={part} onEnlarge={onEnlarge} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{part.part_name}</p>
         <p className="flex items-center gap-1.5 text-xs text-neutral-500">

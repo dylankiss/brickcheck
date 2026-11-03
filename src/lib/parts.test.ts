@@ -4,6 +4,9 @@ import {
   groupParts,
   compareTimestamps,
   filterParts,
+  applyCheckProgress,
+  missingAcrossChecks,
+  searchMissingAcross,
   missingParts,
   sortParts,
   partKey,
@@ -12,7 +15,7 @@ import {
   toLineMap,
   toRebrickableCsv,
 } from "./parts";
-import type { InventoryLine } from "./types";
+import type { CheckSummary, InventoryLine } from "./types";
 
 let nextId = 1;
 function line(overrides: Partial<InventoryLine>): InventoryLine {
@@ -184,5 +187,133 @@ describe("partLabel", () => {
     expect(partLabel({ part_name: "Brick 2 x 4", color_name: "Red" })).toBe(
       "Brick 2 x 4, Red",
     );
+  });
+});
+
+function check(
+  id: string,
+  overrides: Partial<CheckSummary> = {},
+): CheckSummary {
+  return {
+    id,
+    owner_id: "u1",
+    set_num: "1-1",
+    title: `Check ${id}`,
+    include_spares: false,
+    include_minifigs: true,
+    created_at: "2026-11-01T00:00:00Z",
+    set_name: "Test set",
+    set_year: 2026,
+    set_img_url: null,
+    my_role: "owner",
+    needed: 0,
+    found: 0,
+    ...overrides,
+  };
+}
+
+describe("missingAcrossChecks", () => {
+  it("lists every Check a missing part goes to, with what each still needs", () => {
+    const missing = missingAcrossChecks(
+      [check("a", { title: "House" }), check("b", { title: "Castle" })],
+      [
+        line({ check_id: "a", quantity: 4, found_qty: 1 }),
+        line({ check_id: "b", quantity: 2, found_qty: 1 }),
+      ],
+    );
+    expect(missing).toHaveLength(1);
+    expect(missing[0].part.part_name).toBe("Brick 2 x 4");
+    expect(missing[0].missing).toBe(4);
+    expect(missing[0].checks).toEqual([
+      { checkId: "a", label: "House", missing: 3, canTickOff: true },
+      { checkId: "b", label: "Castle", missing: 1, canTickOff: true },
+    ]);
+  });
+
+  it("lists Checks you only view without letting you tick off, and skips fully found ones", () => {
+    const missing = missingAcrossChecks(
+      [check("a", { my_role: "viewer" }), check("b", { my_role: "helper" })],
+      [
+        line({ check_id: "a", quantity: 2, found_qty: 0 }),
+        line({ check_id: "b", quantity: 2, found_qty: 2 }),
+      ],
+    );
+    expect(missing.map((m) => m.checks)).toEqual([
+      [{ checkId: "a", label: "Check a", missing: 2, canTickOff: false }],
+    ]);
+  });
+
+  it("orders parts by color and, per part, the Check needing the most first", () => {
+    const missing = missingAcrossChecks(
+      [check("a"), check("b")],
+      [
+        line({ check_id: "a", color_id: 4, color_name: "Red", quantity: 1 }),
+        line({ check_id: "b", color_id: 4, color_name: "Red", quantity: 3 }),
+        line({ check_id: "a", color_id: 1, color_name: "Blue", quantity: 1 }),
+      ],
+    );
+    expect(missing.map((m) => m.part.color_name)).toEqual(["Blue", "Red"]);
+    expect(missing[1].checks.map((c) => c.checkId)).toEqual(["b", "a"]);
+  });
+
+  it("tells apart Checks with the same title (two copies of one Set) by start date", () => {
+    const missing = missingAcrossChecks(
+      [
+        check("a", { title: "House", created_at: "2026-11-01T09:00:00Z" }),
+        check("b", { title: "House", created_at: "2026-11-03T09:00:00Z" }),
+      ],
+      [
+        line({ check_id: "a", quantity: 1 }),
+        line({ check_id: "b", quantity: 2 }),
+      ],
+    );
+    expect(missing[0].checks.map((c) => c.label)).toEqual([
+      "House (started 3 Nov)",
+      "House (started 1 Nov)",
+    ]);
+  });
+
+  it("searches by name, number or color and totals what is shown", () => {
+    const missing = missingAcrossChecks(
+      [check("a"), check("b")],
+      [
+        line({ check_id: "a", quantity: 2 }),
+        line({ check_id: "b", quantity: 1 }),
+        line({
+          check_id: "a",
+          part_num: "3004",
+          part_name: "Brick 1 x 2",
+          color_id: 1,
+          color_name: "Blue",
+          quantity: 3,
+        }),
+      ],
+    );
+    expect(searchMissingAcross(missing, "red")).toMatchObject({
+      parts: [{ part: { part_num: "3001" } }],
+      pieces: 3,
+      checks: 2,
+    });
+    expect(searchMissingAcross(missing, "")).toMatchObject({
+      pieces: 6,
+      checks: 2,
+    });
+    expect(
+      searchMissingAcross(missing, "3004").parts.map((m) => m.part.part_name),
+    ).toEqual(["Brick 1 x 2"]);
+  });
+
+  it("applies a tick-off to its own Check only, though Checks of one Set share line ids", () => {
+    const lines = [
+      line({ check_id: "a", line_id: 7, quantity: 2 }),
+      line({ check_id: "b", line_id: 7, quantity: 2 }),
+    ];
+    const next = applyCheckProgress(lines, "b", [
+      { line_id: 7, found_qty: 1, updated_at: "2026-11-04T10:00:00Z" },
+    ]);
+    expect(next.map((l) => [l.check_id, l.found_qty])).toEqual([
+      ["a", 0],
+      ["b", 1],
+    ]);
   });
 });

@@ -328,10 +328,21 @@ try {
   await a.screenshot({ path: `${OUT}/5-checks.png` });
   ok(true, "My checks shows progress");
 
+  // Missing in all checks: see where a found piece goes and tick it off there
+  await a.getByRole("link", { name: /See where it goes/ }).click();
+  const foundOne = a.getByRole("button", {
+    name: `Found one Brick 2 x 4, Red for Demo Castle ${SET.slice(-4)}`,
+  });
+  await foundOne.click();
+  // The Check needed one more red brick, so it drops off that part's list.
+  await foundOne.waitFor({ state: "detached" });
+  await a.screenshot({ path: `${OUT}/5b-missing-across-checks.png` });
+  ok(true, "the all-checks overview ticks off a piece in the right check");
+
   // Dark mode screenshot of the check
   await a.emulateMedia({ colorScheme: "dark" });
   await a.goto(`${APP}/checks/${checkId}`);
-  await a.getByText("8/11").waitFor();
+  await a.getByText("9/11").waitFor();
   await a.screenshot({ path: `${OUT}/6-check-dark.png` });
 } finally {
   await browser.close();

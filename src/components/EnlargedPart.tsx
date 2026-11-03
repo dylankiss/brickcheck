@@ -152,8 +152,40 @@ export function EnlargeButton({
   );
 }
 
-/** The magnifier mark, also shown on pictures that are themselves the enlarge button. */
-export function MagnifierBadge() {
+/** A small picture that is itself the enlarge button (lists); disabled when there is no picture. */
+export function EnlargeableThumbnail({
+  part,
+  onEnlarge,
+}: {
+  part: Part;
+  onEnlarge: (key: string) => void;
+}) {
+  const [noPicture, setNoPicture] = useState(!part.img_url);
+  return (
+    <button
+      type="button"
+      onClick={() => onEnlarge(part.key)}
+      disabled={noPicture}
+      className="relative shrink-0 rounded-lg"
+      aria-label={`Enlarge picture of ${partLabel(part)}`}
+    >
+      <PartImage
+        src={part.img_url}
+        alt=""
+        onError={() => setNoPicture(true)}
+        className="size-14"
+      />
+      {!noPicture && (
+        <span className="absolute -right-1 -bottom-1 scale-75">
+          <MagnifierBadge />
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** The magnifier mark. */
+function MagnifierBadge() {
   return (
     <span className="flex size-7 items-center justify-center rounded-full bg-white/85 text-neutral-600 shadow-sm ring-1 ring-black/10">
       <svg

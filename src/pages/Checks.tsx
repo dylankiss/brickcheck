@@ -9,6 +9,7 @@ import {
 } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useChecks } from "../hooks/useChecks";
+import { isComplete } from "../lib/parts";
 
 export default function Checks() {
   const { checks, error } = useChecks();
@@ -34,6 +35,15 @@ export default function Checks() {
           <p className="py-12 text-center text-neutral-500">
             No checks yet. Pick a set and start checking.
           </p>
+        )}
+        {checks?.some((c) => !isComplete(c)) && (
+          <Link
+            to="/missing"
+            className="flex min-h-11 items-center justify-between rounded-2xl px-3 text-sm font-semibold text-brick ring-1 ring-brick"
+          >
+            Found a piece? See where it goes
+            <span aria-hidden>›</span>
+          </Link>
         )}
         {checks?.map((check) => (
           <Link

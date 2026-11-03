@@ -225,6 +225,20 @@ export function getCheckLines(checkId: string): Promise<InventoryLine[]> {
   );
 }
 
+/** The inventory with progress of several checks at once (missing across checks). */
+export function getLinesOfChecks(checkIds: string[]): Promise<InventoryLine[]> {
+  if (checkIds.length === 0) return Promise.resolve([]);
+  return fetchAll((from, to) =>
+    supabase
+      .from("check_lines")
+      .select("*")
+      .in("check_id", checkIds)
+      .order("check_id")
+      .order("line_id")
+      .range(from, to),
+  );
+}
+
 /** Only the progress numbers, for cheap refreshes after reconnecting. */
 export function getCheckProgress(checkId: string): Promise<LineProgress[]> {
   return fetchAll((from, to) =>
