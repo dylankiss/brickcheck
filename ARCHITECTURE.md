@@ -174,7 +174,8 @@ src/
   lib/api.ts        ALL data access (queries, RPCs, function calls, realtime)
   lib/types.ts      domain types shared by api, hooks and UI
   lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
-  hooks/            React state built on lib/api (useAuth, useCheck, ...)
+  lib/theme.ts      light/dark preference (localStorage) and the `dark` class
+  hooks/            React state built on lib/api and lib/theme (useAuth, useCheck, useTheme, ...)
   pages/            route components
   components/       presentational components; no data fetching
 ```
@@ -226,6 +227,10 @@ src/
 - Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and
   optionally `VITE_PUBLIC_URL`. Function secrets: `REBRICKABLE_API_KEY`,
   `BRICKCHECK_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated, `*` wildcards).
+- **Theme**: `dark:` styles follow a `dark` class on `<html>`. It follows the
+  system setting unless the user picks Light or Dark (the button on My checks),
+  a per-device preference in `localStorage`. An inline script in `index.html`
+  applies it before the first paint; `lib/theme.ts` keeps it applied.
 - **Errors**: routes have an error page with a Reload button, and a failed
   lazy chunk load (after a deploy) reloads the page into the new version.
 - **PWA** (`vite.config.ts`):

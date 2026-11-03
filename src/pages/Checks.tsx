@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { ThemeButton } from "../components/ThemeButton";
 import {
   ErrorBanner,
   Header,
@@ -16,12 +17,15 @@ export default function Checks() {
   return (
     <>
       <Header title="My checks">
-        <button
-          onClick={() => signOut()}
-          className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-4 text-sm text-neutral-500"
-        >
-          Sign out
-        </button>
+        <div className="absolute top-[calc(env(safe-area-inset-top)+0.375rem)] right-2 flex items-center">
+          <ThemeButton />
+          <button
+            onClick={() => signOut()}
+            className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
+          >
+            Sign out
+          </button>
+        </div>
       </Header>
       {error && <ErrorBanner message={error} />}
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-28">

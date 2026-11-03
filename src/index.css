@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
+/* Dark mode follows the `dark` class on <html> (src/lib/theme.ts), not only the system setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brick: #d01012;
   --color-brick-dark: #a00d0e;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 html,
