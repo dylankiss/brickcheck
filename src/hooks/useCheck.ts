@@ -4,6 +4,7 @@ import {
   getCheck,
   getCheckLines,
   getCheckProgress,
+  listMembers,
   subscribeToCheck,
 } from "../lib/api";
 import {
@@ -14,7 +15,7 @@ import {
   type LineMap,
   type Tile,
 } from "../lib/tiles";
-import type { CheckSummary, LineProgress, OnlineMember } from "../lib/types";
+import type { CheckSummary, LineProgress, Member } from "../lib/types";
 
 export type CheckStatus = "loading" | "ready" | "not-found" | "error";
 
@@ -30,7 +31,7 @@ export type CheckStatus = "loading" | "ready" | "not-found" | "error";
  *   refetches) are held back and applied together with the request's result,
  *   so the optimistic delta is never counted twice.
  */
-export function useCheck(checkId: string, me: OnlineMember) {
+export function useCheck(checkId: string, myUserId: string) {
   const [summary, setSummary] = useState<CheckSummary | null>(null);
   const [lines, setLines] = useState<LineMap>(() => new Map());
   const [pending, setPending] = useState<ReadonlyMap<string, number>>(
@@ -38,7 +39,8 @@ export function useCheck(checkId: string, me: OnlineMember) {
   );
   const [status, setStatus] = useState<CheckStatus>("loading");
   const [error, setError] = useState<string | null>(null);
-  const [online, setOnline] = useState<OnlineMember[]>([]);
+  const [members, setMembers] = useState<Member[] | null>(null);
+  const [onlineIds, setOnlineIds] = useState<string[]>([]);
   // Bumped when the check or its members change, so dependent views refetch.
   const [version, setVersion] = useState(0);
 
@@ -52,6 +54,26 @@ export function useCheck(checkId: string, me: OnlineMember) {
   const refreshAgain = useRef(false);
   // Bumped on every (un)mount; async work only applies results of its own generation.
   const generation = useRef(0);
+  const stopChannel = useRef<(() => void) | null>(null);
+  const membersRequest = useRef(0);
+
+  /** The check is gone or we were removed: stop listening (the channel would only be refused). */
+  const lostAccess = useCallback(() => {
+    setStatus("not-found");
+    stopChannel.current?.();
+    stopChannel.current = null;
+  }, []);
+
+  /** Loads the member list; responses older than the latest request are dropped. */
+  const loadMembers = useCallback(async () => {
+    const request = ++membersRequest.current;
+    try {
+      const list = await listMembers(checkId);
+      if (request === membersRequest.current) setMembers(list);
+    } catch (e) {
+      console.warn("Loading members failed", e);
+    }
+  }, [checkId]);
 
   /** Applies server values, holding back those for tiles with a request in flight. */
   const receive = useCallback((updates: LineProgress[]) => {
@@ -80,7 +102,7 @@ export function useCheck(checkId: string, me: OnlineMember) {
       ]);
       if (gen !== generation.current) return false;
       if (!check) {
-        setStatus("not-found");
+        lostAccess();
         return false;
       }
       tileOfLine.current = new Map(
@@ -98,7 +120,7 @@ export function useCheck(checkId: string, me: OnlineMember) {
       }
       return false;
     }
-  }, [checkId]);
+  }, [checkId, lostAccess]);
 
   /**
    * Catches up with the server. Requests made while one runs schedule exactly
@@ -128,7 +150,7 @@ export function useCheck(checkId: string, me: OnlineMember) {
           ]);
           if (gen !== generation.current) return;
           if (!check) {
-            setStatus("not-found");
+            lostAccess();
             return;
           }
           setSummary(check);
@@ -141,21 +163,23 @@ export function useCheck(checkId: string, me: OnlineMember) {
       refreshing.current = null;
     });
     return refreshing.current;
-  }, [checkId, load, receive]);
+  }, [checkId, load, receive, lostAccess]);
 
   useEffect(() => {
     generation.current++;
     loaded.current = load();
+    loadMembers();
 
-    const unsubscribe = subscribeToCheck(checkId, me, {
+    stopChannel.current = subscribeToCheck(checkId, myUserId, {
       onProgress: (progress) => receive([progress]),
       onChanged: () => {
         setVersion((v) => v + 1);
+        loadMembers();
         refresh();
       },
       // Catches up on anything missed between loading and (re)subscribing.
       onSubscribed: () => void refresh(),
-      onPresence: setOnline,
+      onPresence: setOnlineIds,
     });
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -165,12 +189,11 @@ export function useCheck(checkId: string, me: OnlineMember) {
       // A counter, not a DOM ref: invalidating in-flight work is the point.
       // oxlint-disable-next-line react-hooks/exhaustive-deps
       generation.current++;
-      unsubscribe();
+      stopChannel.current?.();
+      stopChannel.current = null;
       document.removeEventListener("visibilitychange", onVisibility);
     };
-    // `me` is announced once per subscription; a renamed user shows up on the next visit.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkId, load, receive, refresh]);
+  }, [checkId, myUserId, load, loadMembers, receive, refresh]);
 
   const tiles = useMemo(() => buildTiles(lines, pending), [lines, pending]);
 
@@ -238,9 +261,14 @@ export function useCheck(checkId: string, me: OnlineMember) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Only members count as online: presence keys are chosen by clients.
+  const online = useMemo(() => {
+    const ids = new Set(onlineIds);
+    return (members ?? []).filter((m) => ids.has(m.user_id));
+  }, [members, onlineIds]);
   const others = useMemo(
-    () => online.filter((o) => o.user_id !== me.user_id),
-    [online, me.user_id],
+    () => online.filter((m) => m.user_id !== myUserId),
+    [online, myUserId],
   );
 
   return {
@@ -252,6 +280,8 @@ export function useCheck(checkId: string, me: OnlineMember) {
     clearError,
     canEdit,
     tap,
+    members,
+    reloadMembers: loadMembers,
     online,
     others,
     version,

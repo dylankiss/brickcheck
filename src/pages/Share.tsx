@@ -5,7 +5,7 @@ import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useCheckContext } from "../hooks/useCheckContext";
 import { useMembers } from "../hooks/useMembers";
-import { deleteCheck, inviteUrl, removeMember } from "../lib/api";
+import { inviteUrl } from "../lib/api";
 import type { Invite } from "../lib/types";
 
 const roleLabel = {
@@ -37,12 +37,12 @@ async function shareLink(
 export default function Share() {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const { checkId, summary, version, online } = useCheckContext();
+  const { checkId, summary, version, online, members, reloadMembers } =
+    useCheckContext();
   const check = summary!;
   const isOwner = check.my_role === "owner";
   const me = session!.user.id;
   const {
-    members,
     invites,
     error,
     clearError,
@@ -50,7 +50,9 @@ export default function Share() {
     revokeInvite,
     setRole,
     remove,
-  } = useMembers(checkId, isOwner, version);
+    leave,
+    deleteCheck,
+  } = useMembers(checkId, me, isOwner, version, reloadMembers);
   const [copied, setCopied] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const onlineIds = new Set(online.map((o) => o.user_id));
@@ -74,14 +76,10 @@ export default function Share() {
   async function leaveOrDelete() {
     const question = isOwner
       ? `Delete "${check.title}" for everyone? Progress is lost.`
-      : `Leave "${check.title}"? You can rejoin with a new invite.`;
+      : `Leave "${check.title}"? You can rejoin with an invite link.`;
     if (!window.confirm(question)) return;
-    try {
-      await (isOwner ? deleteCheck(checkId) : removeMember(checkId, me));
+    if (await (isOwner ? deleteCheck() : leave()))
       navigate("/", { replace: true });
-    } catch (e) {
-      setActionError((e as Error).message);
-    }
   }
 
   return (
@@ -162,7 +160,7 @@ export default function Share() {
                     online={onlineIds.has(m.user_id)}
                   />
                   <span className="min-w-0 flex-1 truncate">
-                    {m.display_name ?? "Unnamed builder"}
+                    {m.display_name || "Unnamed builder"}
                     {m.user_id === me && (
                       <span className="text-neutral-500"> (you)</span>
                     )}
@@ -184,7 +182,7 @@ export default function Share() {
                         className="min-h-11 px-2 text-sm text-neutral-500"
                         onClick={() =>
                           window.confirm(
-                            `Remove ${m.display_name ?? "this member"}?`,
+                            `Remove ${m.display_name || "this member"}? Links you sent before won't let them back in.`,
                           ) && remove(m.user_id)
                         }
                       >

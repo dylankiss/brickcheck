@@ -11,7 +11,6 @@ import type {
   LineProgress,
   Member,
   NewCheck,
-  OnlineMember,
   Profile,
 } from "./types";
 
@@ -316,15 +315,17 @@ export async function removeMember(
   if (error) fail(error);
 }
 
-export async function listInvites(checkId: string): Promise<Invite[]> {
-  const { data, error } = await supabase
-    .from("check_invites")
-    .select("token, role, expires_at")
-    .eq("check_id", checkId)
-    .gt("expires_at", new Date().toISOString())
-    .order("created_at");
-  if (error) fail(error);
-  return data;
+export function listInvites(checkId: string): Promise<Invite[]> {
+  return fetchAll((from, to) =>
+    supabase
+      .from("check_invites")
+      .select("token, role, expires_at")
+      .eq("check_id", checkId)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at")
+      .order("token")
+      .range(from, to),
+  );
 }
 
 export async function createInvite(
@@ -380,7 +381,8 @@ export interface CheckChannelHandlers {
   onChanged: () => void;
   /** Called on every (re)subscribe, so callers can refetch what they missed. */
   onSubscribed: () => void;
-  onPresence: (online: OnlineMember[]) => void;
+  /** User ids with the check open; names come from the member list, not from presence. */
+  onPresence: (userIds: string[]) => void;
 }
 
 // Channels still leaving, by topic. supabase.channel() would hand back a
@@ -393,7 +395,7 @@ const leaving = new Map<string, Promise<unknown>>();
  */
 export function subscribeToCheck(
   checkId: string,
-  me: OnlineMember,
+  userId: string,
   handlers: CheckChannelHandlers,
 ): () => void {
   const topic = `check:${checkId}`;
@@ -402,7 +404,7 @@ export function subscribeToCheck(
 
   Promise.all([leaving.get(topic), supabase.realtime.setAuth()]).then(() => {
     if (cancelled) return;
-    channel = openCheckChannel(topic, me, handlers);
+    channel = openCheckChannel(topic, userId, handlers);
   });
 
   return () => {
@@ -417,30 +419,24 @@ export function subscribeToCheck(
 
 function openCheckChannel(
   topic: string,
-  me: OnlineMember,
+  userId: string,
   handlers: CheckChannelHandlers,
 ) {
   const channel = supabase.channel(topic, {
-    config: { private: true, presence: { key: me.user_id } },
+    config: { private: true, presence: { key: userId } },
   });
   channel
     .on("broadcast", { event: "progress" }, ({ payload }) =>
       handlers.onProgress(payload as LineProgress),
     )
     .on("broadcast", { event: "changed" }, () => handlers.onChanged())
-    .on("presence", { event: "sync" }, () => {
-      const state = channel.presenceState<{ name: string | null }>();
-      handlers.onPresence(
-        Object.entries(state).map(([user_id, metas]) => ({
-          user_id,
-          name: metas[0]?.name ?? null,
-        })),
-      );
-    });
+    .on("presence", { event: "sync" }, () =>
+      handlers.onPresence(Object.keys(channel.presenceState())),
+    );
 
   channel.subscribe((status) => {
     if (status !== "SUBSCRIBED") return;
-    channel.track({ name: me.name });
+    channel.track({});
     handlers.onSubscribed();
   });
   return channel;

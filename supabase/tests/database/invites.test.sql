@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(18);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role) values
   ('00000000-0000-0000-0000-00000000000a', 'alice@example.com', '{"full_name": "Alice"}', 'authenticated', 'authenticated'),
@@ -105,7 +105,52 @@ select throws_ok(
   'unknown tokens are rejected'
 );
 
+-- Alice removes Bob: his old link stops working, a new one works
+select pg_temp.login('a');
+delete from public.check_members where user_id = '00000000-0000-0000-0000-00000000000b';
+select pg_temp.login('b');
+select throws_ok(
+  $$ select public.accept_invite(helper_token) from ctx $$,
+  'P0002',
+  null,
+  'a removed member cannot rejoin with an old link'
+);
+select is(
+  (select count(*)::int from public.invite_preview((select helper_token from ctx))),
+  0,
+  'a removed member sees no preview for an old link'
+);
 reset role;
+-- A link created after the removal (one second later) works again.
+with i as (
+  insert into public.check_invites (check_id, created_by, created_at)
+  select check_id, '00000000-0000-0000-0000-00000000000a', now() + interval '1 second' from ctx
+  returning token
+)
+update ctx set helper_token = (select token from i);
+set local role authenticated;
+select pg_temp.login('b');
+select lives_ok($$ select public.accept_invite(helper_token) from ctx $$, 'a new link lets them back in');
+
+-- Leaving on your own is not a removal
+delete from public.check_members where user_id = '00000000-0000-0000-0000-00000000000b';
+select lives_ok($$ select public.accept_invite(viewer_token) from ctx $$, 'someone who left can rejoin with an old link');
+
+select throws_ok(
+  $$ update public.profiles set avatar_url = 'https://tracker.example/pixel.gif' where id = '00000000-0000-0000-0000-00000000000b' $$,
+  '42501',
+  null,
+  'users cannot set their own avatar URL'
+);
+
+reset role;
+select ok(
+  has_function_privilege('authenticated', 'public.adjust_part(uuid, text, int, int)', 'execute')
+  and has_function_privilege('authenticated', 'public.accept_invite(uuid)', 'execute')
+  and has_table_privilege('authenticated', 'public.check_lines', 'select'),
+  'the app''s functions and views are explicitly granted to authenticated'
+);
+
 set local role anon;
 select throws_ok(
   $$ select public.accept_invite(gen_random_uuid()) $$,

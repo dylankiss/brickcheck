@@ -106,7 +106,7 @@ async function newPage(browser) {
 }
 
 /** Logs in via the magic link, or by typing the 6-digit code when `viaCode`. */
-async function loginPage(browser, email, { viaCode = false } = {}) {
+async function loginPage(browser, email, { viaCode = false, name } = {}) {
   await admin.auth.admin.createUser({ email, email_confirm: true });
   const page = await newPage(browser);
   if (viaCode) {
@@ -133,6 +133,9 @@ async function loginPage(browser, email, { viaCode = false } = {}) {
     await page.goto(data.properties.action_link);
   }
   await page.waitForURL(`${APP}/**`);
+  // New email users are asked for a name first.
+  await page.getByPlaceholder("Your name").fill(name);
+  await page.getByRole("button", { name: "Save" }).click();
   await page.getByText("My checks").waitFor();
   return page;
 }
@@ -150,7 +153,9 @@ try {
   await anon.screenshot({ path: `${OUT}/1-login.png` });
   ok(anon.url().endsWith("/login"), "unauthenticated users are sent to /login");
 
-  const a = await loginPage(browser, `alice${Date.now()}@example.com`);
+  const a = await loginPage(browser, `alice${Date.now()}@example.com`, {
+    name: "Alice",
+  });
   ok(true, "magic link logs in and lands on My checks");
 
   // New check
@@ -198,12 +203,9 @@ try {
   // Bob logs in with the code from the email and picks a name
   const b = await loginPage(browser, `bob${Date.now()}@example.com`, {
     viaCode: true,
+    name: "Bob Builder",
   });
-  ok(true, "logging in with the 6-digit code works");
-  await b.getByPlaceholder("Your name").fill("Bob Builder");
-  await b.getByRole("button", { name: "Save" }).click();
-  await b.getByPlaceholder("Your name").waitFor({ state: "detached" });
-  ok(true, "email users are asked for a display name once");
+  ok(true, "logging in with the 6-digit code works, after choosing a name");
 
   // Alice invites helpers; Bob joins through the link
   await a.getByRole("link", { name: "People" }).click();
@@ -212,7 +214,7 @@ try {
   const link = await a.evaluate(() => navigator.clipboard.readText());
   ok(/\/join\/[0-9a-f-]{36}$/.test(link), `invite link copied: ${link}`);
   await b.goto(link);
-  await b.getByText(/invited you to tick off parts/).waitFor();
+  await b.getByText("Alice invited you to tick off parts.").waitFor();
   await b.screenshot({ path: `${OUT}/7-join.png` });
   await b.getByRole("button", { name: "Join" }).click();
   await b.getByText("2/11").waitFor();
@@ -290,6 +292,9 @@ try {
   await a.getByRole("button", { name: "Remove" }).click();
   await b.getByText("Check not found").waitFor({ timeout: 10000 });
   ok(true, "a removed member loses access live");
+  await b.goto(link);
+  await b.getByText("This invite link is invalid or has expired").waitFor();
+  ok(true, "a removed member cannot rejoin with the old link");
 
   // My checks list
   await a.goto(`${APP}/`);

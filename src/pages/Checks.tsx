@@ -1,7 +1,5 @@
-import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import {
-  Button,
   ErrorBanner,
   Header,
   PartImage,
@@ -10,54 +8,10 @@ import {
 } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useChecks } from "../hooks/useChecks";
-import { signOut, updateMyName } from "../lib/api";
-
-/** Asks email users (who have no name yet) what others should see. */
-function NamePrompt() {
-  const { session, refreshProfile } = useAuth();
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  async function save(e: FormEvent) {
-    e.preventDefault();
-    try {
-      await updateMyName(session!.user.id, name.trim());
-      await refreshProfile();
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={save}
-      className="flex flex-col gap-2 rounded-2xl bg-yellow-50 p-3 ring-1 ring-yellow-300 dark:bg-yellow-950 dark:ring-yellow-800"
-    >
-      <label htmlFor="display-name" className="text-sm font-medium">
-        What name should people you check with see?
-      </label>
-      <div className="flex gap-2">
-        <input
-          id="display-name"
-          required
-          maxLength={100}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name"
-          className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
-        />
-        <Button type="submit" disabled={!name.trim()}>
-          Save
-        </Button>
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-    </form>
-  );
-}
 
 export default function Checks() {
   const { checks, error } = useChecks();
-  const { profile } = useAuth();
+  const { signOut } = useAuth();
 
   return (
     <>
@@ -71,7 +25,6 @@ export default function Checks() {
       </Header>
       {error && <ErrorBanner message={error} />}
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-28">
-        {profile && !profile.display_name && <NamePrompt />}
         {!checks && !error && <Spinner />}
         {checks?.length === 0 && (
           <p className="py-12 text-center text-neutral-500">

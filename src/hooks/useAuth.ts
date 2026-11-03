@@ -7,6 +7,8 @@ export interface AuthState {
   profile: Profile | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
+  updateName: (name: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthState>({
@@ -14,6 +16,8 @@ export const AuthContext = createContext<AuthState>({
   profile: null,
   loading: true,
   refreshProfile: async () => {},
+  updateName: async () => {},
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);

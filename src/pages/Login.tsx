@@ -8,10 +8,12 @@ export default function Login() {
   const { session } = useAuth();
   const location = useLocation();
   // Where to return after login, e.g. an invite link (ARCHITECTURE.md, "Invites").
-  // Only same-origin paths: "//evil.com" would be read as another host.
+  // Only same-origin paths: "//evil.com" or "/\\evil.com" would be read as another host.
   const requested = (location.state as { from?: string } | null)?.from;
   const from =
-    requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/";
+    requested && /^\/(?![/\\])/.test(requested) && !requested.includes("\\")
+      ? requested
+      : "/";
   const redirectTo = window.location.origin + from;
 
   const [email, setEmail] = useState("");

@@ -67,7 +67,11 @@ export function Avatar({
 export function OnlineAvatars({
   people,
 }: {
-  people: { user_id: string; name: string | null }[];
+  people: {
+    user_id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  }[];
 }) {
   if (people.length === 0) return null;
   return (
@@ -77,7 +81,7 @@ export function OnlineAvatars({
           key={p.user_id}
           className="rounded-full ring-2 ring-neutral-50 dark:ring-neutral-950"
         >
-          <Avatar name={p.name} size="size-8" />
+          <Avatar name={p.display_name} url={p.avatar_url} size="size-8" />
         </span>
       ))}
       {people.length > 4 && (

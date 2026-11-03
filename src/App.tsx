@@ -7,6 +7,7 @@ import {
 } from "react-router";
 import { Spinner } from "./components/ui";
 import { AuthProvider } from "./components/AuthProvider";
+import { NamePrompt } from "./components/NamePrompt";
 import { useAuth } from "./hooks/useAuth";
 import Check from "./pages/Check";
 import CheckLayout from "./pages/CheckLayout";
@@ -18,7 +19,7 @@ import NewCheck from "./pages/NewCheck";
 import Share from "./pages/Share";
 
 function RequireAuth() {
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   const location = useLocation();
   if (loading) return <Spinner />;
   if (!session)
@@ -29,6 +30,8 @@ function RequireAuth() {
         state={{ from: location.pathname + location.search }}
       />
     );
+  // Ask for a name before anything else (also before joining via an invite).
+  if (profile && !profile.display_name) return <NamePrompt />;
   return <Outlet />;
 }
 

@@ -28,7 +28,8 @@ Browser ──(supabase-js, user JWT)──► Postgres (RLS)        reads, sear
                                          │ service role: import_set()
                                          ▼
                                      set cache (lego_sets, set_parts)
-        ◄──(Realtime broadcast, private channel check:<id>)── trigger on check_progress
+        ◄──(Realtime broadcast, private channel check:<id>)── triggers:
+                 `progress` from check_progress, `changed` from checks / check_members
 
 scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickable sets.csv.gz)
 ```
@@ -89,6 +90,7 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 | `check_members`          | who can see or edit a check (`owner`, `helper`, `viewer`)          | trigger (owner), `accept_invite` RPC (phase 2) |
 | `check_progress`         | `found_qty` per (check, set_part); a missing row means 0           | `adjust_part` RPC only                         |
 | `check_invites`          | invite tokens                                                      | the owner                                      |
+| `check_removals`         | who the owner removed, and when                                    | trigger on `check_members` delete              |
 | `check_lines` (view)     | every line that counts for a check, with `found_qty`               | —                                              |
 | `check_summaries` (view) | per check: set info, my role, needed, found                        | —                                              |
 
@@ -127,6 +129,15 @@ definer` with `search_path = ''` so that policies don't recurse into
   part belongs to the check's set). Trigger functions get no execute grant.
 - The Rebrickable key exists only as an Edge Function secret
   (`REBRICKABLE_API_KEY`). It never appears in `VITE_*` variables or client code.
+- **Realtime limitation**: Realtime checks the channel policies when a client
+  joins (and on token refresh), not for each message. A removed member whose
+  client stays connected and ignores the `changed` event could keep receiving
+  broadcasts until the token expires (`jwt_expiry`, 1 h). Our client leaves
+  the channel as soon as it notices.
+- `avatar_url` is set only from the OAuth provider at signup; users cannot
+  change it (no tracking pixels for co-members).
+- Migrations grant what the app needs to `authenticated` explicitly instead of
+  relying on platform default privileges.
 - Edge Functions run with `verify_jwt = false` and verify the caller in code
   (`_shared/auth.ts`, `auth.getClaims()`), rejecting anyone who isn't an
   authenticated, non-anonymous user. With asymmetric JWTs the check is local, so
@@ -163,9 +174,15 @@ src/
   components/       presentational components; no data fetching
 ```
 
-- **Presence**: the check channel tracks `{name}` under the user's id.
-  `useCheck` exposes `online` and `others`. A `changed` broadcast bumps
-  `version`, which views such as the member list depend on.
+- **Presence**: the check channel only tracks the user's id; presence keys are
+  chosen by clients, so they are never trusted for names. `useCheck` loads the
+  member list (again on every `changed` broadcast) and exposes `online` and
+  `others` as members whose id is present. A `changed` broadcast also bumps
+  `version`, which other views (invites) depend on.
+- **Lost access**: when a refresh finds no check (deleted, or we were removed),
+  `useCheck` shows "not found" and leaves the channel.
+- **Name first**: `RequireAuth` asks users without a display name for one
+  before showing any page, including the join page.
 - **Login**: the login email carries a link and a 6-digit code
   (`supabase/templates/login.html`). The code matters for the installed iOS
   PWA, where the link opens Safari instead of the app.
@@ -225,9 +242,13 @@ back-off).
 - `invite_preview(token)` shows the check, set and inviter before joining.
 - Members can leave a check. The owner can remove members, change their roles,
   or delete the check.
+- A removal is recorded in `check_removals`. Links created before the removal
+  no longer work for that person (neither preview nor accept); a newer link
+  does, and accepting it clears the record. Leaving on your own isn't recorded.
 
 ## Deployment notes
 
+- **Hosted Realtime**: turn off "Allow public access" (private channels only).
 - **Hosted auth**: set `site_url` to the Pages domain. Add the Pages domain and
   `https://*.<project>.pages.dev/**` to the redirect URLs. Do **not** run
   `supabase config push`, which would push the local `localhost` settings.

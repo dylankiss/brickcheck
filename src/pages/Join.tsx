@@ -50,7 +50,7 @@ export default function Join() {
                 {preview.set_num} · {preview.set_name}
               </p>
               <p>
-                {preview.invited_by ?? "Someone"} invited you to{" "}
+                {preview.invited_by || "Someone"} invited you to{" "}
                 {roleText[preview.role]}.
               </p>
             </div>

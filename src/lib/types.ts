@@ -99,9 +99,3 @@ export interface InvitePreview {
   invited_by: string | null;
   already_member: boolean;
 }
-
-/** Someone with the check open right now (Realtime presence). */
-export interface OnlineMember {
-  user_id: string;
-  name: string | null;
-}
