@@ -5,27 +5,28 @@ import {
   useState,
   type MouseEvent,
 } from "react";
-import { partLabel, type Part } from "../lib/parts";
-import { ColorSwatch, PartImage } from "./ui";
+import type { Part } from "../lib/parts";
+import { partPicture, type Picture } from "./pictures";
+import { PartImage } from "./ui";
 
 const ZOOM = 2.5;
 
 /**
- * A Part's picture enlarged to fill the screen, to see its details. Tap the
- * picture to zoom in on that spot (drag to look around), tap again to fit.
- * A native modal <dialog>: Escape and the Android back gesture close it, focus
- * stays inside, and the page behind is inert. The browser's own pinch zoom is
- * off inside it, so the page never stays zoomed after closing.
+ * A picture enlarged to fill the screen, to see its details. Tap the picture to
+ * zoom in on that spot (drag to look around), tap again to fit. A native modal
+ * <dialog>: Escape and the Android back gesture close it, focus stays inside,
+ * and the page behind is inert. The browser's own pinch zoom is off inside it,
+ * so the page never stays zoomed after closing.
  */
-export function EnlargedPart({
-  part,
+export function EnlargedPicture({
+  picture,
   onClose,
 }: {
-  part: Part | null;
+  picture: Picture | null;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const open = part !== null;
+  const open = picture !== null;
 
   useEffect(() => {
     const el = dialog.current;
@@ -38,26 +39,20 @@ export function EnlargedPart({
     <dialog
       ref={dialog}
       onClose={onClose}
-      aria-label={part ? partLabel(part) : undefined}
+      aria-label={picture?.label}
       className="fixed inset-0 m-0 size-full max-h-none max-w-none bg-white p-0 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
       style={{ touchAction: "pan-x pan-y" }}
     >
-      {part && (
+      {picture && (
         <div className="flex h-full flex-col">
           <div className="flex items-center gap-3 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">{part.part_name}</p>
-              <p className="flex items-center gap-1.5 text-sm text-neutral-500 tabular-nums dark:text-neutral-400">
-                <ColorSwatch
-                  rgb={part.color_rgb}
-                  trans={part.is_trans}
-                  className="size-3"
-                />
-                <span className="truncate">
-                  {part.color_name} · {part.part_num} · {part.found} of{" "}
-                  {part.needed} found
-                </span>
-              </p>
+              <p className="truncate font-semibold">{picture.title}</p>
+              {picture.detail && (
+                <p className="flex items-center gap-1.5 text-sm text-neutral-500 tabular-nums dark:text-neutral-400">
+                  {picture.detail}
+                </p>
+              )}
             </div>
             <button
               type="button"
@@ -69,16 +64,38 @@ export function EnlargedPart({
               ✕
             </button>
           </div>
-          {/* Keyed so a new Part starts fitted. */}
-          <ZoomablePicture key={part.key} part={part} />
+          <ZoomablePicture
+            key={picture.key}
+            src={picture.src}
+            label={picture.label}
+          />
         </div>
       )}
     </dialog>
   );
 }
 
+/** A Part's picture enlarged, with its live found count. */
+export function EnlargedPart({
+  part,
+  onClose,
+}: {
+  part: Part | null;
+  onClose: () => void;
+}) {
+  return (
+    <EnlargedPicture picture={part && partPicture(part)} onClose={onClose} />
+  );
+}
+
 /** Fits the picture to the space; a tap zooms in on that spot, the next tap fits again. */
-function ZoomablePicture({ part }: { part: Part }) {
+function ZoomablePicture({
+  src,
+  label,
+}: {
+  src: string | null;
+  label: string;
+}) {
   const area = useRef<HTMLDivElement>(null);
   const [zoomedAt, setZoomedAt] = useState<{ x: number; y: number } | null>(
     null,
@@ -102,7 +119,7 @@ function ZoomablePicture({ part }: { part: Part }) {
   }, [zoomedAt]);
 
   return (
-    // Renders are drawn for a light background, as on the cards.
+    // Pictures are made for a light background, as on the cards.
     <div
       ref={area}
       className="min-h-0 flex-1 overflow-auto bg-white dark:bg-neutral-200"
@@ -120,60 +137,64 @@ function ZoomablePicture({ part }: { part: Part }) {
             : undefined
         }
       >
-        <PartImage
-          src={part.img_url}
-          alt={partLabel(part)}
-          className="size-full p-4"
-        />
+        <PartImage src={src} alt={label} className="size-full p-4" />
       </div>
     </div>
   );
 }
 
-/** Magnifier that enlarges a Part's picture; sits over the picture's corner. */
+/** Magnifier that enlarges a picture; sits over the picture's corner. */
 export function EnlargeButton({
-  part,
+  label,
   onEnlarge,
   className = "",
 }: {
-  part: Part;
-  onEnlarge: (key: string) => void;
+  label: string;
+  onEnlarge: () => void;
   className?: string;
 }) {
   return (
     <button
       type="button"
-      onClick={() => onEnlarge(part.key)}
+      onClick={onEnlarge}
       className={`flex size-11 items-center justify-center ${className}`}
-      aria-label={`Enlarge picture of ${partLabel(part)}`}
+      aria-label={`Enlarge picture of ${label}`}
     >
       <MagnifierBadge />
     </button>
   );
 }
 
-/** A small picture that is itself the enlarge button (lists); disabled when there is no picture. */
+/** A small picture that is itself the enlarge button; disabled when there is no picture. */
 export function EnlargeableThumbnail({
-  part,
+  src,
+  label,
   onEnlarge,
+  className = "size-14",
+  buttonClassName = "",
 }: {
-  part: Part;
-  onEnlarge: (key: string) => void;
+  src: string | null;
+  label: string;
+  onEnlarge: () => void;
+  /** Size and look of the picture. */
+  className?: string;
+  buttonClassName?: string;
 }) {
-  const [noPicture, setNoPicture] = useState(!part.img_url);
+  const [noPicture, setNoPicture] = useState(!src);
   return (
     <button
       type="button"
-      onClick={() => onEnlarge(part.key)}
+      onClick={onEnlarge}
       disabled={noPicture}
-      className="relative shrink-0 rounded-lg"
-      aria-label={`Enlarge picture of ${partLabel(part)}`}
+      // Disabled (no picture): let taps through to whatever is underneath.
+      className={`relative shrink-0 rounded-lg disabled:pointer-events-none ${buttonClassName}`}
+      aria-label={`Enlarge picture of ${label}`}
     >
       <PartImage
-        src={part.img_url}
+        src={src}
         alt=""
         onError={() => setNoPicture(true)}
-        className="size-14"
+        className={className}
       />
       {!noPicture && (
         <span className="absolute -right-1 -bottom-1 scale-75">

@@ -1,12 +1,12 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { ThemeButton } from "../components/ThemeButton";
 import {
-  ErrorBanner,
-  Header,
-  PartImage,
-  ProgressBar,
-  Spinner,
-} from "../components/ui";
+  EnlargeableThumbnail,
+  EnlargedPicture,
+} from "../components/EnlargedPicture";
+import { setPicture, type Picture } from "../components/pictures";
+import { ErrorBanner, Header, ProgressBar, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useMySets } from "../hooks/useMySets";
 import { isComplete } from "../lib/parts";
@@ -14,6 +14,7 @@ import { isComplete } from "../lib/parts";
 export default function MySets() {
   const { sets, error } = useMySets();
   const { signOut } = useAuth();
+  const [enlarged, setEnlarged] = useState<Picture | null>(null);
 
   return (
     <>
@@ -46,17 +47,12 @@ export default function MySets() {
           </Link>
         )}
         {sets?.map((set) => (
-          <Link
-            key={set.id}
-            to={`/sets/${set.id}`}
-            className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800"
-          >
-            <PartImage
-              src={set.catalog_img_url}
-              alt=""
-              className="size-16 shrink-0 rounded-lg bg-white"
-            />
-            <div className="min-w-0 flex-1">
+          // The whole card opens the set; the picture on top of it (a sibling, not nested) enlarges.
+          <div key={set.id} className="relative">
+            <Link
+              to={`/sets/${set.id}`}
+              className="flex min-h-22 items-center rounded-2xl bg-white p-3 pl-22 ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800 dark:active:bg-neutral-800"
+            >
               <p className="truncate font-semibold">{set.title}</p>
               <p className="truncate text-sm text-neutral-500">
                 {set.title === set.catalog_name
@@ -74,8 +70,15 @@ export default function MySets() {
                   {set.found}/{set.needed}
                 </span>
               </div>
-            </div>
-          </Link>
+            </Link>
+            <EnlargeableThumbnail
+              src={set.catalog_img_url}
+              label={set.title}
+              onEnlarge={() => setEnlarged(setPicture(set))}
+              className="size-16 rounded-lg bg-white"
+              buttonClassName="absolute top-1/2 left-3 -translate-y-1/2"
+            />
+          </div>
         ))}
       </main>
       <Link
@@ -84,6 +87,7 @@ export default function MySets() {
       >
         + Add a set
       </Link>
+      <EnlargedPicture picture={enlarged} onClose={() => setEnlarged(null)} />
     </>
   );
 }

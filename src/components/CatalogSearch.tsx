@@ -1,5 +1,5 @@
 import type { CatalogSet } from "../lib/types";
-import { PartImage } from "./ui";
+import { EnlargeableThumbnail } from "./EnlargedPicture";
 
 interface Props {
   query: string;
@@ -8,6 +8,7 @@ interface Props {
   error: string | null;
   noResults: boolean;
   onSelect: (catalogSet: CatalogSet) => void;
+  onEnlarge: (catalogSet: CatalogSet) => void;
 }
 
 export function CatalogSearch({
@@ -17,6 +18,7 @@ export function CatalogSearch({
   error,
   noResults,
   onSelect,
+  onEnlarge,
 }: Props) {
   return (
     <div className="flex flex-col gap-3">
@@ -32,18 +34,14 @@ export function CatalogSearch({
       {noResults && <p className="text-sm text-neutral-500">No sets found.</p>}
       <ul className="flex flex-col gap-2">
         {results.map((catalogSet) => (
-          <li key={catalogSet.set_num}>
+          // The whole row selects the set; the picture on top of it (a sibling, not nested) enlarges.
+          <li key={catalogSet.set_num} className="relative">
             <button
               type="button"
               onClick={() => onSelect(catalogSet)}
-              className="flex w-full items-center gap-3 rounded-2xl bg-white p-2 text-left ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800"
+              className="flex min-h-20 w-full items-center rounded-2xl bg-white p-2 pl-[5.25rem] text-left ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800 dark:active:bg-neutral-800"
             >
-              <PartImage
-                src={catalogSet.img_url}
-                alt=""
-                className="size-16 shrink-0 rounded-lg bg-white"
-              />
-              <span className="min-w-0">
+              <span className="block min-w-0">
                 <span className="block truncate font-semibold">
                   {catalogSet.name}
                 </span>
@@ -53,6 +51,13 @@ export function CatalogSearch({
                 </span>
               </span>
             </button>
+            <EnlargeableThumbnail
+              src={catalogSet.img_url}
+              label={catalogSet.name}
+              onEnlarge={() => onEnlarge(catalogSet)}
+              className="size-16 rounded-lg bg-white"
+              buttonClassName="absolute top-1/2 left-2 -translate-y-1/2"
+            />
           </li>
         ))}
       </ul>

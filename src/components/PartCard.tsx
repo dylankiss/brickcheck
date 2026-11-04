@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { isAllFound, partLabel, type Part } from "../lib/parts";
-import { EnlargeButton } from "./EnlargedPart";
+import { EnlargeButton } from "./EnlargedPicture";
 import { ColorSwatch, PartImage } from "./ui";
 
 interface Props {
@@ -75,8 +75,8 @@ export const PartCard = memo(
         </button>
         {!noPicture && (
           <EnlargeButton
-            part={part}
-            onEnlarge={onEnlarge}
+            label={partLabel(part)}
+            onEnlarge={() => onEnlarge(part.key)}
             className="absolute top-1 right-1"
           />
         )}

@@ -2,12 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { CatalogSearch } from "../components/CatalogSearch";
 import {
-  Button,
-  ErrorBanner,
-  Header,
-  PartImage,
-  Spinner,
-} from "../components/ui";
+  EnlargeableThumbnail,
+  EnlargedPicture,
+} from "../components/EnlargedPicture";
+import { catalogSetPicture, type Picture } from "../components/pictures";
+import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useCatalogSearch } from "../hooks/useCatalogSearch";
 import { createSet, fetchCatalogSet } from "../lib/api";
 import type { CatalogSet } from "../lib/types";
@@ -21,6 +20,7 @@ export default function AddSet() {
   const [includeMinifigs, setIncludeMinifigs] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [enlarged, setEnlarged] = useState<Picture | null>(null);
 
   function choose(chosen: CatalogSet) {
     setCatalogSet(chosen);
@@ -62,6 +62,7 @@ export default function AddSet() {
             error={search.error}
             noResults={search.noResults}
             onSelect={choose}
+            onEnlarge={(c) => setEnlarged(catalogSetPicture(c))}
           />
         ) : busy ? (
           <Spinner
@@ -74,10 +75,11 @@ export default function AddSet() {
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
-              <PartImage
+              <EnlargeableThumbnail
                 src={catalogSet.img_url}
-                alt=""
-                className="size-20 shrink-0 rounded-lg bg-white"
+                label={catalogSet.name}
+                onEnlarge={() => setEnlarged(catalogSetPicture(catalogSet))}
+                className="size-20 rounded-lg bg-white"
               />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{catalogSet.name}</p>
@@ -144,6 +146,7 @@ export default function AddSet() {
           </form>
         )}
       </main>
+      <EnlargedPicture picture={enlarged} onClose={() => setEnlarged(null)} />
     </>
   );
 }

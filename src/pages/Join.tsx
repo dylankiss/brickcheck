@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import {
-  Button,
-  ErrorBanner,
-  Header,
-  PartImage,
-  Spinner,
-} from "../components/ui";
+  EnlargeableThumbnail,
+  EnlargedPicture,
+} from "../components/EnlargedPicture";
+import { setPicture } from "../components/pictures";
+import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useInvite } from "../hooks/useInvite";
 
 const roleText = { helper: "tick off parts", viewer: "follow along" } as const;
@@ -17,6 +16,7 @@ export default function Join() {
   const { preview, error, accept } = useInvite(token);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [enlarged, setEnlarged] = useState(false);
 
   if (preview === undefined) return <Spinner />;
   if (preview?.already_member)
@@ -40,10 +40,11 @@ export default function Join() {
         {preview ? (
           <>
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-white p-4 text-center ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
-              <PartImage
+              <EnlargeableThumbnail
                 src={preview.catalog_img_url}
-                alt=""
-                className="h-32 w-full rounded-lg bg-white"
+                label={preview.set_title}
+                onEnlarge={() => setEnlarged(true)}
+                className="h-32 w-48 rounded-lg bg-white"
               />
               <p className="text-lg font-semibold">{preview.set_title}</p>
               <p className="text-sm text-neutral-500">
@@ -64,6 +65,20 @@ export default function Join() {
           </p>
         )}
       </main>
+      <EnlargedPicture
+        picture={
+          enlarged && preview
+            ? setPicture({
+                id: preview.set_id,
+                title: preview.set_title,
+                set_num: preview.set_num,
+                catalog_name: preview.catalog_name,
+                catalog_img_url: preview.catalog_img_url,
+              })
+            : null
+        }
+        onClose={() => setEnlarged(false)}
+      />
     </>
   );
 }

@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { EnlargeableThumbnail, EnlargedPart } from "../components/EnlargedPart";
+import {
+  EnlargeableThumbnail,
+  EnlargedPart,
+} from "../components/EnlargedPicture";
 import { ColorChips } from "../components/ColorChips";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useMissingAcrossSets } from "../hooks/useMissingAcrossSets";
@@ -114,7 +117,11 @@ function MissingAcrossItem({
   return (
     <li className="rounded-2xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
       <div className="flex items-center gap-3">
-        <EnlargeableThumbnail part={part} onEnlarge={onEnlarge} />
+        <EnlargeableThumbnail
+          src={part.img_url}
+          label={partLabel(part)}
+          onEnlarge={() => onEnlarge(part.key)}
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{part.part_name}</p>
           <p className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">

@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
-import { EnlargeableThumbnail, EnlargedPart } from "../components/EnlargedPart";
+import {
+  EnlargeableThumbnail,
+  EnlargedPart,
+} from "../components/EnlargedPicture";
 import { Button, ColorSwatch, Header } from "../components/ui";
 import { useSetContext } from "../hooks/useSetContext";
 import {
   missingParts,
+  partLabel,
   toBrickLinkXml,
   toRebrickableCsv,
   type Part,
@@ -98,7 +102,11 @@ function MissingItem({
 }) {
   return (
     <li className="flex items-center gap-3 rounded-2xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
-      <EnlargeableThumbnail part={part} onEnlarge={onEnlarge} />
+      <EnlargeableThumbnail
+        src={part.img_url}
+        label={partLabel(part)}
+        onEnlarge={() => onEnlarge(part.key)}
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{part.part_name}</p>
         <p className="flex items-center gap-1.5 text-xs text-neutral-500">

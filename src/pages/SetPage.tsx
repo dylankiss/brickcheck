@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
-import { EnlargedPart } from "../components/EnlargedPart";
+import { EnlargedPart } from "../components/EnlargedPicture";
 import { ErrorBanner, Header, PeopleIcon, ProgressBar } from "../components/ui";
 import { useSetContext } from "../hooks/useSetContext";
 import {
