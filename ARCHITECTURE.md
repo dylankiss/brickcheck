@@ -48,8 +48,9 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    limit and a global cap of 200 imports per hour, and refuses a second import
    of the same set within 3 minutes. A failed import calls `release_import`,
    so it can be retried at once; the attempt still counts towards the limits. Each Rebrickable
-   request has a 10 s timeout, and the whole import has a 110 s budget (free
-   Edge Functions stop at 150 s). Otherwise it reads everything from the API
+   request has a 45 s timeout, because part details make Rebrickable slow
+   (about 40 ms per inventory line, fetched in pages of 500), and the whole
+   import has a 110 s budget (free Edge Functions stop at 150 s). Otherwise it reads everything from the API
    first: the set, its parts, its minifigs, and each minifig's parts. Then it
    writes it all in **one** `import_set(set, parts)` call (service role only).
    `import_set` takes a per-set advisory lock and merges rows that share a line

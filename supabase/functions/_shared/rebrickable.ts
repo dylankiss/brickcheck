@@ -5,7 +5,11 @@ const BASE_URL = "https://rebrickable.com/api/v3/lego";
 const MIN_INTERVAL_MS = 1000;
 const MAX_RETRIES = 3;
 const MAX_RETRY_WAIT_MS = 5000;
-const REQUEST_TIMEOUT_MS = 10_000;
+// Part details make Rebrickable slow: about 40 ms per inventory line, so a
+// 415-line page took 18 s (measured 2026-11-04). Pages of PAGE_SIZE lines
+// stay well under this even for large sets.
+const REQUEST_TIMEOUT_MS = 45_000;
+const PAGE_SIZE = 500;
 // Free-tier Edge Functions are stopped after 150 s; stop well before that.
 const TIME_BUDGET_MS = 110_000;
 
@@ -72,19 +76,19 @@ export class Rebrickable {
   // inc_part_details=1 is needed for part.external_ids (BrickLink ids).
   getSetParts(setNum: string): Promise<RbInventoryPart[]> {
     return this.getAll(
-      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/parts/?page_size=1000&inc_part_details=1`,
+      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/parts/?page_size=${PAGE_SIZE}&inc_part_details=1`,
     );
   }
 
   getSetMinifigs(setNum: string): Promise<RbInventoryMinifig[]> {
     return this.getAll(
-      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/minifigs/?page_size=1000`,
+      `${BASE_URL}/sets/${encodeURIComponent(setNum)}/minifigs/?page_size=${PAGE_SIZE}`,
     );
   }
 
   getMinifigParts(figNum: string): Promise<RbInventoryPart[]> {
     return this.getAll(
-      `${BASE_URL}/minifigs/${encodeURIComponent(figNum)}/parts/?page_size=1000&inc_part_details=1`,
+      `${BASE_URL}/minifigs/${encodeURIComponent(figNum)}/parts/?page_size=${PAGE_SIZE}&inc_part_details=1`,
     );
   }
 
@@ -123,6 +127,12 @@ export class Rebrickable {
         });
       } catch (error) {
         console.error(`Rebrickable request failed for ${url}:`, error);
+        if (error instanceof DOMException && error.name === "TimeoutError") {
+          throw new HttpError(
+            504,
+            "Rebrickable is slow right now, try again in a minute",
+          );
+        }
         throw new HttpError(502, "Rebrickable is unavailable, try again later");
       }
       if (res.ok) return (await res.json()) as T;
@@ -140,6 +150,8 @@ export class Rebrickable {
       console.error(
         `Rebrickable ${res.status} for ${url}: ${await res.text()}`,
       );
+      if (res.status === 401 || res.status === 403)
+        throw new HttpError(502, "Rebrickable rejected the API key");
       throw new HttpError(502, "Rebrickable is unavailable, try again later");
     }
   }
