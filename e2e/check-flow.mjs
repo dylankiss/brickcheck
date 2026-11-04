@@ -170,7 +170,29 @@ try {
     .click();
   await a.screenshot({ path: `${OUT}/2-new-set.png` });
   await a.getByText("Start checking").click();
-  await a.waitForURL(/\/sets\/[0-9a-f-]{36}$/);
+  // Fail with the app's own error message instead of a bare navigation timeout.
+  await Promise.race([
+    a.waitForURL(/\/sets\/[0-9a-f-]{36}$/),
+    a
+      .getByRole("alert")
+      .waitFor()
+      .then(
+        async () => {
+          throw new Error(
+            `Adding the set failed: ${await a.getByRole("alert").innerText()}`,
+          );
+        },
+        () => {}, // no error banner within the timeout: the URL wait decides
+      ),
+  ]).catch(async (error) => {
+    await a.screenshot({ path: `${OUT}/failed-add-set.png` });
+    const spinner = await a
+      .getByText(/Adding set|Loading the parts list/)
+      .isVisible();
+    throw new Error(
+      `${error.message}${spinner ? " (still busy: fetch-set or creating the set never answered)" : ""}`,
+    );
+  });
   const setId = a.url().split("/").pop();
   await a.getByText("0/11").waitFor();
   ok(true, "set created with 11 needed pieces (spare excluded)");
