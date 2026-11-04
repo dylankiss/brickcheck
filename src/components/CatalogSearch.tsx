@@ -51,13 +51,14 @@ export function CatalogSearch({
                 </span>
               </span>
             </button>
-            <EnlargeableThumbnail
-              src={catalogSet.img_url}
-              label={catalogSet.name}
-              onEnlarge={() => onEnlarge(catalogSet)}
-              className="size-16 rounded-lg bg-white"
-              buttonClassName="absolute top-1/2 left-2 -translate-y-1/2"
-            />
+            <div className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2">
+              <EnlargeableThumbnail
+                src={catalogSet.img_url}
+                label={catalogSet.name}
+                onEnlarge={() => onEnlarge(catalogSet)}
+                className="size-16 rounded-lg bg-white"
+              />
+            </div>
           </li>
         ))}
       </ul>

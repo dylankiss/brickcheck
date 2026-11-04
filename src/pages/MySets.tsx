@@ -53,31 +53,34 @@ export default function MySets() {
               to={`/sets/${set.id}`}
               className="flex min-h-22 items-center rounded-2xl bg-white p-3 pl-22 ring-1 ring-neutral-200 active:bg-neutral-100 dark:bg-neutral-900 dark:ring-neutral-800 dark:active:bg-neutral-800"
             >
-              <p className="truncate font-semibold">{set.title}</p>
-              <p className="truncate text-sm text-neutral-500">
-                {set.title === set.catalog_name
-                  ? set.set_num
-                  : `${set.set_num} · ${set.catalog_name}`}
-                {set.my_role !== "owner" && " · shared with you"}
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <ProgressBar
-                  found={set.found}
-                  needed={set.needed}
-                  className="flex-1"
-                />
-                <span className="text-xs text-neutral-500 tabular-nums">
-                  {set.found}/{set.needed}
-                </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{set.title}</p>
+                <p className="truncate text-sm text-neutral-500">
+                  {set.title === set.catalog_name
+                    ? set.set_num
+                    : `${set.set_num} · ${set.catalog_name}`}
+                  {set.my_role !== "owner" && " · shared with you"}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <ProgressBar
+                    found={set.found}
+                    needed={set.needed}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-neutral-500 tabular-nums">
+                    {set.found}/{set.needed}
+                  </span>
+                </div>
               </div>
             </Link>
-            <EnlargeableThumbnail
-              src={set.catalog_img_url}
-              label={set.title}
-              onEnlarge={() => setEnlarged(setPicture(set))}
-              className="size-16 rounded-lg bg-white"
-              buttonClassName="absolute top-1/2 left-3 -translate-y-1/2"
-            />
+            <div className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">
+              <EnlargeableThumbnail
+                src={set.catalog_img_url}
+                label={set.title}
+                onEnlarge={() => setEnlarged(setPicture(set))}
+                className="size-16 rounded-lg bg-white"
+              />
+            </div>
           </div>
         ))}
       </main>

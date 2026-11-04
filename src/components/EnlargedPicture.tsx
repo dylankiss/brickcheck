@@ -171,14 +171,12 @@ export function EnlargeableThumbnail({
   label,
   onEnlarge,
   className = "size-14",
-  buttonClassName = "",
 }: {
   src: string | null;
   label: string;
   onEnlarge: () => void;
-  /** Size and look of the picture. */
+  /** Size and look of the picture. Position it with a wrapper: the button itself is `relative`. */
   className?: string;
-  buttonClassName?: string;
 }) {
   const [noPicture, setNoPicture] = useState(!src);
   return (
@@ -186,8 +184,9 @@ export function EnlargeableThumbnail({
       type="button"
       onClick={onEnlarge}
       disabled={noPicture}
-      // Disabled (no picture): let taps through to whatever is underneath.
-      className={`relative shrink-0 rounded-lg disabled:pointer-events-none ${buttonClassName}`}
+      // Disabled (no picture): taps go through to whatever is underneath, also
+      // when a pointer-events-none wrapper positions it on top of a card.
+      className="pointer-events-auto relative shrink-0 rounded-lg disabled:pointer-events-none"
       aria-label={`Enlarge picture of ${label}`}
     >
       <PartImage
