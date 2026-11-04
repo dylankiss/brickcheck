@@ -29,12 +29,12 @@ export const PartCard = memo(
           className={`flex flex-1 flex-col items-stretch p-2 text-left transition active:scale-[0.97] disabled:active:scale-100 ${allFound ? "opacity-50" : ""}`}
           aria-label={`${partLabel(part)}: ${part.found} of ${part.needed} found. Tap to add one.`}
         >
-          {/* Renders are drawn for a light background; dark mode only dims it. */}
+          {/* Pictures come with a white background, so their frame is white in both themes. */}
           <PartImage
             src={part.img_url}
             alt=""
             onError={() => setNoPicture(true)}
-            className="aspect-square w-full rounded-xl bg-white p-1 dark:bg-neutral-200"
+            className="aspect-square w-full rounded-xl bg-white p-1"
           />
           <span
             className="mt-2 truncate text-sm font-medium"

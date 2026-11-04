@@ -119,10 +119,10 @@ function ZoomablePicture({
   }, [zoomedAt]);
 
   return (
-    // Pictures are made for a light background, as on the cards.
+    // Pictures come with a white background, so the area is white in both themes.
     <div
       ref={area}
-      className="min-h-0 flex-1 overflow-auto bg-white dark:bg-neutral-200"
+      className="min-h-0 flex-1 overflow-auto bg-white"
       onClick={toggle}
     >
       <div
@@ -170,7 +170,7 @@ export function EnlargeableThumbnail({
   src,
   label,
   onEnlarge,
-  className = "size-14",
+  className = "size-14 rounded-lg bg-white",
 }: {
   src: string | null;
   label: string;
