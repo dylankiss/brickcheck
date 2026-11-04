@@ -1,20 +1,16 @@
 // Browser end-to-end test of checking a set with two users, against a local
 // stack and `npm run dev`. Uses the installed Google Chrome.
-// Usage: SUPABASE_SECRET_KEY=... node e2e/check-flow.mjs [screenshot-dir]
+// Usage: npm run e2e [-- screenshot-dir] (keys come from `npx supabase status` unless set in the environment).
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright-core";
 import { createClient } from "@supabase/supabase-js";
+import { localStack } from "../scripts/local-stack.mjs";
 
 const OUT = process.argv[2] ?? "e2e/screenshots";
 mkdirSync(OUT, { recursive: true });
 const APP = process.env.APP_URL ?? "http://localhost:5173";
-const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
-const { protocol, hostname } = new globalThis.URL(SUPABASE_URL);
-if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
-  throw new Error("Refusing to run against a non-local stack");
-if (!process.env.SUPABASE_SECRET_KEY)
-  throw new Error("Set SUPABASE_SECRET_KEY");
-const admin = createClient(SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
+const { url: SUPABASE_URL, secretKey } = localStack();
+const admin = createClient(SUPABASE_URL, secretKey, {
   auth: { persistSession: false },
 });
 const ok = (cond, msg) => {

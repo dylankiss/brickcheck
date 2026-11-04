@@ -1,5 +1,5 @@
 // Seeds demo data into the LOCAL stack so the UI can be explored without a
-// Rebrickable API key. Usage: SUPABASE_SECRET_KEY=... npm run seed-demo -- you@example.com
+// Rebrickable API key. Usage: npm run seed-demo -- you@example.com
 //
 // Creates a fictional Set with a cached inventory (every image URL checked to
 // exist on Rebrickable's CDN), then acts as real users
@@ -10,27 +10,9 @@
 // Running it again replaces the demo Sets. Log in as the given email
 // afterwards (the login email lands in Mailpit, http://127.0.0.1:54324).
 import { createClient } from "@supabase/supabase-js";
+import { localStack } from "./local-stack.mjs";
 
-try {
-  process.loadEnvFile(".env.local");
-} catch {
-  // Fall back to the environment.
-}
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ??
-  process.env.VITE_SUPABASE_URL ??
-  "http://127.0.0.1:54321";
-const PUBLISHABLE_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
 const EMAIL = process.argv[2];
-
-const { protocol, hostname } = new globalThis.URL(SUPABASE_URL);
-if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
-  throw new Error(`Refusing to seed a non-local stack: ${SUPABASE_URL}`);
-if (!SECRET_KEY)
-  throw new Error("Set SUPABASE_SECRET_KEY (from `npx supabase status`)");
-if (!PUBLISHABLE_KEY)
-  throw new Error("Set VITE_SUPABASE_PUBLISHABLE_KEY in .env.local");
 if (!EMAIL || !EMAIL.includes("@"))
   throw new Error("Usage: npm run seed-demo -- you@example.com");
 
@@ -38,6 +20,11 @@ const SAM_EMAIL = "sam.demo@example.com";
 if (EMAIL.toLowerCase() === SAM_EMAIL)
   throw new Error("Use your own email, not the demo user Sam");
 const SET_NUM = "demo-house-1";
+const {
+  url: SUPABASE_URL,
+  publishableKey: PUBLISHABLE_KEY,
+  secretKey: SECRET_KEY,
+} = localStack();
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const admin = createClient(SUPABASE_URL, SECRET_KEY, options);
 

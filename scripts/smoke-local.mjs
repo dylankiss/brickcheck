@@ -1,18 +1,18 @@
 // End-to-end smoke test against a running local stack (`supabase start` + `supabase functions serve`).
-// Usage: SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... SUPABASE_SECRET_KEY=... node scripts/smoke-local.mjs
+// Usage: npm run smoke (keys come from `npx supabase status` unless set in the environment).
 // Creates throwaway users and a `smoke-<timestamp>` set; meant for local databases only.
 import { createClient } from "@supabase/supabase-js";
+import { localStack } from "./local-stack.mjs";
 
-const URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
-const PUB = process.env.SUPABASE_PUBLISHABLE_KEY;
-const SECRET = process.env.SUPABASE_SECRET_KEY;
-if (!PUB || !SECRET)
-  throw new Error("Set SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY");
-const { protocol, hostname } = new globalThis.URL(URL);
-if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
-  throw new Error("Refusing to run against a non-local stack");
+const {
+  url: SUPABASE_URL,
+  publishableKey: PUB,
+  secretKey: SECRET,
+} = localStack();
 const SET_NUM = `smoke-${Date.now()}`;
-const admin = createClient(URL, SECRET, { auth: { persistSession: false } });
+const admin = createClient(SUPABASE_URL, SECRET, {
+  auth: { persistSession: false },
+});
 const ok = (cond, msg) => {
   console.log(`${cond ? "PASS" : "FAIL"} ${msg}`);
   if (!cond) process.exitCode = 1;
@@ -24,7 +24,9 @@ async function user(email) {
     password: "password123",
     email_confirm: true,
   });
-  const c = createClient(URL, PUB, { auth: { persistSession: false } });
+  const c = createClient(SUPABASE_URL, PUB, {
+    auth: { persistSession: false },
+  });
   const { error } = await c.auth.signInWithPassword({
     email,
     password: "password123",
@@ -55,7 +57,9 @@ const { error: impErr } = await admin.rpc("import_set", {
 });
 ok(!impErr, `import_set via service role ${impErr?.message ?? ""}`);
 
-const anon = createClient(URL, PUB, { auth: { persistSession: false } });
+const anon = createClient(SUPABASE_URL, PUB, {
+  auth: { persistSession: false },
+});
 let r = await anon.functions.invoke("fetch-set", {
   body: { set_num: SET_NUM },
 });

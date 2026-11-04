@@ -14,9 +14,10 @@ Read `ARCHITECTURE.md` before changing anything; keep it up to date.
 - `npx supabase functions serve`: run Edge Functions locally
 - `npm run import-catalog`: seed `lego_sets` from Rebrickable's CSV (needs `SUPABASE_URL`, `SUPABASE_SECRET_KEY`)
 - `npm run icons`: regenerate every icon in `public/` from the logo in `scripts/icons.mjs`; don't edit the icon files by hand
-- `npm run seed-demo -- <email>`: a demo catalog set and three Sets for that user on the local stack (needs `SUPABASE_SECRET_KEY` and `.env.local`)
-- `npm run smoke`: API smoke test against the local stack
-- `npm run e2e`: browser test of checking a set (local stack + `npm run dev`, uses Google Chrome)
+- `npm run seed-demo -- <email>`: a demo catalog set and three Sets for that user on the local stack
+- `npm run smoke`: API smoke test against the local stack (with `npx supabase functions serve`)
+- `npm run e2e`: browser test of checking a set (local stack, `npx supabase functions serve` and `npm run dev`; uses Google Chrome)
+- `smoke`, `e2e` and `seed-demo` only run against the local stack and read its URL and keys from `npx supabase status` (`scripts/local-stack.mjs`). `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` override that, so unset a production key left in your shell
 - `npm run test:pwa`: PWA test (manifest, service worker, offline) against `npx vite preview --port 4173`
 - Deploying: see `DEPLOY.md`
 
