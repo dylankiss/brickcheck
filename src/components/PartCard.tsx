@@ -18,16 +18,15 @@ export const PartCard = memo(
     return (
       <div
         className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_16rem] [content-visibility:auto] dark:bg-neutral-900 ${
-          allFound
-            ? "opacity-50 ring-green-600"
-            : "ring-neutral-200 dark:ring-neutral-800"
+          allFound ? "ring-green-600" : "ring-neutral-200 dark:ring-neutral-800"
         }`}
       >
         <button
           type="button"
           disabled={!canEdit || allFound}
           onClick={() => onTap(part, 1)}
-          className="flex flex-1 flex-col items-stretch p-2 text-left active:scale-[0.97] disabled:active:scale-100"
+          // A fully found part dims its content only: "−" and the magnifier still work and look it.
+          className={`flex flex-1 flex-col items-stretch p-2 text-left transition active:scale-[0.97] disabled:active:scale-100 ${allFound ? "opacity-50" : ""}`}
           aria-label={`${partLabel(part)}: ${part.found} of ${part.needed} found. Tap to add one.`}
         >
           {/* Renders are drawn for a light background; dark mode only dims it. */}
