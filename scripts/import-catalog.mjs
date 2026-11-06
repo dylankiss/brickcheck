@@ -32,7 +32,9 @@ export function parseCsv(text) {
       row.push(field);
       field = "";
     } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
+      if (c === "\r" && text[i + 1] === "\n") {
+        i++;
+      }
       row.push(field);
       rows.push(row);
       row = [];
@@ -49,17 +51,22 @@ export function parseCsv(text) {
 }
 
 async function loadCsv(path) {
-  if (path) return gunzipSync(await readFile(path)).toString("utf8");
+  if (path) {
+    return gunzipSync(await readFile(path)).toString("utf8");
+  }
   const res = await fetch(CSV_URL);
-  if (!res.ok)
+  if (!res.ok) {
     throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  }
   return gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8");
 }
 
 async function main() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) throw new Error("Set SUPABASE_URL and SUPABASE_SECRET_KEY");
+  if (!url || !key) {
+    throw new Error("Set SUPABASE_URL and SUPABASE_SECRET_KEY");
+  }
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
   const [header, ...rows] = parseCsv(await loadCsv(process.argv[2]));
@@ -72,7 +79,9 @@ async function main() {
     "num_parts",
     "img_url",
   ]) {
-    if (!(name in col)) throw new Error(`CSV is missing column ${name}`);
+    if (!(name in col)) {
+      throw new Error(`CSV is missing column ${name}`);
+    }
   }
 
   const sets = rows
@@ -90,7 +99,9 @@ async function main() {
     const { error } = await supabase
       .from("lego_sets")
       .upsert(sets.slice(i, i + BATCH_SIZE), { onConflict: "set_num" });
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     process.stdout.write(
       `\r${Math.min(i + BATCH_SIZE, sets.length)}/${sets.length} sets`,
     );

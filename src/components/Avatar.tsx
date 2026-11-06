@@ -8,7 +8,9 @@ const PALETTE = [
 ];
 
 function initials(name: string | null): string {
-  if (!name) return "?";
+  if (!name) {
+    return "?";
+  }
   return name
     .split(/\s+/)
     .filter(Boolean)
@@ -19,7 +21,9 @@ function initials(name: string | null): string {
 
 function colorFor(name: string | null): string {
   let hash = 0;
-  for (const char of name ?? "") hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  for (const char of name ?? "") {
+    hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  }
   return PALETTE[Math.abs(hash) % PALETTE.length]!;
 }
 
@@ -73,7 +77,9 @@ export function OnlineAvatars({
     avatar_url: string | null;
   }[];
 }) {
-  if (people.length === 0) return null;
+  if (people.length === 0) {
+    return null;
+  }
   return (
     <div className="flex -space-x-2" aria-label={`${people.length} online`}>
       {people.slice(0, 4).map((p) => (

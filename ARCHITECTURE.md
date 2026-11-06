@@ -273,6 +273,9 @@ What the formatter doesn't decide:
 - `interface` for object shapes, `type` for unions and aliases; no `any`;
   `import type` for type-only imports. oxlint enforces all three
   (`.oxlintrc.json`).
+- Always braces on `if`, `else`, `for` and `while`, even for one statement
+  (oxlint `curly`; `npx oxlint --fix` adds them, run it more than once for
+  nested cases, then `npm run format`).
 - TypeScript everywhere in `src`; the scripts in `scripts/` and `e2e/` are
   plain ES modules (`.mjs`).
 - Deno code (`supabase/functions`) imports local files with their `.ts`

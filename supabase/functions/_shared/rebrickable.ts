@@ -62,7 +62,9 @@ export class Rebrickable {
 
   static fromEnv(): Rebrickable {
     const key = Deno.env.get("REBRICKABLE_API_KEY");
-    if (!key) throw new Error("REBRICKABLE_API_KEY is not set");
+    if (!key) {
+      throw new Error("REBRICKABLE_API_KEY is not set");
+    }
     return new Rebrickable(key);
   }
 
@@ -107,7 +109,9 @@ export class Rebrickable {
   private async get<T>(url: string, notFoundMessage?: string): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const wait = this.lastRequestAt + MIN_INTERVAL_MS - Date.now();
-      if (wait > 0) await sleep(wait);
+      if (wait > 0) {
+        await sleep(wait);
+      }
       if (Date.now() + REQUEST_TIMEOUT_MS > this.deadline) {
         throw new HttpError(
           503,
@@ -135,9 +139,12 @@ export class Rebrickable {
         }
         throw new HttpError(502, "Rebrickable is unavailable, try again later");
       }
-      if (res.ok) return (await res.json()) as T;
-      if (res.status === 404 && notFoundMessage)
+      if (res.ok) {
+        return (await res.json()) as T;
+      }
+      if (res.status === 404 && notFoundMessage) {
         throw new HttpError(404, notFoundMessage);
+      }
       if (res.status === 429 && attempt < MAX_RETRIES) {
         const retryAfter = Number(res.headers.get("Retry-After")) * 1000;
         const backoff =
@@ -150,8 +157,9 @@ export class Rebrickable {
       console.error(
         `Rebrickable ${res.status} for ${url}: ${await res.text()}`,
       );
-      if (res.status === 401 || res.status === 403)
+      if (res.status === 401 || res.status === 403) {
         throw new HttpError(502, "Rebrickable rejected the API key");
+      }
       throw new HttpError(502, "Rebrickable is unavailable, try again later");
     }
   }

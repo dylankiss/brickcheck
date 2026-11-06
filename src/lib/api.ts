@@ -38,8 +38,12 @@ async function fetchAll<T>(
       rows.length,
       rows.length + PAGE_SIZE - 1,
     );
-    if (error || !data) fail(error);
-    if (data.length === 0) return rows;
+    if (error || !data) {
+      fail(error);
+    }
+    if (data.length === 0) {
+      return rows;
+    }
     rows.push(...data);
   }
 }
@@ -70,7 +74,9 @@ export async function signInWithEmail(
     email,
     options: { emailRedirectTo: redirectTo },
   });
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 /** Logs in with the 6-digit code from the login email (needed in the installed iOS app). */
@@ -83,7 +89,9 @@ export async function verifyEmailCode(
     token: code,
     type: "email",
   });
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 export async function signInWithGoogle(redirectTo: string): Promise<void> {
@@ -91,12 +99,16 @@ export async function signInWithGoogle(redirectTo: string): Promise<void> {
     provider: "google",
     options: { redirectTo },
   });
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut();
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +121,9 @@ export async function getMyProfile(userId: string): Promise<Profile | null> {
     .select("id, display_name, avatar_url")
     .eq("id", userId)
     .maybeSingle();
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return data;
 }
 
@@ -121,7 +135,9 @@ export async function updateMyName(
     .from("profiles")
     .update({ display_name: displayName })
     .eq("id", userId);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +149,9 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 /** Searches the catalog by set number prefix ("75192") or name ("falcon"). */
 export async function searchCatalog(query: string): Promise<CatalogSet[]> {
   const q = query.trim();
-  if (q.length < 2) return [];
+  if (q.length < 2) {
+    return [];
+  }
   let request = supabase.from("lego_sets").select("*").gt("num_parts", 0);
   request = /^\d[\d-]*$/.test(q)
     ? request.like("set_num", `${escapeLike(q)}%`)
@@ -141,7 +159,9 @@ export async function searchCatalog(query: string): Promise<CatalogSet[]> {
   const { data, error } = await request
     .order("year", { ascending: false })
     .limit(30);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return data;
 }
 
@@ -158,7 +178,9 @@ export async function fetchCatalogSet(setNum: string): Promise<CatalogSet> {
     }
     fail(error);
   }
-  if (!data) throw new ApiError("Could not load the set");
+  if (!data) {
+    throw new ApiError("Could not load the set");
+  }
   return data;
 }
 
@@ -183,7 +205,9 @@ export async function getSet(setId: string): Promise<SetSummary | null> {
     .select("*")
     .eq("id", setId)
     .maybeSingle();
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return data;
 }
 
@@ -193,7 +217,9 @@ export async function createSet(set: NewSet): Promise<string> {
     .insert(set)
     .select("id")
     .single();
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return data.id;
 }
 
@@ -202,12 +228,16 @@ export async function updateSet(
   changes: { title?: string },
 ): Promise<void> {
   const { error } = await supabase.from("sets").update(changes).eq("id", setId);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 export async function deleteSet(setId: string): Promise<void> {
   const { error } = await supabase.from("sets").delete().eq("id", setId);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 /** The set's full inventory with progress; loaded once per visit. */
@@ -224,7 +254,9 @@ export function getSetLines(setId: string): Promise<InventoryLine[]> {
 
 /** The inventory with progress of several sets at once (missing across sets). */
 export function getLinesOfSets(setIds: string[]): Promise<InventoryLine[]> {
-  if (setIds.length === 0) return Promise.resolve([]);
+  if (setIds.length === 0) {
+    return Promise.resolve([]);
+  }
   return fetchAll((from, to) =>
     supabase
       .from("set_lines")
@@ -263,12 +295,13 @@ export async function adjustPart(
       p_delta: delta,
     })
     .abortSignal(AbortSignal.timeout(TAP_TIMEOUT_MS));
-  if (error)
+  if (error) {
     fail(
       error.name === "AbortError"
         ? { message: "The connection is slow; that tap was not saved" }
         : error,
     );
+  }
   return data;
 }
 
@@ -310,7 +343,9 @@ export async function setMemberRole(
     .update({ role })
     .eq("set_id", setId)
     .eq("user_id", userId);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 /** Removes a member; with your own id this is "leave the set". */
@@ -323,7 +358,9 @@ export async function removeMember(
     .delete()
     .eq("set_id", setId)
     .eq("user_id", userId);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 export function listInvites(setId: string): Promise<Invite[]> {
@@ -348,7 +385,9 @@ export async function createInvite(
     .insert({ set_id: setId, role })
     .select("token, role, expires_at")
     .single();
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return data;
 }
 
@@ -357,7 +396,9 @@ export async function deleteInvite(token: string): Promise<void> {
     .from("set_invites")
     .delete()
     .eq("token", token);
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
 }
 
 // The public address, so links made on a preview deploy still point at production.
@@ -373,7 +414,9 @@ export async function getInvitePreview(
   const { data, error } = await supabase.rpc("invite_preview", {
     p_token: token,
   });
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return (data as InvitePreview[])[0] ?? null;
 }
 
@@ -382,7 +425,9 @@ export async function acceptInvite(token: string): Promise<string> {
   const { data, error } = await supabase.rpc("accept_invite", {
     p_token: token,
   });
-  if (error) fail(error);
+  if (error) {
+    fail(error);
+  }
   return data;
 }
 
@@ -418,15 +463,21 @@ export function subscribeToSet(
   let cancelled = false;
 
   Promise.all([leaving.get(topic), supabase.realtime.setAuth()]).then(() => {
-    if (cancelled) return;
+    if (cancelled) {
+      return;
+    }
     channel = openSetChannel(topic, userId, handlers);
   });
 
   return () => {
     cancelled = true;
-    if (!channel) return;
+    if (!channel) {
+      return;
+    }
     const removal = supabase.removeChannel(channel).finally(() => {
-      if (leaving.get(topic) === removal) leaving.delete(topic);
+      if (leaving.get(topic) === removal) {
+        leaving.delete(topic);
+      }
     });
     leaving.set(topic, removal);
   };
@@ -450,7 +501,9 @@ function openSetChannel(
     );
 
   channel.subscribe((status) => {
-    if (status !== "SUBSCRIBED") return;
+    if (status !== "SUBSCRIBED") {
+      return;
+    }
     channel.track({});
     handlers.onSubscribed();
   });

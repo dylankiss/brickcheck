@@ -12,7 +12,9 @@ let current: Theme = getTheme();
 export function getTheme(): Theme {
   try {
     const saved = localStorage.getItem(KEY);
-    if (saved === "light" || saved === "dark") return saved;
+    if (saved === "light" || saved === "dark") {
+      return saved;
+    }
   } catch {
     // Storage blocked (private mode): fall back to the system.
   }
@@ -21,14 +23,19 @@ export function getTheme(): Theme {
 
 export function setTheme(theme: Theme): void {
   try {
-    if (theme === "system") localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, theme);
+    if (theme === "system") {
+      localStorage.removeItem(KEY);
+    } else {
+      localStorage.setItem(KEY, theme);
+    }
   } catch {
     // Still applies for this visit.
   }
   current = theme;
   apply();
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
 export function subscribeTheme(listener: () => void): () => void {
@@ -46,9 +53,13 @@ export const currentTheme = () => current;
 media.addEventListener("change", apply);
 // Another tab of the app changed the theme.
 window.addEventListener("storage", (event) => {
-  if (event.key !== KEY && event.key !== null) return;
+  if (event.key !== KEY && event.key !== null) {
+    return;
+  }
   current = getTheme();
   apply();
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 });
 apply();

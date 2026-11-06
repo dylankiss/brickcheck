@@ -32,11 +32,15 @@ export function useMissingAcrossSets() {
     try {
       const sets = (await listMySets()).filter((c) => !isComplete(c));
       const lines = await getLinesOfSets(sets.map((c) => c.id));
-      if (version.current !== started) return;
+      if (version.current !== started) {
+        return;
+      }
       setData({ sets, lines });
       setError(null);
     } catch (e) {
-      if (version.current === started) setError((e as Error).message);
+      if (version.current === started) {
+        setError((e as Error).message);
+      }
     }
   }, []);
 
@@ -44,7 +48,9 @@ export function useMissingAcrossSets() {
     // oxlint-disable-next-line react/set-state-in-effect -- load only sets state after awaiting the fetch
     load();
     const onVisibility = () => {
-      if (document.visibilityState === "visible") load();
+      if (document.visibilityState === "visible") {
+        load();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);

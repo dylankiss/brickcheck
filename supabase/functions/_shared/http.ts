@@ -63,8 +63,9 @@ export function serve(handler: (req: Request) => Promise<Response>) {
         res = json({ error: "Internal error" }, 500);
       }
     }
-    for (const [name, value] of Object.entries(cors))
+    for (const [name, value] of Object.entries(cors)) {
       res.headers.set(name, value);
+    }
     return res;
   });
 }

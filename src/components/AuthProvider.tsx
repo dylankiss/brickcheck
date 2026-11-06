@@ -39,7 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateName = useCallback(
     async (name: string) => {
-      if (!userId) return;
+      if (!userId) {
+        return;
+      }
       await updateMyName(userId, name);
       await refreshProfile();
     },

@@ -14,7 +14,9 @@ function SetLayout({ setId }: { setId: string }) {
   const { session } = useAuth();
   const set = useSet(setId, session!.user.id);
 
-  if (set.status === "loading") return <Spinner label="Loading parts…" />;
+  if (set.status === "loading") {
+    return <Spinner label="Loading parts…" />;
+  }
   if (set.status === "not-found") {
     return (
       <>

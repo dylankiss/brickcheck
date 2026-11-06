@@ -58,15 +58,18 @@ function addLines(
 }
 
 serve(async (req) => {
-  if (req.method !== "POST") throw new HttpError(405, "Method not allowed");
+  if (req.method !== "POST") {
+    throw new HttpError(405, "Method not allowed");
+  }
 
   const admin = adminClient();
   const userId = await requireUser(req, admin);
 
   const body = await req.json().catch(() => null);
   const setNum = typeof body?.set_num === "string" ? body.set_num.trim() : "";
-  if (!SET_NUM_PATTERN.test(setNum))
+  if (!SET_NUM_PATTERN.test(setNum)) {
     throw new HttpError(400, "Invalid set number");
+  }
 
   // Only sets from the catalog can be imported, so typos never reach Rebrickable
   // and the catalog's set_num is the canonical cache key.
@@ -75,31 +78,42 @@ serve(async (req) => {
     .select("*")
     .eq("set_num", setNum)
     .maybeSingle();
-  if (cachedError) throw cachedError;
-  if (!cached) throw new HttpError(404, "Unknown set");
-  if (cached.parts_fetched_at) return json(cached);
+  if (cachedError) {
+    throw cachedError;
+  }
+  if (!cached) {
+    throw new HttpError(404, "Unknown set");
+  }
+  if (cached.parts_fetched_at) {
+    return json(cached);
+  }
 
   const { data: claim, error: claimError } = await admin.rpc("claim_import", {
     p_user_id: userId,
     p_set_num: cached.set_num,
     p_per_hour: IMPORTS_PER_HOUR,
   });
-  if (claimError) throw claimError;
-  if (claim === "rate_limited")
+  if (claimError) {
+    throw claimError;
+  }
+  if (claim === "rate_limited") {
     throw new HttpError(
       429,
       "Too many new sets imported, try again in an hour",
     );
-  if (claim === "in_progress")
+  }
+  if (claim === "in_progress") {
     throw new HttpError(
       409,
       "This set is being imported right now, try again in a minute",
     );
-  if (claim === "busy")
+  }
+  if (claim === "busy") {
     throw new HttpError(
       503,
       "Many new sets are being added right now, try again later",
     );
+  }
 
   try {
     // Read everything first, then write once (import_set is atomic).
@@ -120,8 +134,9 @@ serve(async (req) => {
     }
 
     // Not cached: retrying an empty set costs quota, but such sets are rare and the claim limits retries.
-    if (lines.size === 0)
+    if (lines.size === 0) {
       throw new HttpError(422, "Rebrickable has no inventory for this set");
+    }
 
     const { error: importError } = await admin.rpc("import_set", {
       p_set: {
@@ -134,7 +149,9 @@ serve(async (req) => {
       },
       p_parts: [...lines.values()],
     });
-    if (importError) throw importError;
+    if (importError) {
+      throw importError;
+    }
   } catch (error) {
     // Let the next attempt start right away (the attempt still counts towards the limits).
     await admin.rpc("release_import", {
@@ -149,6 +166,8 @@ serve(async (req) => {
     .select("*")
     .eq("set_num", cached.set_num)
     .single();
-  if (importedError) throw importedError;
+  if (importedError) {
+    throw importedError;
+  }
   return json(imported);
 });

@@ -34,7 +34,9 @@ export default function Login() {
       : null,
   );
 
-  if (session) return <Navigate to={from} replace />;
+  if (session) {
+    return <Navigate to={from} replace />;
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();

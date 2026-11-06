@@ -26,11 +26,15 @@ export function useMembers(
   const request = useRef(0);
 
   const refreshInvites = useCallback(async () => {
-    if (!isOwner) return;
+    if (!isOwner) {
+      return;
+    }
     const current = ++request.current;
     try {
       const list = await listInvites(setId);
-      if (current === request.current) setInvites(list);
+      if (current === request.current) {
+        setInvites(list);
+      }
     } catch (e) {
       setError((e as Error).message);
     }

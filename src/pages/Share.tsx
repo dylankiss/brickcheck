@@ -59,7 +59,9 @@ export default function Share() {
 
   async function createAndShare(role: Invite["role"]) {
     const created = await invite(role);
-    if (created) send(created.token);
+    if (created) {
+      send(created.token);
+    }
   }
 
   async function send(token: string) {
@@ -77,9 +79,12 @@ export default function Share() {
     const question = isOwner
       ? `Delete "${set.title}" for everyone? Progress is lost.`
       : `Leave "${set.title}"? You can rejoin with an invite link.`;
-    if (!window.confirm(question)) return;
-    if (await (isOwner ? deleteSet() : leave()))
+    if (!window.confirm(question)) {
+      return;
+    }
+    if (await (isOwner ? deleteSet() : leave())) {
       navigate("/", { replace: true });
+    }
   }
 
   return (

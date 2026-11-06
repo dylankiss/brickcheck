@@ -30,7 +30,9 @@ export default function AddSet() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!catalogSet) return;
+    if (!catalogSet) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

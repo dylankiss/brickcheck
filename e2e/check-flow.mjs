@@ -15,7 +15,9 @@ const admin = createClient(SUPABASE_URL, secretKey, {
 });
 const ok = (cond, msg) => {
   console.log(`${cond ? "PASS" : "FAIL"} ${msg}`);
-  if (!cond) process.exitCode = 1;
+  if (!cond) {
+    process.exitCode = 1;
+  }
 };
 const img = (color, part) =>
   `https://cdn.rebrickable.com/media/parts/ldraw/${color}/${part}.png`;
@@ -117,7 +119,9 @@ async function loginPage(browser, email, { viaCode = false, name } = {}) {
       type: "magiclink",
       email,
     });
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     await page.getByLabel("Login code").fill(data.properties.email_otp);
     await page.getByText("Log in with code").click();
   } else {
@@ -126,7 +130,9 @@ async function loginPage(browser, email, { viaCode = false, name } = {}) {
       email,
       options: { redirectTo: `${APP}/` },
     });
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     await page.goto(data.properties.action_link);
   }
   await page.waitForURL(`${APP}/**`);
@@ -196,7 +202,9 @@ try {
   // Tap red brick 3 times, then undo once
   // Anchored: the card's own button, not its "Enlarge picture of …" button.
   const red = a.getByRole("button", { name: /^Brick 2 x 4, Red:/ });
-  for (let i = 0; i < 3; i++) await red.click();
+  for (let i = 0; i < 3; i++) {
+    await red.click();
+  }
   await a.getByRole("button", { name: "Remove one Brick 2 x 4" }).click();
   await a.getByText("2/11").waitFor();
   ok(true, "taps and undo update the counter optimistically");
@@ -272,7 +280,9 @@ try {
   const gray = a.getByRole("button", {
     name: /^Brick 1 x 2, Light Bluish Gray:/,
   });
-  for (let i = 0; i < 3; i++) await gray.click();
+  for (let i = 0; i < 3; i++) {
+    await gray.click();
+  }
   await a.getByText("7/11").waitFor();
   await a.screenshot({ path: `${OUT}/3-set.png` });
   await a.getByRole("button", { name: "Hide found" }).click();

@@ -18,9 +18,12 @@ export default function Join() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [enlarged, setEnlarged] = useState(false);
 
-  if (preview === undefined) return <Spinner />;
-  if (preview?.already_member)
+  if (preview === undefined) {
+    return <Spinner />;
+  }
+  if (preview?.already_member) {
     return <Navigate to={`/sets/${preview.set_id}`} replace />;
+  }
 
   async function join() {
     setJoining(true);

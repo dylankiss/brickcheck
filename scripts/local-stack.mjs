@@ -6,7 +6,11 @@ import { execFileSync } from "node:child_process";
 let status;
 function fromStatus(...names) {
   status ??= readStatus();
-  for (const name of names) if (status[name]) return status[name];
+  for (const name of names) {
+    if (status[name]) {
+      return status[name];
+    }
+  }
   return undefined;
 }
 
@@ -47,16 +51,18 @@ export function localStack() {
     (needStatus ? fromStatus("API_URL") : undefined) ??
     "http://127.0.0.1:54321";
   const { protocol, hostname } = new URL(url);
-  if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname))
+  if (protocol !== "http:" || !["127.0.0.1", "localhost"].includes(hostname)) {
     throw new Error(`Refusing to run against a non-local stack: ${url}`);
+  }
   // Newer CLIs print PUBLISHABLE_KEY / SECRET_KEY, older ones ANON_KEY / SERVICE_ROLE_KEY.
   const publishableKey =
     fromEnv.publishableKey ?? fromStatus("PUBLISHABLE_KEY", "ANON_KEY");
   const secretKey =
     fromEnv.secretKey ?? fromStatus("SECRET_KEY", "SERVICE_ROLE_KEY");
-  if (!publishableKey || !secretKey)
+  if (!publishableKey || !secretKey) {
     throw new Error(
       "`npx supabase status` printed no keys; set SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY",
     );
+  }
   return { url, publishableKey, secretKey };
 }

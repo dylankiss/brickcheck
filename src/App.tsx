@@ -26,8 +26,10 @@ const Share = lazy(() => import("./pages/Share"));
 function RequireAuth() {
   const { session, profile, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <Spinner />;
-  if (!session)
+  if (loading) {
+    return <Spinner />;
+  }
+  if (!session) {
     return (
       <Navigate
         to="/login"
@@ -35,8 +37,11 @@ function RequireAuth() {
         state={{ from: location.pathname + location.search }}
       />
     );
+  }
   // Ask for a name before anything else (also before joining via an invite).
-  if (profile && !profile.display_name) return <NamePrompt />;
+  if (profile && !profile.display_name) {
+    return <NamePrompt />;
+  }
   return (
     <Suspense fallback={<Spinner />}>
       <Outlet />

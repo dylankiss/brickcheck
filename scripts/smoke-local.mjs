@@ -15,7 +15,9 @@ const admin = createClient(SUPABASE_URL, SECRET, {
 });
 const ok = (cond, msg) => {
   console.log(`${cond ? "PASS" : "FAIL"} ${msg}`);
-  if (!cond) process.exitCode = 1;
+  if (!cond) {
+    process.exitCode = 1;
+  }
 };
 
 async function user(email) {
@@ -31,7 +33,9 @@ async function user(email) {
     email,
     password: "password123",
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return c;
 }
 

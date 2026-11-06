@@ -4,6 +4,7 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "curly": ["error", "all"],
     "typescript/no-explicit-any": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/consistent-type-definitions": ["error", "interface"]

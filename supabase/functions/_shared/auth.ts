@@ -8,7 +8,9 @@ export function adminClient(): SupabaseClient {
   const key =
     Deno.env.get("BRICKCHECK_SECRET_KEY") ??
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Supabase environment is not configured");
+  if (!url || !key) {
+    throw new Error("Supabase environment is not configured");
+  }
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -24,7 +26,9 @@ export async function requireUser(
   admin: SupabaseClient,
 ): Promise<string> {
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) throw new HttpError(401, "Not logged in");
+  if (!token) {
+    throw new HttpError(401, "Not logged in");
+  }
 
   const { data, error } = await admin.auth.getClaims(token);
   const claims = data?.claims;

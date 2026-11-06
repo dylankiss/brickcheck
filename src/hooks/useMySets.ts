@@ -23,7 +23,9 @@ export function useMySets() {
     // oxlint-disable-next-line react/set-state-in-effect -- refresh only sets state after awaiting the fetch
     refresh();
     const onVisibility = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);

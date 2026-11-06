@@ -13,7 +13,9 @@ export function useInvite(token: string) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!valid) return;
+    if (!valid) {
+      return;
+    }
     let current = true;
     getInvitePreview(token).then(
       (p) => current && setPreview(p),

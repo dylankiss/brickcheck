@@ -30,9 +30,15 @@ export function EnlargedPicture({
 
   useEffect(() => {
     const el = dialog.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
+    if (!el) {
+      return;
+    }
+    if (open && !el.open) {
+      el.showModal();
+    }
+    if (!open && el.open) {
+      el.close();
+    }
   }, [open]);
 
   return (
@@ -102,7 +108,9 @@ function ZoomablePicture({
   );
 
   const toggle = (e: MouseEvent<HTMLDivElement>) => {
-    if (zoomedAt) return setZoomedAt(null);
+    if (zoomedAt) {
+      return setZoomedAt(null);
+    }
     const box = e.currentTarget.getBoundingClientRect();
     setZoomedAt({
       x: (e.clientX - box.left) / box.width,
@@ -113,7 +121,9 @@ function ZoomablePicture({
   // Scroll the zoomed picture so the tapped spot stays under the finger.
   useLayoutEffect(() => {
     const el = area.current;
-    if (!el || !zoomedAt) return;
+    if (!el || !zoomedAt) {
+      return;
+    }
     el.scrollLeft = zoomedAt.x * el.scrollWidth - el.clientWidth / 2;
     el.scrollTop = zoomedAt.y * el.scrollHeight - el.clientHeight / 2;
   }, [zoomedAt]);

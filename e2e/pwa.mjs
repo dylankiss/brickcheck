@@ -5,7 +5,9 @@ import { chromium } from "playwright-core";
 const APP = process.env.APP_URL ?? "http://localhost:4173";
 const ok = (cond, msg) => {
   console.log(`${cond ? "PASS" : "FAIL"} ${msg}`);
-  if (!cond) process.exitCode = 1;
+  if (!cond) {
+    process.exitCode = 1;
+  }
 };
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });

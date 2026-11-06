@@ -69,13 +69,18 @@ export function applyProgress(
   let next: Map<number, InventoryLine> | null = null;
   for (const update of updates) {
     const line = (next ?? lines).get(update.line_id);
-    if (!line) continue;
-    if (isNewer(line.updated_at, update.updated_at)) continue;
+    if (!line) {
+      continue;
+    }
+    if (isNewer(line.updated_at, update.updated_at)) {
+      continue;
+    }
     if (
       line.found_qty === update.found_qty &&
       line.updated_at === update.updated_at
-    )
+    ) {
       continue;
+    }
     next ??= new Map(lines);
     next.set(update.line_id, {
       ...line,
@@ -123,8 +128,9 @@ export function groupParts(
   }
   for (const [key, delta] of pending) {
     const part = parts.get(key);
-    if (part)
+    if (part) {
       part.found = Math.min(part.needed, Math.max(0, part.found + delta));
+    }
   }
   return [...parts.values()];
 }
@@ -182,12 +188,13 @@ export interface PartColor {
 /** Distinct colors present in the parts, for the color filter. */
 export function partColors(parts: Part[]): PartColor[] {
   const colors = new Map<number, PartColor>();
-  for (const p of parts)
+  for (const p of parts) {
     colors.set(p.color_id, {
       id: p.color_id,
       name: p.color_name,
       rgb: p.color_rgb,
     });
+  }
   return [...colors.values()].sort((a, b) => collator.compare(a.name, b.name));
 }
 
@@ -242,8 +249,9 @@ export function missingAcrossSets(
     linesBySet.set(l.set_id, list);
   }
   const titleCount = new Map<string, number>();
-  for (const c of sets)
+  for (const c of sets) {
     titleCount.set(c.title, (titleCount.get(c.title) ?? 0) + 1);
+  }
   const label = (c: SetSummary) =>
     titleCount.get(c.title)! > 1
       ? `${c.title} (started ${startDate.format(new Date(c.created_at))})`
@@ -252,7 +260,9 @@ export function missingAcrossSets(
   for (const c of sets) {
     for (const part of groupParts(toLineMap(linesBySet.get(c.id) ?? []))) {
       const missing = part.needed - part.found;
-      if (missing <= 0) continue;
+      if (missing <= 0) {
+        continue;
+      }
       let entry = result.get(part.key);
       if (!entry) {
         entry = {
@@ -273,8 +283,9 @@ export function missingAcrossSets(
       });
     }
   }
-  for (const entry of result.values())
+  for (const entry of result.values()) {
     entry.sets.sort((x, y) => y.missing - x.missing);
+  }
   return sortParts(
     [...result.values()].map((entry) => entry.part),
     "color",
@@ -313,7 +324,9 @@ export function applySetProgress(
 ): InventoryLine[] {
   const own = toLineMap(lines.filter((l) => l.set_id === setId));
   const next = applyProgress(own, updates);
-  if (next === own) return lines;
+  if (next === own) {
+    return lines;
+  }
   return lines.map((l) => (l.set_id === setId ? next.get(l.line_id)! : l));
 }
 

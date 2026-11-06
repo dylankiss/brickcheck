@@ -70,7 +70,9 @@ export function useSet(setId: string, myUserId: string) {
     const request = ++membersRequest.current;
     try {
       const list = await listMembers(setId);
-      if (request === membersRequest.current) setMembers(list);
+      if (request === membersRequest.current) {
+        setMembers(list);
+      }
     } catch (e) {
       console.warn("Loading members failed", e);
     }
@@ -90,7 +92,9 @@ export function useSet(setId: string, myUserId: string) {
         now.push(update);
       }
     }
-    if (now.length) setLines((held) => applyProgress(held, now));
+    if (now.length) {
+      setLines((held) => applyProgress(held, now));
+    }
   }, []);
 
   /** Loads summary and inventory; resolves to whether it succeeded. */
@@ -101,7 +105,9 @@ export function useSet(setId: string, myUserId: string) {
         getSet(setId),
         getSetLines(setId),
       ]);
-      if (gen !== generation.current) return false;
+      if (gen !== generation.current) {
+        return false;
+      }
       if (!set) {
         lostAccess();
         return false;
@@ -149,7 +155,9 @@ export function useSet(setId: string, myUserId: string) {
             getSet(setId),
             getSetProgress(setId),
           ]);
-          if (gen !== generation.current) return;
+          if (gen !== generation.current) {
+            return;
+          }
           if (!set) {
             lostAccess();
             return;
@@ -183,7 +191,9 @@ export function useSet(setId: string, myUserId: string) {
       onPresence: setOnlineIds,
     });
     const onVisibility = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
@@ -204,8 +214,11 @@ export function useSet(setId: string, myUserId: string) {
     setPending((map) => {
       const next = new Map(map);
       const remaining = (next.get(key) ?? 0) - delta;
-      if (remaining) next.set(key, remaining);
-      else next.delete(key);
+      if (remaining) {
+        next.set(key, remaining);
+      } else {
+        next.delete(key);
+      }
       return next;
     });
   }, []);
@@ -213,10 +226,14 @@ export function useSet(setId: string, myUserId: string) {
   /** Sends the part's queued taps, unless a request for it is already in flight. */
   const flush = useCallback(
     function flushPart(key: string, partNum: string, colorId: number) {
-      if (inFlight.current.has(key)) return;
+      if (inFlight.current.has(key)) {
+        return;
+      }
       const delta = queued.current.get(key) ?? 0;
       queued.current.delete(key);
-      if (delta === 0) return;
+      if (delta === 0) {
+        return;
+      }
 
       inFlight.current.add(key);
       const release = () => {
@@ -248,8 +265,12 @@ export function useSet(setId: string, myUserId: string) {
 
   const tap = useCallback(
     (part: Part, delta: 1 | -1) => {
-      if (!canEdit) return;
-      if (delta > 0 ? part.found >= part.needed : part.found <= 0) return;
+      if (!canEdit) {
+        return;
+      }
+      if (delta > 0 ? part.found >= part.needed : part.found <= 0) {
+        return;
+      }
       navigator.vibrate?.(10);
       queued.current.set(part.key, (queued.current.get(part.key) ?? 0) + delta);
       setPending((map) =>

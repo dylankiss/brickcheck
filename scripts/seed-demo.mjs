@@ -13,12 +13,14 @@ import { createClient } from "@supabase/supabase-js";
 import { localStack } from "./local-stack.mjs";
 
 const EMAIL = process.argv[2];
-if (!EMAIL || !EMAIL.includes("@"))
+if (!EMAIL || !EMAIL.includes("@")) {
   throw new Error("Usage: npm run seed-demo -- you@example.com");
+}
 
 const SAM_EMAIL = "sam.demo@example.com";
-if (EMAIL.toLowerCase() === SAM_EMAIL)
+if (EMAIL.toLowerCase() === SAM_EMAIL) {
   throw new Error("Use your own email, not the demo user Sam");
+}
 const SET_NUM = "demo-house-1";
 const {
   url: SUPABASE_URL,
@@ -29,7 +31,9 @@ const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const admin = createClient(SUPABASE_URL, SECRET_KEY, options);
 
 const must = ({ data, error }) => {
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return data;
 };
 const img = (color, part) =>
@@ -124,8 +128,9 @@ async function signIn(email, name) {
     email,
     email_confirm: true,
   });
-  if (created.error && created.error.code !== "email_exists")
+  if (created.error && created.error.code !== "email_exists") {
     throw new Error(created.error.message);
+  }
   const link = must(
     await admin.auth.admin.generateLink({ type: "magiclink", email }),
   );
@@ -144,13 +149,14 @@ async function signIn(email, name) {
       .eq("id", user.id)
       .single(),
   );
-  if (!profile.display_name)
+  if (!profile.display_name) {
     must(
       await client
         .from("profiles")
         .update({ display_name: name })
         .eq("id", user.id),
     );
+  }
   return { client, id: user.id };
 }
 
@@ -172,7 +178,7 @@ async function createSet(owner, title, { includeSpares = false } = {}) {
 
 /** Ticks off `found` pieces of a part (part number + color) through adjust_part, as the app does. */
 async function tickOff(user, setId, partNum, colorId, found) {
-  if (found > 0)
+  if (found > 0) {
     must(
       await user.client.rpc("adjust_part", {
         p_set_id: setId,
@@ -181,6 +187,7 @@ async function tickOff(user, setId, partNum, colorId, found) {
         p_delta: found,
       }),
     );
+  }
 }
 
 /** Adds `member` to `owner`'s Set through an Invite, as the join page does. */
