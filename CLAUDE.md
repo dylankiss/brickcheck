@@ -8,6 +8,7 @@ Read `ARCHITECTURE.md` before changing anything; keep it up to date.
 - `npm run dev`: Vite dev server (needs `.env.local`, see `.env.example`)
 - `npm run build`: type-check and build
 - `npm run lint`: oxlint
+- `npm run format`: Prettier with its defaults (plus Tailwind class sorting); `npm run format:check` is the CI check
 - `npm test`: vitest (pure logic in `src/lib`)
 - `npm run test:db`: pgTAP tests in `supabase/tests/database`
 - `npx supabase start` / `npx supabase db reset`: local stack (Docker)

@@ -260,6 +260,22 @@ src/
 - Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
   deploy point at production.
 
+## Code style
+
+Prettier formats everything with its default options, plus
+`prettier-plugin-tailwindcss` for class order (`.prettierrc.json`). Run
+`npm run format`; CI runs `npm run format:check`. SQL migrations, email
+templates, `public/` and lock files are skipped (`.prettierignore`). Don't
+hand-format or add overrides.
+
+What the formatter doesn't decide:
+
+- `interface` for object shapes, `type` for unions and aliases.
+- TypeScript everywhere in `src`; the scripts in `scripts/` and `e2e/` are
+  plain ES modules (`.mjs`).
+- Deno code (`supabase/functions`) imports local files with their `.ts`
+  extension and packages by the bare names in `deno.json`.
+
 ## Edge Functions
 
 `supabase/functions/<name>/index.ts` (Deno). Shared code lives in

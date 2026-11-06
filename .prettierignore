@@ -1,0 +1,8 @@
+node_modules
+dist
+public
+package-lock.json
+deno.lock
+supabase/templates
+supabase/migrations
+.claude
