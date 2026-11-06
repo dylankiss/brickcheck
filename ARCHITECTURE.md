@@ -266,6 +266,11 @@ src/
 `supabase/functions/_shared/` (CORS, auth check, Rebrickable client with 429
 back-off).
 
+`supabase/functions/deno.json` is the shared Deno config. Its `imports` map
+pins npm dependencies (e.g. `@supabase/supabase-js`), and functions import them
+by bare specifier, not an inline `npm:` prefix. `nodeModulesDir: "none"` keeps
+Deno on its own cache instead of the repo's `node_modules`.
+
 ## Invites
 
 - The owner creates an invite: a random uuid token, a role of `helper` or
