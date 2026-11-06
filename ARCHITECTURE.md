@@ -270,7 +270,9 @@ hand-format or add overrides.
 
 What the formatter doesn't decide:
 
-- `interface` for object shapes, `type` for unions and aliases.
+- `interface` for object shapes, `type` for unions and aliases; no `any`;
+  `import type` for type-only imports. oxlint enforces all three
+  (`.oxlintrc.json`).
 - TypeScript everywhere in `src`; the scripts in `scripts/` and `e2e/` are
   plain ES modules (`.mjs`).
 - Deno code (`supabase/functions`) imports local files with their `.ts`
