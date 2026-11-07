@@ -58,6 +58,11 @@ Everything below runs on free tiers. Expect about an hour the first time.
    - **Authentication > Sign in / Providers > Google**: enable it with an OAuth
      client from Google Cloud Console (Web application). Add the authorized
      redirect URI that Supabase shows.
+   - **Authentication > Passkeys** (beta): turn it on. If the dashboard asks
+     for a relying party ID or allowed origins, use the domain that serves the
+     app (`<project>.pages.dev` or your custom domain). Passkeys are tied to
+     that domain, so choose it before users add passkeys: after a move to
+     another domain, existing passkeys stop working and users add new ones.
    - **Realtime > Settings**: turn off "Allow public access", so only private
      channels are allowed.
    - Before going public: CAPTCHA, in this order (see step 2 for the site key).
