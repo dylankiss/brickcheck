@@ -62,7 +62,7 @@ routes like `/join/<token>` work. `public/_headers` sets security headers and ke
 
 ## 3. GitHub
 
-- **CI** (`.github/workflows/ci.yml`) runs lint, unit tests, the build and the database tests.
+- **CI** (`.github/workflows/ci.yml`) runs lint, the format check, unit tests, the build and the database tests.
 - **Catalog refresh** (`.github/workflows/catalog.yml`) runs twice a week. Add the
   repository secrets `SUPABASE_URL` and `SUPABASE_SECRET_KEY`. It also keeps the
   free project from being paused after 7 idle days. GitHub disables scheduled
