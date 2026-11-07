@@ -23,7 +23,9 @@ export function CatalogSearch({
   return (
     <div className="flex flex-col gap-3">
       <input
+        name="catalog-search"
         type="search"
+        aria-label="Search sets by number or name"
         // This page exists to search, so the field takes focus on arrival.
         // oxlint-disable-next-line jsx-a11y/no-autofocus
         autoFocus

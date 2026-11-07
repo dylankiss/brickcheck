@@ -117,6 +117,8 @@ export default function Login() {
             Tap it, or type the 6-digit code here.
           </p>
           <input
+            id="code"
+            name="code"
             inputMode="numeric"
             autoComplete="one-time-code"
             pattern="[0-9]{6,10}"
@@ -142,9 +144,12 @@ export default function Login() {
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-3">
           <input
+            id="email"
+            name="email"
             type="email"
             required
             autoComplete="email"
+            aria-label="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"

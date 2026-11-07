@@ -114,6 +114,7 @@ export default function Account() {
           <div className="flex gap-2">
             <input
               id="display-name"
+              name="display-name"
               required
               maxLength={100}
               value={name}

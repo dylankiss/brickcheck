@@ -46,6 +46,7 @@ export default function MissingAcrossSets() {
       <Header title="Missing in all sets" back="/">
         <div className="flex flex-col gap-2 pb-3">
           <input
+            name="part-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

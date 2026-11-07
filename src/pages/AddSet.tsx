@@ -102,6 +102,7 @@ export default function AddSet() {
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium">Name</span>
               <input
+                name="title"
                 value={title}
                 maxLength={200}
                 onChange={(e) => setTitle(e.target.value)}
@@ -120,6 +121,7 @@ export default function AddSet() {
                 </span>
               </span>
               <input
+                name="include-minifigs"
                 type="checkbox"
                 checked={includeMinifigs}
                 onChange={(e) => setIncludeMinifigs(e.target.checked)}
@@ -134,6 +136,7 @@ export default function AddSet() {
                 </span>
               </span>
               <input
+                name="include-spares"
                 type="checkbox"
                 checked={includeSpares}
                 onChange={(e) => setIncludeSpares(e.target.checked)}

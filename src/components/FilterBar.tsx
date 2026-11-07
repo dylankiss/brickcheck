@@ -20,6 +20,7 @@ export function FilterBar({
     <div className="flex flex-col gap-2 pb-3">
       <div className="flex gap-2">
         <input
+          name="part-search"
           type="search"
           value={filter.query}
           onChange={(e) => onFilterChange({ ...filter, query: e.target.value })}
