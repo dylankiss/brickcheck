@@ -211,8 +211,10 @@ src/
 - **CAPTCHA**: when `VITE_TURNSTILE_SITE_KEY` is set, the login form shows a
   Cloudflare Turnstile widget (`components/Turnstile.tsx`, "interaction-only":
   invisible unless Cloudflare wants a click) and sends its token as
-  `captchaToken` with `signInWithOtp`. The button waits for the token. A token
-  works once, so a failed request asks for a new one. Without the key (local
+  `captchaToken` with `signInWithOtp` and the passkey login. `hooks/useCaptcha`
+  hides the lifecycle: the page renders its `widget`, disables buttons while
+  `pending`, and wraps each protected request in `use(token => ...)`, which
+  fetches a fresh token afterwards because a token works once. Without the key (local
   development, e2e) there is no widget and no token, which matches the local
   stack, where CAPTCHA is off. Google sign-in and `verifyOtp` don't send one.
   Don't turn CAPTCHA on in Supabase before a build with the site key is live,
