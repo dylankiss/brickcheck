@@ -290,7 +290,9 @@ back-off).
 `supabase/functions/deno.json` is the shared Deno config. Its `imports` map
 pins npm dependencies (e.g. `@supabase/supabase-js`), and functions import them
 by bare specifier, not an inline `npm:` prefix. `nodeModulesDir: "none"` keeps
-Deno on its own cache instead of the repo's `node_modules`.
+Deno on its own cache instead of the repo's `node_modules`. `lock: false` means
+there is no `deno.lock`: the editor's Deno would pin newer package versions
+than the Supabase Edge Runtime can resolve, and `functions serve` fails on it.
 
 ## Invites
 
