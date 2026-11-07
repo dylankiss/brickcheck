@@ -296,8 +296,11 @@ export async function adjustPart(
     })
     .abortSignal(AbortSignal.timeout(TAP_TIMEOUT_MS));
   if (error) {
+    // postgrest-js returns a plain object for a fetch failure, with the error
+    // name only at the start of its message (AbortSignal.timeout rejects with
+    // a TimeoutError).
     fail(
-      error.name === "AbortError"
+      /^(TimeoutError|AbortError)\b/.test(error.message)
         ? { message: "The connection is slow; that tap was not saved" }
         : error,
     );
