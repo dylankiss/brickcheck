@@ -197,6 +197,15 @@ src/
   table-based HTML email with inline styles (mail clients ignore most CSS),
   light and dark colors, and the app icon loaded from `{{ .SiteURL }}`, so
   the logo only shows once the Auth Site URL is the deployed address.
+- **CAPTCHA**: when `VITE_TURNSTILE_SITE_KEY` is set, the login form shows a
+  Cloudflare Turnstile widget (`components/Turnstile.tsx`, "interaction-only":
+  invisible unless Cloudflare wants a click) and sends its token as
+  `captchaToken` with `signInWithOtp`. The button waits for the token. A token
+  works once, so a failed request asks for a new one. Without the key (local
+  development, e2e) there is no widget and no token, which matches the local
+  stack, where CAPTCHA is off. Google sign-in and `verifyOtp` don't send one.
+  Don't turn CAPTCHA on in Supabase before a build with the site key is live,
+  or email login stops working.
 - Pages and components never import `supabase` directly. They go through
   `lib/api.ts`, usually via a hook. Components don't fetch data; the one
   exception is `AuthProvider`, which holds app-level session state.
@@ -329,9 +338,10 @@ Step-by-step instructions are in `DEPLOY.md`.
   `https://*.<project>.pages.dev/**` to the redirect URLs. Do **not** run
   `supabase config push`, which would push the local `localhost` settings.
 - **Email**: Supabase's built-in SMTP only sends to team members and is heavily
-  rate-limited. Use a free SMTP provider for magic links: Brevo works with a
-  single verified sender address, while Resend needs a domain you own. Add a
-  CAPTCHA (Cloudflare Turnstile) to sign-in once the app is public.
+  rate-limited. Use a free SMTP provider for magic links, sending from a domain
+  whose DNS you control (it need not serve the app); `DEPLOY.md` has the Brevo
+  setup. Turn on CAPTCHA (Cloudflare Turnstile, see Login) once the app is
+  public.
 - **Free tier**: a project with no activity for a week is paused. The
   twice-weekly catalog refresh (`.github/workflows/catalog.yml`) prevents that.
 - **Testing on a phone**: Vite listens on the LAN (`server.host`). Add the LAN

@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router";
 import { Button, ErrorBanner } from "../components/ui";
+import { Turnstile } from "../components/Turnstile";
 import { useAuth } from "../hooks/useAuth";
+import { turnstileSiteKey } from "../lib/captcha";
 import { signInWithEmail, signInWithGoogle, verifyEmailCode } from "../lib/api";
 
 export default function Login() {
@@ -28,6 +30,10 @@ export default function Login() {
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  // A CAPTCHA token works once: after a failed request, resetKey asks for a new one.
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const waitingForCaptcha = Boolean(turnstileSiteKey) && !captchaToken;
   const [error, setError] = useState<string | null>(
     linkError
       ? "That login link has expired or was already used. Ask for a new one, or use the code from the email."
@@ -43,10 +49,17 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      await signInWithEmail(email.trim(), redirectTo);
+      await signInWithEmail(
+        email.trim(),
+        redirectTo,
+        captchaToken ?? undefined,
+      );
       setSent(true);
+      setCaptchaToken(null);
     } catch (err) {
       setError((err as Error).message);
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     } finally {
       setBusy(false);
     }
@@ -126,8 +139,21 @@ export default function Login() {
             placeholder="you@example.com"
             className="min-h-12 rounded-xl bg-white px-4 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
-          <Button type="submit" disabled={busy}>
-            {busy ? "Sending…" : "Email me a login link"}
+          <Turnstile
+            resetKey={captchaReset}
+            onToken={(token, captchaError) => {
+              setCaptchaToken(token);
+              if (captchaError) {
+                setError(captchaError);
+              }
+            }}
+          />
+          <Button type="submit" disabled={busy || waitingForCaptcha}>
+            {busy
+              ? "Sending…"
+              : waitingForCaptcha
+                ? "Checking your browser…"
+                : "Email me a login link"}
           </Button>
         </form>
       )}

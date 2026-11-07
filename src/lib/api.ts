@@ -66,13 +66,15 @@ export function onAuthChange(
   return () => data.subscription.unsubscribe();
 }
 
+/** Emails a login link and code. `captchaToken` is needed once CAPTCHA is on in Supabase. */
 export async function signInWithEmail(
   email: string,
   redirectTo: string,
+  captchaToken?: string,
 ): Promise<void> {
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: redirectTo },
+    options: { emailRedirectTo: redirectTo, captchaToken },
   });
   if (error) {
     fail(error);
