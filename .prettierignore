@@ -6,3 +6,4 @@ deno.lock
 supabase/templates
 supabase/migrations
 .claude
+supabase/.temp
