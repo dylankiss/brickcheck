@@ -19,6 +19,12 @@ export default defineConfig({
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
+        // Explicit identity and scope, so browsers that route links to
+        // installed apps know every path of this origin belongs to it.
+        id: "/",
+        scope: "/",
+        // Chromium: a link that launches the app reuses the open window.
+        launch_handler: { client_mode: "navigate-existing" },
         icons: [
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
           { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },

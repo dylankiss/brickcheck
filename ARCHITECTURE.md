@@ -248,6 +248,11 @@ src/
     `max-age=31536000`), and that also works offline.
   - Login uses the implicit flow (tokens in the URL hash), which the fallback
     leaves alone.
+  - Links to the app: the manifest has `id`, `scope` and
+    `launch_handler: navigate-existing`. Android Chrome then opens in-scope
+    links in the installed app and Chromium desktop reuses the open window.
+    iOS has no way to send a link to a home-screen app; it always opens in
+    Safari, which is why the login email also carries a code.
   - The installed app checks for a new version every hour.
   - Icons: `scripts/icons.mjs` (`npm run icons`) generates every icon in
     `public/` from one logo definition: `favicon.svg` and the manifest icons
