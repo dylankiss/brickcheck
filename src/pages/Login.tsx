@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router";
 import { Button, ErrorBanner } from "../components/ui";
+import { OfflineBanner } from "../components/OfflineBanner";
 import { useAuth } from "../hooks/useAuth";
 import { useCaptcha } from "../hooks/useCaptcha";
 import {
@@ -108,6 +109,7 @@ export default function Login() {
         </p>
       </div>
 
+      <OfflineBanner />
       {shownError && <ErrorBanner message={shownError} />}
 
       {sent ? (

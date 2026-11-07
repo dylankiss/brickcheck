@@ -17,8 +17,27 @@ export default defineConfig({
         theme_color: "#d01012",
         background_color: "#fafafa",
         display: "standalone",
-        orientation: "portrait",
         start_url: "/",
+        categories: ["utilities", "lifestyle"],
+        // Long-press shortcuts on the installed icon (Android, desktop).
+        shortcuts: [
+          {
+            name: "Add a set",
+            short_name: "Add set",
+            url: "/new",
+            icons: [
+              { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            ],
+          },
+          {
+            name: "Missing in all sets",
+            short_name: "Missing",
+            url: "/missing",
+            icons: [
+              { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            ],
+          },
+        ],
         // Explicit identity and scope, so browsers that route links to
         // installed apps know every path of this origin belongs to it.
         id: "/",

@@ -318,6 +318,15 @@ src/
   links in the installed app and Chromium desktop reuses the open window.
   iOS has no way to send a link to a home-screen app; it always opens in
   Safari, which is why the login email also carries a code.
+- Manifest: standalone display with no orientation lock (the OS decides, so
+  tablets and landscape phones work), `categories`, and two long-press
+  `shortcuts` (Add a set, Missing in all sets). `theme_color` stays the brand
+  red in both themes. There are no `screenshots`: they only feed Chrome's
+  richer install dialog and need real images.
+- Offline: the app shell opens without a connection, and `OfflineBanner`
+  (inside `Header`, and on Login) says "You're offline" while
+  `navigator.onLine` is false (`hooks/useOnline`). Data calls still fail with
+  their usual error.
 - The installed app checks for a new version every hour. Updates use
   `registerType: 'prompt'`: `UpdatePrompt` asks before reloading, because a
   reload would drop taps in flight.
@@ -454,27 +463,23 @@ Gaps, highest impact first:
    (keep off), Auth rate limits (the custom SMTP email limit is low), JWT
    expiry, the Security and Performance advisors before launch, rotating
    secrets (Supabase secret key, Rebrickable key, SMTP key, Turnstile secret).
-6. **Database migrations not yet pushed**: `20261107000000` adds the three
-   missing indexes and the log pruning in `claim_import`; `20261108000000` adds
-   `reset_set_progress` and the trigger change behind it. Run
-   `npx supabase db push`, and the Reset counts button fails until you do. The membership helpers live in `public`, so the
-   advisor's lint 0029 fires; accepted, since they only return the caller's
-   own data. The global cap of 200 imports per hour is shared by all users.
-7. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
+6. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
    and components are not, there is no coverage report, and CI skips
    `test:pwa`. Fix: add vitest coverage, tests for `lib/errors.ts` and the
    `useSet` sync logic, and a `test:pwa` CI step.
-8. **Performance**: the part grid is not virtualised (matters around 5000
+7. **Performance**: the part grid is not virtualised (matters around 5000
    parts), the search box is not deferred, images lack `decoding="async"`.
    Measure on a phone before changing.
-9. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
+8. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
    `console.error` it now; error reporting (with consent) later.
-10. **PWA polish**: manifest lacks `categories` and `screenshots`;
-    `orientation: portrait` blocks landscape; `theme-color` ignores dark mode;
-    no offline banner.
 
 ## Known limitations
 
+- The membership helper functions live in the `public` schema, so the Supabase
+  database advisor's lint 0029 fires for them. Accepted: they only return the
+  caller's own data.
+- The global cap of 200 imports per hour is shared by all users, so a few
+  accounts importing at their per-user limit can exhaust it.
 - Rebrickable throttling is per function invocation. Imports of different sets
   running at the same time can briefly exceed 1 req/s on the shared key. That
   is fine at hobby scale; a queue would fix it.

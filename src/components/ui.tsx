@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "react-router";
+import { OfflineBanner } from "./OfflineBanner";
 
 export function ProgressBar({
   found,
@@ -82,6 +83,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+      <OfflineBanner />
       <div className="flex min-h-14 items-center gap-2">
         {back && (
           <Link
