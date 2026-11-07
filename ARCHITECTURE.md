@@ -193,7 +193,10 @@ src/
   before showing any page, including the join page.
 - **Login**: the login email carries a link and a 6-digit code
   (`supabase/templates/login.html`). The code matters for the installed iOS
-  PWA, where the link opens Safari instead of the app.
+  PWA, where the link opens Safari instead of the app. The template is a
+  table-based HTML email with inline styles (mail clients ignore most CSS),
+  light and dark colors, and the app icon loaded from `{{ .SiteURL }}`, so
+  the logo only shows once the Auth Site URL is the deployed address.
 - Pages and components never import `supabase` directly. They go through
   `lib/api.ts`, usually via a hook. Components don't fetch data; the one
   exception is `AuthProvider`, which holds app-level session state.
