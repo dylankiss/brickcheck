@@ -112,11 +112,14 @@ routes like `/join/<token>` work. `public/_headers` sets security headers and ke
    seconds per minifigure.
 3. Invite yourself from a second account in another browser and tap a part. It
    should appear on both screens.
-4. Check the Content-Security-Policy. `public/_headers` sends it as
-   `Content-Security-Policy-Report-Only`, so nothing is blocked yet. In a
-   desktop browser, open the developer tools console, then go through login
-   (email, Google, passkey), a set, an enlarged picture, your avatar and the
-   install prompt. A line starting with "Content-Security-Policy" is a
-   violation. When there are none, rename the header in `public/_headers` to
-   `Content-Security-Policy` and deploy to enforce it; repeat the walk-through
-   once. If something breaks, rename it back.
+4. Check the Content-Security-Policy, which `public/_headers` enforces. After
+   a deploy, open a desktop browser's developer tools console (context
+   "top", filter `Content-Security-Policy`) and go through login (email,
+   Google, passkey), a set, an enlarged picture, your avatar and the install
+   prompt. A line that starts with "Refused to" is something the policy
+   blocked. The CAPTCHA frame prints its own errors (about `eval`, `data:` and
+   permissions); those come from Cloudflare's page. With DevTools open,
+   Turnstile also pauses on `debugger` statements; resume them or use
+   Deactivate breakpoints. If our own flows break, rename the header in
+   `public/_headers` to `Content-Security-Policy-Report-Only` and deploy.
+   Fix the policy before enforcing it again.

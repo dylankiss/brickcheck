@@ -414,6 +414,9 @@ Met, so keep it that way:
   scope), jobs have timeouts and concurrency, `npm audit` runs on the
   production dependencies, and Dependabot proposes npm and action updates
   weekly.
+- Security headers include an enforced Content-Security-Policy (see Security
+  rules). The Cloudflare Turnstile frame logs its own CSP and `eval` errors in
+  the console; they come from Cloudflare's page, not from ours.
 - No cookies or tracking. `localStorage` only holds the theme.
 
 Gaps, highest impact first:
@@ -421,43 +424,38 @@ Gaps, highest impact first:
 1. **Backups**: the free Supabase plan has none and no point-in-time recovery.
    Fix: a weekly `supabase db dump` workflow, or the Pro plan, and a dump
    before every `db push`. Roll back with a new corrective migration.
-2. **CSP is report-only**: `public/_headers` sends
-   `Content-Security-Policy-Report-Only`, so violations only show in the
-   browser console. Fix: browse every flow on the live site with the console
-   open (login, Google, passkey, a set, images, avatars, install), fix what is
-   reported, then rename the header to `Content-Security-Policy` to enforce it.
-3. **Privacy**: no privacy policy page, although email, name and avatar are
+2. **Privacy**: no privacy policy page, although email, name and avatar are
    stored and IP addresses reach Cloudflare and Rebrickable. Fix: a static
    `/privacy` page linked from Login, naming Supabase, Cloudflare, Rebrickable
    and Google.
-4. **Account deletion and export**: no "delete my account" (GDPR Art. 17 and 20).
+3. **Account deletion and export**: no "delete my account" (GDPR Art. 17 and 20).
    Deleting an owner deletes their sets for everyone. Fix for now: a manual
    procedure in `DEPLOY.md`; later a `delete-account` Edge Function.
-5. **Accessibility is untested by hand**: the contrast, focus, label and
+4. **Accessibility is untested by hand**: the contrast, focus, label and
    motion fixes are checked by arithmetic and lint, not with VoiceOver,
    TalkBack, a keyboard or Lighthouse. Do a pass before a wider launch.
-6. **Hosted settings missing from `DEPLOY.md`**: sign-ups, anonymous sign-ins
+5. **Hosted settings missing from `DEPLOY.md`**: sign-ups, anonymous sign-ins
    (keep off), Auth rate limits (the custom SMTP email limit is low), JWT
    expiry, the Security and Performance advisors before launch, rotating
    secrets (Supabase secret key, Rebrickable key, SMTP key, Turnstile secret).
-7. **Database migration not yet pushed**: `20261107000000` adds the three
+6. **Database migration not yet pushed**: `20261107000000` adds the three
    missing indexes and the log pruning in `claim_import`. Run
    `npx supabase db push`. The membership helpers live in `public`, so the
    advisor's lint 0029 fires; accepted, since they only return the caller's
    own data. The global cap of 200 imports per hour is shared by all users.
-8. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
+7. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
    and components are not, there is no coverage report, and CI skips
    `test:pwa`. Fix: add vitest coverage, tests for `lib/errors.ts` and the
    `useSet` sync logic, and a `test:pwa` CI step.
-9. **Edge Functions**: `@supabase/supabase-js@2` is not pinned and there is no
+8. **Edge Functions**: `@supabase/supabase-js@2` is not pinned and there is no
    lockfile; CORS allows any origin when `ALLOWED_ORIGINS` is unset (fine
    locally, but a forgotten secret in production would open it).
-10. **Performance**: the part grid is not virtualised (matters around 5000
-    parts), the search box is not deferred, images lack `decoding="async"`.
-    Measure on a phone before changing.
-11. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
+9. **Performance**: the part grid is not virtualised (matters around 5000
+   parts), the search box is not deferred, images lack `decoding="async"`.
+   Measure on a phone before changing.
+10. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
     `console.error` it now; error reporting (with consent) later.
-12. **PWA polish**: manifest lacks `categories` and `screenshots`;
+11. **PWA polish**: manifest lacks `categories` and `screenshots`;
     `orientation: portrait` blocks landscape; `theme-color` ignores dark mode;
     no offline banner.
 
