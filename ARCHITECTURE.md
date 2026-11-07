@@ -195,7 +195,10 @@ src/
 - **Lost access**: when a refresh finds no set (deleted, or we were removed),
   `useSet` shows "not found" and leaves the channel.
 - **Name first**: `RequireAuth` asks users without a display name for one
-  before showing any page, including the join page.
+  before showing any page, including the join page. If the profile can't be
+  loaded it shows the error with a retry button instead of letting the person
+  in nameless. Only the newest profile request sets state, so a slow reply
+  after a sign-out or account switch is ignored.
 - **Login**: the login email carries a link and a 6-digit code
   (`supabase/templates/login.html`). The code matters for the installed iOS
   PWA, where the link opens Safari instead of the app. The template is a

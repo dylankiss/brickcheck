@@ -25,7 +25,7 @@ const Share = lazy(() => import("./pages/Share"));
 const Account = lazy(() => import("./pages/Account"));
 
 function RequireAuth() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, profileError, refreshProfile, loading } = useAuth();
   const location = useLocation();
   if (loading) {
     return <Spinner />;
@@ -37,6 +37,22 @@ function RequireAuth() {
         replace
         state={{ from: location.pathname + location.search }}
       />
+    );
+  }
+  // Without a profile we can't tell whether a name is missing, so don't let the
+  // person in nameless: say what failed and offer a retry.
+  if (profileError) {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 p-4 text-center">
+        <p className="text-lg font-semibold">Couldn't load your account.</p>
+        <p className="text-neutral-500">{profileError}</p>
+        <button
+          className="min-h-11 rounded-xl bg-brick px-4 font-semibold text-white"
+          onClick={() => refreshProfile()}
+        >
+          Try again
+        </button>
+      </main>
     );
   }
   // Ask for a name before anything else (also before joining via an invite).

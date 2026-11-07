@@ -1,5 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { AuthContext } from "../hooks/useAuth";
 import {
   getMyProfile,
@@ -14,7 +20,11 @@ import type { Profile } from "../lib/types";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Only the newest profile request may set state: an older one can finish
+  // after a sign-out or an account switch.
+  const latestProfileRequest = useRef(0);
   const userId = session?.user.id;
 
   useEffect(() => {
@@ -28,13 +38,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /** Never rejects: a failed load shows up as `profileError`. */
   const refreshProfile = useCallback(async () => {
-    setProfile(userId ? await getMyProfile(userId) : null);
+    const request = ++latestProfileRequest.current;
+    try {
+      const next = userId ? await getMyProfile(userId) : null;
+      if (request === latestProfileRequest.current) {
+        setProfile(next);
+        setProfileError(null);
+      }
+    } catch (e) {
+      if (request === latestProfileRequest.current) {
+        setProfile(null);
+        setProfileError((e as Error).message);
+      }
+    }
   }, [userId]);
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- refreshProfile only sets state after awaiting the fetch
-    refreshProfile().catch(() => setProfile(null));
+    refreshProfile();
   }, [refreshProfile]);
 
   const updateName = useCallback(
@@ -50,7 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, profile, loading, refreshProfile, updateName, signOut }}
+      value={{
+        session,
+        profile,
+        profileError,
+        loading,
+        refreshProfile,
+        updateName,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
