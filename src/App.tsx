@@ -22,6 +22,7 @@ const Missing = lazy(() => import("./pages/Missing"));
 const MissingAcrossSets = lazy(() => import("./pages/MissingAcrossSets"));
 const AddSet = lazy(() => import("./pages/AddSet"));
 const Share = lazy(() => import("./pages/Share"));
+const Account = lazy(() => import("./pages/Account"));
 
 function RequireAuth() {
   const { session, profile, loading } = useAuth();
@@ -76,6 +77,7 @@ const router = createBrowserRouter([
       { path: "/", element: <MySets /> },
       { path: "/new", element: <AddSet /> },
       { path: "/missing", element: <MissingAcrossSets /> },
+      { path: "/account", element: <Account /> },
       { path: "/join/:token", element: <Join /> },
       {
         path: "/sets/:setId",

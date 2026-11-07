@@ -158,6 +158,7 @@ definer` with `search_path = ''` so that policies don't recurse into
 | ------------------- | ----------------- | -------------------------------------------------------------------------------------------------- |
 | `/login`            | Login             | magic link, 6-digit code, or Google; returns to the requested path                                 |
 | `/`                 | MySets            | my sets; asks email users for a display name once                                                  |
+| `/account`          | Account           | your display name (editable), login email (read-only), sign out; opened from the avatar on My sets |
 | `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live) |
 | `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                          |
 | `/join/:token`      | Join              | invite preview → `accept_invite`                                                                   |

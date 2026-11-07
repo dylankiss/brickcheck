@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { Avatar } from "../components/Avatar";
 import { ThemeButton } from "../components/ThemeButton";
 import {
   EnlargeableThumbnail,
@@ -13,7 +14,7 @@ import { isComplete } from "../lib/parts";
 
 export default function MySets() {
   const { sets, error } = useMySets();
-  const { signOut } = useAuth();
+  const { profile } = useAuth();
   const [enlarged, setEnlarged] = useState<Picture | null>(null);
 
   return (
@@ -21,12 +22,17 @@ export default function MySets() {
       <Header title="My sets">
         <div className="absolute top-[calc(env(safe-area-inset-top)+0.375rem)] right-2 flex items-center">
           <ThemeButton />
-          <button
-            onClick={() => signOut()}
-            className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
+          <Link
+            to="/account"
+            className="flex min-h-11 min-w-11 items-center justify-center"
+            aria-label="Account"
           >
-            Sign out
-          </button>
+            <Avatar
+              name={profile?.display_name ?? null}
+              url={profile?.avatar_url}
+              size="size-8"
+            />
+          </Link>
         </div>
       </Header>
       {error && <ErrorBanner message={error} />}
