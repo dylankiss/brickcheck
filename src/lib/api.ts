@@ -11,6 +11,7 @@ import type {
   LineProgress,
   Member,
   NewSet,
+  Passkey,
   Profile,
 } from "./types";
 
@@ -101,6 +102,66 @@ export async function signInWithGoogle(redirectTo: string): Promise<void> {
     provider: "google",
     options: { redirectTo },
   });
+  if (error) {
+    fail(error);
+  }
+}
+
+/** True when this browser can use passkeys at all. */
+export function passkeysSupported(): boolean {
+  return typeof window.PublicKeyCredential !== "undefined";
+}
+
+/** Closing the browser's passkey prompt is not an error worth showing. */
+function dismissedPasskeyPrompt(error: { code?: string; cause?: unknown }) {
+  return (
+    error.code === "ERROR_CEREMONY_ABORTED" ||
+    (error.cause instanceof Error && error.cause.name === "NotAllowedError")
+  );
+}
+
+/**
+ * Logs in with a passkey (the browser shows its own prompt). Returns false if
+ * the person dismissed the prompt. `captchaToken` is passed along in case
+ * CAPTCHA is on in Supabase.
+ */
+export async function signInWithPasskey(
+  captchaToken?: string,
+): Promise<boolean> {
+  const { error } = await supabase.auth.signInWithPasskey({
+    options: { captchaToken },
+  });
+  if (error) {
+    if (dismissedPasskeyPrompt(error)) {
+      return false;
+    }
+    fail(error);
+  }
+  return true;
+}
+
+/** Registers a passkey for the signed-in user. Returns false if the prompt was dismissed. */
+export async function registerPasskey(): Promise<boolean> {
+  const { error } = await supabase.auth.registerPasskey();
+  if (error) {
+    if (dismissedPasskeyPrompt(error)) {
+      return false;
+    }
+    fail(error);
+  }
+  return true;
+}
+
+export async function listPasskeys(): Promise<Passkey[]> {
+  const { data, error } = await supabase.auth.passkey.list();
+  if (error) {
+    fail(error);
+  }
+  return data ?? [];
+}
+
+export async function deletePasskey(passkeyId: string): Promise<void> {
+  const { error } = await supabase.auth.passkey.delete({ passkeyId });
   if (error) {
     fail(error);
   }

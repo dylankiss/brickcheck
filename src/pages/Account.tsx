@@ -2,6 +2,59 @@ import { useState, type FormEvent } from "react";
 import { Avatar } from "../components/Avatar";
 import { Button, ErrorBanner, Header } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
+import { usePasskeys } from "../hooks/usePasskeys";
+import { passkeysSupported } from "../lib/api";
+import type { Passkey } from "../lib/types";
+
+const date = (iso: string) => new Date(iso).toLocaleDateString();
+
+/** Log in with Face ID, Touch ID or a password manager instead of an emailed code. */
+function Passkeys() {
+  const { passkeys, error, busy, add, remove } = usePasskeys();
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="font-semibold">Passkeys</h2>
+      <p className="text-sm text-neutral-500">
+        Log in with Face ID, Touch ID or your password manager, without waiting
+        for an email.
+      </p>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <ul className="flex flex-col gap-2">
+        {passkeys?.map((p: Passkey) => (
+          <li
+            key={p.id}
+            className="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">
+                {p.friendly_name || "Passkey"}
+              </p>
+              <p className="text-sm text-neutral-500">
+                Added {date(p.created_at)}
+                {p.last_used_at && `, last used ${date(p.last_used_at)}`}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm("Remove this passkey?")) {
+                  remove(p.id);
+                }
+              }}
+              className="min-h-11 px-2 text-sm text-red-600 disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <Button variant="secondary" disabled={busy} onClick={add}>
+        {busy ? "Waiting…" : "Add a passkey"}
+      </Button>
+    </section>
+  );
+}
 
 /** Your own details: the name other people see, your login email, and signing out. */
 export default function Account() {
@@ -91,6 +144,8 @@ export default function Account() {
             This is the address you log in with. It can't be changed here.
           </p>
         </section>
+
+        {passkeysSupported() && <Passkeys />}
 
         <Button variant="secondary" onClick={() => signOut()}>
           Sign out

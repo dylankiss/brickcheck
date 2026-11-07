@@ -154,18 +154,18 @@ definer` with `search_path = ''` so that policies don't recurse into
 
 ## Routes
 
-| Path                | Page              | Notes                                                                                              |
-| ------------------- | ----------------- | -------------------------------------------------------------------------------------------------- |
-| `/login`            | Login             | magic link, 6-digit code, or Google; returns to the requested path                                 |
-| `/`                 | MySets            | my sets; asks email users for a display name once                                                  |
-| `/account`          | Account           | your display name (editable), login email (read-only), sign out; opened from the avatar on My sets |
-| `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live) |
-| `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                          |
-| `/join/:token`      | Join              | invite preview → `accept_invite`                                                                   |
-| `/sets/:id`         | SetLayout         | owns `useSet` (one channel, presence) for its children                                             |
-| `/sets/:id` (index) | SetPage           | the grid of part cards                                                                             |
-| `/sets/:id/missing` | Missing           | missing list and exports                                                                           |
-| `/sets/:id/people`  | Share             | members, roles, invite links, leave or delete                                                      |
+| Path                | Page              | Notes                                                                                                        |
+| ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `/login`            | Login             | magic link, 6-digit code, or Google; returns to the requested path                                           |
+| `/`                 | MySets            | my sets; asks email users for a display name once                                                            |
+| `/account`          | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets |
+| `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)           |
+| `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                                    |
+| `/join/:token`      | Join              | invite preview → `accept_invite`                                                                             |
+| `/sets/:id`         | SetLayout         | owns `useSet` (one channel, presence) for its children                                                       |
+| `/sets/:id` (index) | SetPage           | the grid of part cards                                                                                       |
+| `/sets/:id/missing` | Missing           | missing list and exports                                                                                     |
+| `/sets/:id/people`  | Share             | members, roles, invite links, leave or delete                                                                |
 
 Everything except `/login` is behind `RequireAuth`.
 
@@ -198,6 +198,16 @@ src/
   table-based HTML email with inline styles (mail clients ignore most CSS),
   light and dark colors, and the app icon loaded from `{{ .SiteURL }}`, so
   the logo only shows once the Auth Site URL is the deployed address.
+- **Passkeys** (Supabase Auth, beta; `supabase.auth.signInWithPasskey`,
+  `registerPasskey`, `passkey.*`, on by default in the installed
+  `supabase-js`): the account page lists, adds and removes the user's
+  passkeys (`hooks/usePasskeys.ts`), and the login page has a "Log in with a
+  passkey" button, shown wherever `PublicKeyCredential` exists, including the
+  installed iOS app (where Google is hidden). Dismissing the browser prompt is
+  not an error. The button sends the CAPTCHA token like the email form does.
+  A passkey is bound to the domain it was created on, so moving the app to
+  another domain makes existing passkeys unusable; users fall back to an email
+  code and add a new one.
 - **CAPTCHA**: when `VITE_TURNSTILE_SITE_KEY` is set, the login form shows a
   Cloudflare Turnstile widget (`components/Turnstile.tsx`, "interaction-only":
   invisible unless Cloudflare wants a click) and sends its token as

@@ -4,7 +4,13 @@ import { Button, ErrorBanner } from "../components/ui";
 import { Turnstile } from "../components/Turnstile";
 import { useAuth } from "../hooks/useAuth";
 import { turnstileSiteKey } from "../lib/captcha";
-import { signInWithEmail, signInWithGoogle, verifyEmailCode } from "../lib/api";
+import {
+  passkeysSupported,
+  signInWithEmail,
+  signInWithGoogle,
+  signInWithPasskey,
+  verifyEmailCode,
+} from "../lib/api";
 
 export default function Login() {
   const { session } = useAuth();
@@ -74,6 +80,21 @@ export default function Login() {
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
+    }
+  }
+
+  async function passkey() {
+    setBusy(true);
+    setError(null);
+    try {
+      await signInWithPasskey(captchaToken ?? undefined);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+      // A CAPTCHA token works once.
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     }
   }
 
@@ -155,6 +176,16 @@ export default function Login() {
                 ? "Checking your browser…"
                 : "Email me a login link"}
           </Button>
+          {passkeysSupported() && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy || waitingForCaptcha}
+              onClick={passkey}
+            >
+              Log in with a passkey
+            </Button>
+          )}
         </form>
       )}
 

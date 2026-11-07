@@ -74,6 +74,14 @@ export interface Profile {
   avatar_url: string | null;
 }
 
+/** A passkey registered for the signed-in user (Supabase Auth, beta). */
+export interface Passkey {
+  id: string;
+  friendly_name?: string;
+  created_at: string;
+  last_used_at?: string;
+}
+
 export interface Member {
   user_id: string;
   role: SetRole;
