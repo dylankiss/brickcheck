@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useOnVisible } from "./useOnVisible";
 import {
   adjustPart,
   getSet,
@@ -190,21 +191,16 @@ export function useSet(setId: string, myUserId: string) {
       onSubscribed: () => void refresh(),
       onPresence: setOnlineIds,
     });
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        refresh();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       // A counter, not a DOM ref: invalidating in-flight work is the point.
       // oxlint-disable-next-line react-hooks/exhaustive-deps
       generation.current++;
       stopChannel.current?.();
       stopChannel.current = null;
-      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [setId, myUserId, load, loadMembers, receive, refresh]);
+  // Catches up on anything missed while the page was in the background.
+  useOnVisible(() => void refresh());
 
   const parts = useMemo(() => groupParts(lines, pending), [lines, pending]);
 

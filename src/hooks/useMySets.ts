@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useOnVisible } from "./useOnVisible";
 import { listMySets } from "../lib/api";
 import type { SetSummary } from "../lib/types";
 
@@ -22,14 +23,8 @@ export function useMySets() {
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- refresh only sets state after awaiting the fetch
     refresh();
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        refresh();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [refresh]);
+  useOnVisible(() => void refresh());
 
   return { sets, error, refresh };
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useOnVisible } from "./useOnVisible";
 import { adjustPart, getLinesOfSets, listMySets } from "../lib/api";
 import {
   applySetProgress,
@@ -47,14 +48,8 @@ export function useMissingAcrossSets() {
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- load only sets state after awaiting the fetch
     load();
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        load();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [load]);
+  useOnVisible(() => void load());
 
   const tickOff = useCallback(
     async (setId: string, part: Part) => {
