@@ -127,3 +127,60 @@ routes like `/join/<token>` work. `public/_headers` sets security headers and ke
    Deactivate breakpoints. If our own flows break, rename the header in
    `public/_headers` to `Content-Security-Policy-Report-Only` and deploy.
    Fix the policy before enforcing it again.
+
+## 5. Before you go public
+
+Hosted Supabase projects ignore `supabase/config.toml`, so each setting below
+is checked in the dashboard. Menu names change from time to time; Supabase's
+production checklist is the reference if a label differs. Tick each box once
+you have looked.
+
+**Authentication**
+
+- [ ] **Anonymous sign-ins are off** (Authentication > Sign In / Providers).
+      The app has no anonymous use.
+- [ ] **Sign-ups are on** ("Allow new users to sign up"), because anyone with
+      an email may use the app. Turn them off for an invite-only phase; only
+      existing users can then log in.
+- [ ] **Email**: "Confirm email" on, OTP length 6, OTP expiration 900 s (step 1.5).
+- [ ] **Rate limits** (Authentication > Rate Limits): the number of emails per
+      hour is low by default with custom SMTP (check the value); raise it to what
+      your Brevo plan allows (300 a day on the free plan). Sign-ups and sign-ins
+      per 5 minutes per IP and token verifications per 5 minutes per IP: 30 each
+      matches what the app was developed against.
+- [ ] **JWT expiry is 3600 s.** A removed member's open page can keep listening
+      for up to this long (see _Security rules_ in `ARCHITECTURE.md`).
+- [ ] **Redirect URLs** (Authentication > URL configuration) list only your
+      site and the preview pattern. Remove `localhost` and LAN addresses left
+      over from phone testing.
+- [ ] **CAPTCHA is on** (step 1.5).
+
+**Database and project**
+
+- [ ] **Advisors**: run the Security Advisor and the Performance Advisor
+      (Database > Advisors). The expected finding is lint 0029 for the
+      membership helper functions (accepted, see _Known limitations_); look
+      at anything else.
+- [ ] **SSL enforcement** is on for database connections (Database > Settings).
+      The app only talks to the HTTPS API, so network restrictions can stay off.
+- [ ] **Backups**: the free plan has none and no point-in-time recovery. See
+      the _Standards and gaps_ list in `ARCHITECTURE.md`, and dump the data
+      (`npx supabase db dump --data-only`) before each `db push`.
+
+**Rotating secrets**
+
+Rotate one when it leaks, when someone with access leaves, or about once a
+year. Create the new value first, switch over, then delete the old one.
+
+| Secret                     | Lives in                                                                     | How                                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Supabase secret key        | function secret `BRICKCHECK_SECRET_KEY`, GitHub secret `SUPABASE_SECRET_KEY` | Create a new secret key (Settings > API keys), run `npx supabase secrets set BRICKCHECK_SECRET_KEY=...`, update the GitHub secret, delete the old key |
+| Rebrickable API key        | function secret `REBRICKABLE_API_KEY`                                        | New key on rebrickable.com, then `npx supabase secrets set REBRICKABLE_API_KEY=...`                                                                   |
+| Brevo SMTP key             | Supabase (Authentication > Emails > SMTP)                                    | New SMTP key in Brevo, paste it into Supabase, delete the old key                                                                                     |
+| Turnstile secret key       | Supabase (Authentication > Attack protection)                                | Rotate the secret in Cloudflare Turnstile, paste it into Supabase (the site key stays)                                                                |
+| Google OAuth client secret | Supabase (Authentication > Sign In / Providers > Google)                     | Add a new secret to the OAuth client in Google Cloud Console, paste it into Supabase, disable the old one                                             |
+| Database password          | not used by the app                                                          | Reset it under Settings > Database if it leaks                                                                                                        |
+
+After rotating a function secret, import a small set (e.g. 40516-1) to check
+the function still works. Functions read secrets when they start, so a new
+secret should reach them without a redeploy, but confirm it.

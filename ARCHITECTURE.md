@@ -459,18 +459,14 @@ Gaps, highest impact first:
 4. **Accessibility is untested by hand**: the contrast, focus, label and
    motion fixes are checked by arithmetic and lint, not with VoiceOver,
    TalkBack, a keyboard or Lighthouse. Do a pass before a wider launch.
-5. **Hosted settings missing from `DEPLOY.md`**: sign-ups, anonymous sign-ins
-   (keep off), Auth rate limits (the custom SMTP email limit is low), JWT
-   expiry, the Security and Performance advisors before launch, rotating
-   secrets (Supabase secret key, Rebrickable key, SMTP key, Turnstile secret).
-6. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
+5. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
    and components are not, there is no coverage report, and CI skips
    `test:pwa`. Fix: add vitest coverage, tests for `lib/errors.ts` and the
    `useSet` sync logic, and a `test:pwa` CI step.
-7. **Performance**: the part grid is not virtualised (matters around 5000
+6. **Performance**: the part grid is not virtualised (matters around 5000
    parts), the search box is not deferred, images lack `decoding="async"`.
    Measure on a phone before changing.
-8. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
+7. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
    `console.error` it now; error reporting (with consent) later.
 
 ## Known limitations
