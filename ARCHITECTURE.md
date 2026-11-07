@@ -156,7 +156,7 @@ definer` with `search_path = ''` so that policies don't recurse into
 
 | Path                | Page              | Notes                                                                                                        |
 | ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| `/login`            | Login             | magic link, 6-digit code, or Google; returns to the requested path                                           |
+| `/login`            | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                  |
 | `/`                 | MySets            | my sets; asks email users for a display name once                                                            |
 | `/account`          | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets |
 | `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)           |
@@ -177,10 +177,12 @@ src/
   lib/api.ts        ALL data access (queries, RPCs, function calls, realtime); import everything from here
   lib/auth.ts       sign-in methods, passkeys, session and own profile; part of api.ts, which re-exports it
   lib/errors.ts     ApiError and fail(), shared by api.ts and auth.ts
+  lib/captcha.ts    the public Turnstile site key (VITE_TURNSTILE_SITE_KEY), if set
   lib/types.ts      domain types shared by api, hooks and UI
   lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
   lib/theme.ts      light/dark preference (localStorage) and the `dark` class
-  hooks/            React state built on lib/api and lib/theme (useAuth, useSet, useTheme, ...)
+  hooks/            React state built on lib/api and lib/theme (useAuth, useSet, useTheme, ...);
+                    useCaptcha wraps the Turnstile widget and token lifecycle
   pages/            route components
   components/       presentational components; no data fetching
 ```
@@ -283,8 +285,9 @@ src/
     with rounded corners, plus full-bleed `apple-touch-icon.png` and
     `maskable-512x512.png`, which iOS and Android mask themselves. The logo
     fits Android's safe zone at full size.
-  - In the installed app (`display-mode: standalone`) the login page offers
-    only email, because OAuth would finish in Safari, outside the app.
+  - In the installed app (`display-mode: standalone`) the login page hides
+    Google, because OAuth would finish in Safari, outside the app. Email and
+    passkeys stay.
   - Updates use `registerType: 'prompt'`: `UpdatePrompt` asks before
     reloading, because a reload would drop taps in flight.
   - Routes other than login and My sets are lazy-loaded. React and Supabase
