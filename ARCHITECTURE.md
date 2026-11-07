@@ -174,7 +174,9 @@ Everything except `/login` is behind `RequireAuth`.
 ```
 src/
   lib/supabase.ts   the one supabase client
-  lib/api.ts        ALL data access (queries, RPCs, function calls, realtime)
+  lib/api.ts        ALL data access (queries, RPCs, function calls, realtime); import everything from here
+  lib/auth.ts       sign-in methods, passkeys, session and own profile; part of api.ts, which re-exports it
+  lib/errors.ts     ApiError and fail(), shared by api.ts and auth.ts
   lib/types.ts      domain types shared by api, hooks and UI
   lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
   lib/theme.ts      light/dark preference (localStorage) and the `dark` class
