@@ -103,7 +103,7 @@ export default function Share() {
         {isOwner && (
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">Invite people</h2>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Send a link. Anyone who opens it and logs in joins this set. Links
               expire after 7 days.
             </p>
@@ -136,7 +136,7 @@ export default function Share() {
                       {copied === i.token ? "Copied!" : "Share"}
                     </button>
                     <button
-                      className="min-h-11 px-2 text-neutral-500"
+                      className="min-h-11 px-2 text-neutral-500 dark:text-neutral-400"
                       onClick={() => revokeInvite(i.token)}
                     >
                       Revoke
@@ -167,7 +167,10 @@ export default function Share() {
                   <span className="min-w-0 flex-1 truncate">
                     {m.display_name || "Unnamed builder"}
                     {m.user_id === me && (
-                      <span className="text-neutral-500"> (you)</span>
+                      <span className="text-neutral-500 dark:text-neutral-400">
+                        {" "}
+                        (you)
+                      </span>
                     )}
                   </span>
                   {isOwner && m.role !== "owner" ? (
@@ -184,7 +187,7 @@ export default function Share() {
                         <option value="viewer">{roleLabel.viewer}</option>
                       </select>
                       <button
-                        className="min-h-11 px-2 text-sm text-neutral-500"
+                        className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
                         onClick={() =>
                           window.confirm(
                             `Remove ${m.display_name || "this member"}? Links you sent before won't let them back in.`,
@@ -195,7 +198,7 @@ export default function Share() {
                       </button>
                     </>
                   ) : (
-                    <span className="text-sm text-neutral-500">
+                    <span className="text-sm text-neutral-500 dark:text-neutral-400">
                       {roleLabel[m.role]}
                     </span>
                   )}

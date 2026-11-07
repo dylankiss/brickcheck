@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type KeyboardEvent,
   type MouseEvent,
 } from "react";
 import type { Part } from "../lib/parts";
@@ -107,6 +108,7 @@ function ZoomablePicture({
     null,
   );
 
+  // A tap zooms in on that spot; the keyboard zooms in on the middle.
   const toggle = (e: MouseEvent<HTMLDivElement>) => {
     if (zoomedAt) {
       return setZoomedAt(null);
@@ -116,6 +118,13 @@ function ZoomablePicture({
       x: (e.clientX - box.left) / box.width,
       y: (e.clientY - box.top) / box.height,
     });
+  };
+  const toggleWithKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+    e.preventDefault();
+    setZoomedAt(zoomedAt ? null : { x: 0.5, y: 0.5 });
   };
 
   // Scroll the zoomed picture so the tapped spot stays under the finger.
@@ -133,7 +142,11 @@ function ZoomablePicture({
     <div
       ref={area}
       className="min-h-0 flex-1 overflow-auto bg-white"
+      role="button"
+      tabIndex={0}
+      aria-label={`${zoomedAt ? "Zoom out" : "Zoom in"}: ${label}`}
       onClick={toggle}
+      onKeyDown={toggleWithKey}
     >
       <div
         className={

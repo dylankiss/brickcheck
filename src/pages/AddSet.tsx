@@ -85,7 +85,7 @@ export default function AddSet() {
               />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{catalogSet.name}</p>
-                <p className="text-sm text-neutral-500">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {catalogSet.set_num} · {catalogSet.year} ·{" "}
                   {catalogSet.num_parts} pieces
                 </p>
@@ -107,7 +107,7 @@ export default function AddSet() {
                 onChange={(e) => setTitle(e.target.value)}
                 className="min-h-12 rounded-xl bg-white px-4 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
               />
-              <span className="text-xs text-neutral-500">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">
                 Handy if you own several copies, e.g. "Castle – blue box".
               </span>
             </label>
@@ -115,7 +115,7 @@ export default function AddSet() {
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>
                 Include minifigure parts
-                <span className="block text-xs text-neutral-500">
+                <span className="block text-xs text-neutral-500 dark:text-neutral-400">
                   Heads, torsos, legs and accessories
                 </span>
               </span>
@@ -129,7 +129,7 @@ export default function AddSet() {
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>
                 Include spare parts
-                <span className="block text-xs text-neutral-500">
+                <span className="block text-xs text-neutral-500 dark:text-neutral-400">
                   Pieces LEGO adds on top of what the set needs
                 </span>
               </span>
@@ -140,7 +140,7 @@ export default function AddSet() {
                 className="size-6 accent-brick"
               />
             </label>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
               These two options can't be changed later.
             </p>
 

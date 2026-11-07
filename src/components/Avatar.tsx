@@ -1,9 +1,10 @@
 const PALETTE = [
+  // Dark enough for white initials (WCAG 2.2 AA, 4.5:1).
   "bg-red-600",
   "bg-blue-600",
-  "bg-yellow-500",
-  "bg-green-600",
-  "bg-orange-500",
+  "bg-yellow-700",
+  "bg-green-700",
+  "bg-orange-700",
   "bg-purple-600",
 ];
 

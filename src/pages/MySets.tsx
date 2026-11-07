@@ -39,7 +39,7 @@ export default function MySets() {
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-28">
         {!sets && !error && <Spinner />}
         {sets?.length === 0 && (
-          <p className="py-12 text-center text-neutral-500">
+          <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
             No sets yet. Add one and start checking.
           </p>
         )}
@@ -61,7 +61,7 @@ export default function MySets() {
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{set.title}</p>
-                <p className="truncate text-sm text-neutral-500">
+                <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">
                   {set.title === set.catalog_name
                     ? set.set_num
                     : `${set.set_num} · ${set.catalog_name}`}
@@ -73,7 +73,7 @@ export default function MySets() {
                     needed={set.needed}
                     className="flex-1"
                   />
-                  <span className="text-xs text-neutral-500 tabular-nums">
+                  <span className="text-xs text-neutral-500 tabular-nums dark:text-neutral-400">
                     {set.found}/{set.needed}
                   </span>
                 </div>

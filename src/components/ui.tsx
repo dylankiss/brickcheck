@@ -1,4 +1,10 @@
-import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router";
 
 export function ProgressBar({
@@ -15,12 +21,14 @@ export function ProgressBar({
     <div
       className={`h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800 ${className}`}
       role="progressbar"
+      aria-label="Progress"
       aria-valuemin={0}
       aria-valuemax={needed}
       aria-valuenow={found}
+      aria-valuetext={`${found} of ${needed} found`}
     >
       <div
-        className={`h-full rounded-full transition-[width] ${percent === 100 ? "bg-green-600" : "bg-brick"}`}
+        className={`h-full rounded-full transition-[width] motion-reduce:transition-none ${percent === 100 ? "bg-green-600" : "bg-brick"}`}
         style={{ width: `${percent}%` }}
       />
     </div>
@@ -57,6 +65,21 @@ export function Header({
   back?: string;
   children?: ReactNode;
 }) {
+  // A new page moves focus to its heading, so screen readers announce it and
+  // keyboard users start at the top. A field that took focus itself (the
+  // catalog search) keeps it.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      active.matches("input, textarea, select")
+    ) {
+      return;
+    }
+    heading.current?.focus({ preventScroll: true });
+  }, []);
+
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
       <div className="flex min-h-14 items-center gap-2">
@@ -69,7 +92,13 @@ export function Header({
             ‹
           </Link>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{title}</h1>
+        <h1
+          ref={heading}
+          tabIndex={-1}
+          className="min-w-0 flex-1 truncate text-lg font-bold outline-none"
+        >
+          {title}
+        </h1>
       </div>
       {children}
     </header>
@@ -104,9 +133,20 @@ export function ErrorBanner({
 
 export function Spinner({ label }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 p-8 text-neutral-500">
-      <div className="size-8 animate-spin rounded-full border-4 border-neutral-300 border-t-brick" />
-      {label && <p className="text-sm">{label}</p>}
+    <div
+      role="status"
+      className="flex flex-col items-center justify-center gap-3 p-8 text-neutral-500 dark:text-neutral-400"
+    >
+      {/* Slower, not stopped, for people who prefer reduced motion: it still shows that work is going on. */}
+      <div
+        aria-hidden="true"
+        className="size-8 animate-spin rounded-full border-4 border-neutral-300 border-t-brick motion-reduce:animate-[spin_3s_linear_infinite]"
+      />
+      {label ? (
+        <p className="text-sm">{label}</p>
+      ) : (
+        <span className="sr-only">Loading</span>
+      )}
     </div>
   );
 }

@@ -66,19 +66,19 @@ export default function MissingAcrossSets() {
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {!missing && !error && <Spinner />}
         {missing?.length === 0 && (
-          <p className="py-12 text-center text-neutral-500">
+          <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
             Nothing is missing in any of your sets. 🎉
           </p>
         )}
         {all && all.parts.length > 0 && (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {all.pieces} {all.pieces === 1 ? "piece" : "pieces"} in{" "}
             {all.parts.length} {all.parts.length === 1 ? "part" : "parts"} still
             to find, across {all.sets} {all.sets === 1 ? "set" : "sets"}.
           </p>
         )}
         {missing && missing.length > 0 && shown.length === 0 && (
-          <p className="py-8 text-center text-neutral-500">
+          <p className="py-8 text-center text-neutral-500 dark:text-neutral-400">
             No missing parts match.
           </p>
         )}

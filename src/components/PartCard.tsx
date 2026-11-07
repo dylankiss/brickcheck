@@ -42,7 +42,7 @@ export const PartCard = memo(
           >
             {part.part_name}
           </span>
-          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500">
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
             <ColorSwatch
               rgb={part.color_rgb}
               trans={part.is_trans}
@@ -65,7 +65,7 @@ export const PartCard = memo(
             <span className="text-xl font-bold tabular-nums">
               {allFound ? "✓ " : ""}
               {part.found}
-              <span className="text-sm font-normal text-neutral-500">
+              <span className="text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 {" "}
                 / {part.needed}
               </span>

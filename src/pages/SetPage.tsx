@@ -80,7 +80,7 @@ export default function SetPage() {
             {others.length ? (
               <OnlineAvatars people={others} />
             ) : (
-              <PeopleIcon className="size-6 text-neutral-500" />
+              <PeopleIcon className="size-6 text-neutral-500 dark:text-neutral-400" />
             )}
           </Link>
           <ProgressBar found={found} needed={needed} className="flex-1" />
@@ -104,7 +104,7 @@ export default function SetPage() {
       </Header>
       {error && <ErrorBanner message={error} onClose={clearError} />}
       {!canEdit && (
-        <p className="px-4 pt-3 text-sm text-neutral-500">
+        <p className="px-4 pt-3 text-sm text-neutral-500 dark:text-neutral-400">
           You can view this set but not change it.
         </p>
       )}
@@ -119,7 +119,7 @@ export default function SetPage() {
           />
         ))}
         {order.length === 0 && (
-          <p className="col-span-full py-12 text-center text-neutral-500">
+          <p className="col-span-full py-12 text-center text-neutral-500 dark:text-neutral-400">
             {found === needed
               ? "All pieces found! 🎉"
               : "No parts match the filter."}

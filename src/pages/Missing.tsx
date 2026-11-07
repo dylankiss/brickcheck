@@ -41,7 +41,7 @@ export default function Missing() {
           </p>
         ) : (
           <>
-            <p className="text-neutral-500">
+            <p className="text-neutral-500 dark:text-neutral-400">
               {total} {total === 1 ? "piece" : "pieces"} in {missing.length}{" "}
               {missing.length === 1 ? "part" : "parts"} still to find.
             </p>
@@ -64,7 +64,7 @@ export default function Missing() {
               </Button>
             </div>
             {bricklink.skipped.length > 0 && (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {bricklink.skipped.length} part(s) have no BrickLink id and are
                 left out of the BrickLink file.
               </p>
@@ -109,7 +109,7 @@ function MissingItem({
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{part.part_name}</p>
-        <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+        <p className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
           <ColorSwatch
             rgb={part.color_rgb}
             trans={part.is_trans}

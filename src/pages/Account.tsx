@@ -14,7 +14,7 @@ function Passkeys() {
   return (
     <section className="flex flex-col gap-2">
       <h2 className="font-semibold">Passkeys</h2>
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-neutral-500 dark:text-neutral-400">
         Log in with Face ID, Touch ID or your password manager, without waiting
         for an email.
       </p>
@@ -29,7 +29,7 @@ function Passkeys() {
               <p className="truncate font-medium">
                 {p.friendly_name || "Passkey"}
               </p>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 Added {date(p.created_at)}
                 {p.last_used_at && `, last used ${date(p.last_used_at)}`}
               </p>
@@ -98,7 +98,7 @@ export default function Account() {
             <p className="truncate text-lg font-semibold">
               {profile?.display_name ?? "No name yet"}
             </p>
-            <p className="truncate text-sm text-neutral-500">
+            <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">
               {session?.user.email}
             </p>
           </div>
@@ -108,7 +108,7 @@ export default function Account() {
           <label htmlFor="display-name" className="font-semibold">
             Name
           </label>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             People you share sets with see this name.
           </p>
           <div className="flex gap-2">
@@ -140,7 +140,7 @@ export default function Account() {
           <p className="text-neutral-600 dark:text-neutral-300">
             {session?.user.email ?? "Unknown"}
           </p>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             This is the address you log in with. It can't be changed here.
           </p>
         </section>

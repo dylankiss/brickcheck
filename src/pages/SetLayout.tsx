@@ -21,7 +21,7 @@ function SetLayout({ setId }: { setId: string }) {
     return (
       <>
         <Header title="Set not found" back="/" />
-        <p className="p-8 text-center text-neutral-500">
+        <p className="p-8 text-center text-neutral-500 dark:text-neutral-400">
           This set doesn't exist or isn't shared with you.
         </p>
       </>

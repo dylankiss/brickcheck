@@ -26,3 +26,12 @@ body {
   @apply bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* People who prefer reduced motion get no transitions. Spinners keep going, slowly (see Spinner). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+  }
+}

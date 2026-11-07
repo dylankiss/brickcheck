@@ -50,7 +50,7 @@ export default function Join() {
                 className="h-32 w-48 rounded-lg bg-white"
               />
               <p className="text-lg font-semibold">{preview.set_title}</p>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 {preview.set_num} · {preview.catalog_name}
               </p>
               <p>
@@ -63,7 +63,7 @@ export default function Join() {
             </Button>
           </>
         ) : (
-          <p className="py-12 text-center text-neutral-500">
+          <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
             This invite link is invalid or has expired. Ask for a new one.
           </p>
         )}

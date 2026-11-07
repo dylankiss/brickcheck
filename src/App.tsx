@@ -45,7 +45,7 @@ function RequireAuth() {
     return (
       <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 p-4 text-center">
         <p className="text-lg font-semibold">Couldn't load your account.</p>
-        <p className="text-neutral-500">{profileError}</p>
+        <p className="text-neutral-500 dark:text-neutral-400">{profileError}</p>
         <button
           className="min-h-11 rounded-xl bg-brick px-4 font-semibold text-white"
           onClick={() => refreshProfile()}
@@ -73,7 +73,9 @@ function RouteError() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 p-4 text-center">
       <p className="text-lg font-semibold">Something went wrong.</p>
-      <p className="text-neutral-500">BrickCheck may have just been updated.</p>
+      <p className="text-neutral-500 dark:text-neutral-400">
+        BrickCheck may have just been updated.
+      </p>
       <button
         className="min-h-11 rounded-xl bg-brick px-4 font-semibold text-white"
         onClick={() => window.location.reload()}
