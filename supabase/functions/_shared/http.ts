@@ -1,7 +1,6 @@
 // ALLOWED_ORIGINS: comma-separated origins, `*` wildcards allowed for preview
 // deploys, e.g. "https://brickcheck.app,https://*.brickcheck.pages.dev".
-// Unset means any origin (local development); calls are JWT-checked either way.
-const allowedOrigins = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean)
@@ -13,13 +12,20 @@ const allowedOrigins = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
       ),
   );
 
+// Used when ALLOWED_ORIGINS is unset (local development): this machine and
+// private networks (a phone on the LAN), never the public web. A hosted project
+// that forgot the secret then fails visibly instead of answering every origin.
+const localOrigins = [
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i,
+  /^https?:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/,
+];
+
+const allowedOrigins =
+  configuredOrigins.length > 0 ? configuredOrigins : localOrigins;
+
 function corsHeaders(origin: string | null): Record<string, string> {
   const allowed =
-    allowedOrigins.length === 0
-      ? "*"
-      : origin && allowedOrigins.some((re) => re.test(origin))
-        ? origin
-        : "null";
+    origin && allowedOrigins.some((re) => re.test(origin)) ? origin : "null";
   return {
     "Access-Control-Allow-Origin": allowed,
     Vary: "Origin",

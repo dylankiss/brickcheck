@@ -20,6 +20,10 @@ Everything below runs on free tiers. Expect about an hour the first time.
      BRICKCHECK_SECRET_KEY=<sb_secret_... from Settings > API keys> \
      ALLOWED_ORIGINS='https://<your-domain>,https://*.<pages-project>.pages.dev'
    ```
+   `ALLOWED_ORIGINS` must be set on the hosted project. Without it the function
+   only answers local origins (localhost and private networks), so the live app's
+   import calls fail until you set it. Redeploy after changing the library
+   version in `supabase/functions/deno.json`.
 4. Seed the catalog once (28k sets, about a minute):
    ```sh
    SUPABASE_URL=https://<project-ref>.supabase.co SUPABASE_SECRET_KEY=<sb_secret_...> npm run import-catalog

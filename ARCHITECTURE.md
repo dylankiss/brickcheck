@@ -352,9 +352,19 @@ back-off).
 `supabase/functions/deno.json` is the shared Deno config. Its `imports` map
 pins npm dependencies (e.g. `@supabase/supabase-js`), and functions import them
 by bare specifier, not an inline `npm:` prefix. `nodeModulesDir: "none"` keeps
-Deno on its own cache instead of the repo's `node_modules`. `lock: false` means
+Deno on its own cache instead of the repo's `node_modules`. The library is
+pinned to an exact version (`@2.118.0`, the version the frontend is tested
+with); Dependabot doesn't update `deno.json`, so bump it by hand with the
+frontend's version. `lock: false` means
 there is no `deno.lock`: the editor's Deno would pin newer package versions
 than the Supabase Edge Runtime can resolve, and `functions serve` fails on it.
+
+CORS (`_shared/http.ts`): the function answers only origins in `ALLOWED_ORIGINS`
+(comma-separated, `*` wildcards). When it is unset, only local origins
+(`localhost`, `127.0.0.1` and private-network addresses such as a phone on the
+LAN) are allowed, never the public web, so a hosted project that forgot the
+secret fails visibly instead of answering every site. Every call is also
+JWT-checked.
 
 ## Invites
 
@@ -447,15 +457,12 @@ Gaps, highest impact first:
    and components are not, there is no coverage report, and CI skips
    `test:pwa`. Fix: add vitest coverage, tests for `lib/errors.ts` and the
    `useSet` sync logic, and a `test:pwa` CI step.
-8. **Edge Functions**: `@supabase/supabase-js@2` is not pinned and there is no
-   lockfile; CORS allows any origin when `ALLOWED_ORIGINS` is unset (fine
-   locally, but a forgotten secret in production would open it).
-9. **Performance**: the part grid is not virtualised (matters around 5000
+8. **Performance**: the part grid is not virtualised (matters around 5000
    parts), the search box is not deferred, images lack `decoding="async"`.
    Measure on a phone before changing.
-10. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
-    `console.error` it now; error reporting (with consent) later.
-11. **PWA polish**: manifest lacks `categories` and `screenshots`;
+9. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
+   `console.error` it now; error reporting (with consent) later.
+10. **PWA polish**: manifest lacks `categories` and `screenshots`;
     `orientation: portrait` blocks landscape; `theme-color` ignores dark mode;
     no offline banner.
 
