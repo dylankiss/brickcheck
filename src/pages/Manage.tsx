@@ -34,7 +34,7 @@ async function shareLink(
   return "copied";
 }
 
-export default function Share() {
+export default function Manage() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const { setId, summary, version, online, members, reloadMembers } =
@@ -51,6 +51,7 @@ export default function Share() {
     setRole,
     remove,
     leave,
+    resetCounts,
     deleteSet,
   } = useMembers(setId, me, isOwner, version, reloadMembers);
   const [copied, setCopied] = useState<string | null>(null);
@@ -87,9 +88,16 @@ export default function Share() {
     }
   }
 
+  async function confirmReset() {
+    const question = `Reset all counts in "${set.title}" to zero for everyone? This can't be undone.`;
+    if (window.confirm(question) && (await resetCounts())) {
+      navigate(`/sets/${setId}`);
+    }
+  }
+
   return (
     <>
-      <Header title={`People · ${set.title}`} back={`/sets/${setId}`} />
+      <Header title={`Manage · ${set.title}`} back={`/sets/${setId}`} />
       {(error || actionError) && (
         <ErrorBanner
           message={(error || actionError)!}
@@ -208,6 +216,15 @@ export default function Share() {
           )}
         </section>
 
+        {isOwner && (
+          <Button
+            variant="secondary"
+            onClick={confirmReset}
+            className="text-red-700 dark:text-red-400"
+          >
+            Reset counts
+          </Button>
+        )}
         <Button
           variant="secondary"
           onClick={leaveOrDelete}

@@ -224,7 +224,8 @@ function BrickIcon({ className = "" }: { className?: string }) {
 }
 
 /** Two people: the link to who is on a Set, shown while nobody else is online. */
-export function PeopleIcon({ className = "size-6" }: { className?: string }) {
+/** Sliders: the entry to a set's management page (members, invites, reset, delete). */
+export function SettingsIcon({ className = "size-6" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -236,10 +237,10 @@ export function PeopleIcon({ className = "size-6" }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
-      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
-      <path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />
+      <path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2" />
+      <circle cx="14" cy="6" r="2" />
+      <circle cx="8" cy="12" r="2" />
+      <circle cx="16" cy="18" r="2" />
     </svg>
   );
 }

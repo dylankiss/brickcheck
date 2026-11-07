@@ -251,7 +251,7 @@ try {
   ok(true, "logging in with the 6-digit code works, after choosing a name");
 
   // Alice invites helpers; Bob joins through the link
-  await a.getByRole("link", { name: "People" }).click();
+  await a.getByRole("link", { name: "Manage set" }).click();
   await a.getByRole("button", { name: "Invite helpers" }).click();
   await a.getByText("Copied!").waitFor();
   const link = await a.evaluate(() => navigator.clipboard.readText());
@@ -263,11 +263,11 @@ try {
   await b.getByText("2/11").waitFor();
   ok(true, "the invitee joins and sees the same progress");
   await a.getByText("Bob Builder").waitFor();
-  await a.screenshot({ path: `${OUT}/8-people.png` });
+  await a.screenshot({ path: `${OUT}/8-manage.png` });
   ok(true, "the owner sees the new member appear live");
   await a.getByRole("link", { name: "Back" }).click();
   await a
-    .getByRole("link", { name: "People" })
+    .getByRole("link", { name: "Manage set" })
     .locator('[title="Bob Builder"]')
     .waitFor({ timeout: 10000 });
   ok(true, "Bob's avatar shows as online on Alice's set");
@@ -331,7 +331,7 @@ try {
 
   // Alice makes Bob a viewer; his page switches to read-only without reloading
   await b.goto(`${APP}/sets/${setId}`);
-  await a.goto(`${APP}/sets/${setId}/people`);
+  await a.goto(`${APP}/sets/${setId}/manage`);
   await a.getByLabel("Role of Bob Builder").selectOption("viewer");
   await b
     .getByText("You can view this set but not change it.")

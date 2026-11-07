@@ -4,7 +4,12 @@ import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
 import { EnlargedPart } from "../components/EnlargedPicture";
-import { ErrorBanner, Header, PeopleIcon, ProgressBar } from "../components/ui";
+import {
+  ErrorBanner,
+  Header,
+  ProgressBar,
+  SettingsIcon,
+} from "../components/ui";
 import { useSetContext } from "../hooks/useSetContext";
 import {
   filterParts,
@@ -73,14 +78,14 @@ export default function SetPage() {
       <Header title={summary!.title} back="/">
         <div className="flex items-center gap-3 pb-2">
           <Link
-            to={`/sets/${setId}/people`}
-            aria-label="People"
+            to={`/sets/${setId}/manage`}
+            aria-label="Manage set"
             className="flex min-h-9 items-center"
           >
             {others.length ? (
               <OnlineAvatars people={others} />
             ) : (
-              <PeopleIcon className="size-6 text-neutral-500 dark:text-neutral-400" />
+              <SettingsIcon className="size-6 text-neutral-500 dark:text-neutral-400" />
             )}
           </Link>
           <ProgressBar found={found} needed={needed} className="flex-1" />

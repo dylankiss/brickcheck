@@ -140,6 +140,16 @@ export async function updateSet(
   }
 }
 
+/** Owner only: sets every part's found count in the set back to zero. */
+export async function resetSetProgress(setId: string): Promise<void> {
+  const { error } = await supabase.rpc("reset_set_progress", {
+    p_set_id: setId,
+  });
+  if (error) {
+    fail(error);
+  }
+}
+
 export async function deleteSet(setId: string): Promise<void> {
   const { error } = await supabase.from("sets").delete().eq("id", setId);
   if (error) {

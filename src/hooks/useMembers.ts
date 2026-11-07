@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createInvite,
   deleteSet,
+  resetSetProgress,
   deleteInvite,
   listInvites,
   removeMember,
@@ -76,6 +77,7 @@ export function useMembers(
     remove: (userId: string) =>
       run(() => removeMember(setId, userId).then(reloadMembers)),
     leave: () => run(() => removeMember(setId, myUserId)),
+    resetCounts: () => run(() => resetSetProgress(setId)),
     deleteSet: () => run(() => deleteSet(setId)),
   };
 }

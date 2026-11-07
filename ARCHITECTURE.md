@@ -67,7 +67,11 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    part's lines as `{line_id, found_qty, updated_at}`, the same fields a
    broadcast carries (a broadcast adds `updated_by`). Clients never write `set_progress` directly. A retried call
    applies its delta again, which is accepted for taps. A complete set is
-   not frozen: a piece found later can still be counted.
+   not frozen: a piece found later can still be counted. The owner can reset
+   all counts: `reset_set_progress(set)` (owner only) sets every `found_qty` to
+   0, keeping the rows, and sends one `changed` broadcast instead of a
+   `progress` per row (the progress trigger skips its broadcast while it runs),
+   so every open page refetches the progress.
 4. **Live sync**: a trigger on `set_progress` sends a `progress` broadcast
    (`{line_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
    `set:<id>`. RLS policies on `realtime.messages` let only members of the
@@ -92,7 +96,7 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 | `set_import_log`       | Rebrickable fetches per user, for rate limiting                       | `fetch-set` (service role)                                                                          |
 | `sets`                 | one physical set being checked: a copy of a catalog set (GLOSSARY.md) | owner insert; `title` by helpers                                                                    |
 | `set_members`          | who can see or edit a set (`owner`, `helper`, `viewer`)               | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member |
-| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` RPC only                                                                              |
+| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` and `reset_set_progress` RPCs only                                                    |
 | `set_invites`          | invite tokens                                                         | the owner                                                                                           |
 | `set_removals`         | who the owner removed, and when                                       | trigger on `set_members` delete                                                                     |
 | `set_lines` (view)     | every line that counts for a set, with `found_qty`                    | —                                                                                                   |
@@ -125,6 +129,8 @@ and groups them by part and color.
   members only. Views are `security_invoker = true`.
 - `profiles` are readable by the user themselves and by people they share a
   set with.
+- Only the owner can reset a set's counts (`reset_set_progress`, which checks
+  `is_set_owner`); helpers can still correct single parts with taps.
 - Column-level grants limit writes: updates to `sets(title)`,
   `set_members(role)` and `profiles(display_name)`, and inserts
   to `set_invites(set_id, role, expires_at)`. Invites expire within 30 days.
@@ -170,9 +176,9 @@ and groups them by part and color.
 | `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                                    |
 | `/join/:token`      | Join              | invite preview → `accept_invite`                                                                             |
 | `/sets/:id`         | SetLayout         | owns `useSet` (one channel, presence) for its children                                                       |
-| `/sets/:id` (index) | SetPage           | the grid of part cards                                                                                       |
+| `/sets/:id` (index) | SetPage           | the grid of part cards; the header icon opens Manage and shows who is online instead when others are         |
 | `/sets/:id/missing` | Missing           | missing list and exports                                                                                     |
-| `/sets/:id/people`  | Share             | members, roles, invite links, leave or delete                                                                |
+| `/sets/:id/manage`  | Manage            | Manage: members, roles, invite links, reset counts (owner), leave or delete                                  |
 
 Everything except `/login` is behind `RequireAuth`.
 
@@ -379,7 +385,7 @@ JWT-checked.
   `emailRedirectTo` / `redirectTo`. Only same-origin paths are accepted.
 - `invite_preview(token)` shows the set, its catalog set and the inviter before joining.
 - Members can leave a set. The owner can remove members, change their roles,
-  or delete the set.
+  reset all counts, or delete the set.
 - A removal is recorded in `set_removals`. Links created before the removal
   no longer work for that person (neither preview nor accept); a newer link
   does, and accepting it clears the record. Leaving on your own isn't recorded.
@@ -448,9 +454,10 @@ Gaps, highest impact first:
    (keep off), Auth rate limits (the custom SMTP email limit is low), JWT
    expiry, the Security and Performance advisors before launch, rotating
    secrets (Supabase secret key, Rebrickable key, SMTP key, Turnstile secret).
-6. **Database migration not yet pushed**: `20261107000000` adds the three
-   missing indexes and the log pruning in `claim_import`. Run
-   `npx supabase db push`. The membership helpers live in `public`, so the
+6. **Database migrations not yet pushed**: `20261107000000` adds the three
+   missing indexes and the log pruning in `claim_import`; `20261108000000` adds
+   `reset_set_progress` and the trigger change behind it. Run
+   `npx supabase db push`, and the Reset counts button fails until you do. The membership helpers live in `public`, so the
    advisor's lint 0029 fires; accepted, since they only return the caller's
    own data. The global cap of 200 imports per hour is shared by all users.
 7. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
