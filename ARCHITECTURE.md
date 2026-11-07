@@ -142,6 +142,14 @@ and groups them by part and color.
   change it (no tracking pixels for co-members).
 - Migrations grant what the app needs to `authenticated` explicitly instead of
   relying on platform default privileges.
+- **Browser headers** (`public/_headers`, served by Cloudflare Pages): `nosniff`,
+  a strict referrer policy, a minimal `Permissions-Policy`, `X-Frame-Options`,
+  HSTS, `Cross-Origin-Opener-Policy: same-origin` and a
+  Content-Security-Policy that allows only our own files, Supabase
+  (`https` and `wss`), Cloudflare Turnstile, Rebrickable images and Google
+  avatars. No inline scripts exist, so the CSP needs no `unsafe-inline` for
+  scripts; styles keep it because React sets `style` attributes. A new third-party
+  origin (script, frame, image, API) must be added to the CSP in the same commit.
 - Edge Functions run with `verify_jwt = false` and verify the caller in code
   (`_shared/auth.ts`, `auth.getClaims()`), rejecting anyone who isn't an
   authenticated, non-anonymous user. With asymmetric JWTs the check is local, so
@@ -210,8 +218,8 @@ src/
   wildcards).
 - **Theme**: `dark:` styles follow a `dark` class on `<html>`. It follows the
   system setting unless the user picks Light or Dark (the button on My sets),
-  a per-device preference in `localStorage`. An inline script in `index.html`
-  applies it before the first paint; `lib/theme.ts` keeps it applied.
+  a per-device preference in `localStorage`. `public/theme-init.js` (a blocking script
+  in `index.html`) applies it before the first paint; `lib/theme.ts` keeps it applied.
 - **Errors**: routes have an error page with a Reload button, and a failed
   lazy chunk load (after a deploy) reloads the page into the new version.
 - Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
@@ -413,11 +421,11 @@ Gaps, highest impact first:
 1. **Backups**: the free Supabase plan has none and no point-in-time recovery.
    Fix: a weekly `supabase db dump` workflow, or the Pro plan, and a dump
    before every `db push`. Roll back with a new corrective migration.
-2. **Security headers**: `public/_headers` has no Content-Security-Policy,
-   HSTS or COOP. Fix: start with `Content-Security-Policy-Report-Only`
-   allowing `self`, Supabase (https and wss), `challenges.cloudflare.com`
-   (script and frame), `cdn.rebrickable.com` and Google avatar images. The
-   inline theme script in `index.html` needs its own file or a hash first.
+2. **CSP is report-only**: `public/_headers` sends
+   `Content-Security-Policy-Report-Only`, so violations only show in the
+   browser console. Fix: browse every flow on the live site with the console
+   open (login, Google, passkey, a set, images, avatars, install), fix what is
+   reported, then rename the header to `Content-Security-Policy` to enforce it.
 3. **Privacy**: no privacy policy page, although email, name and avatar are
    stored and IP addresses reach Cloudflare and Rebrickable. Fix: a static
    `/privacy` page linked from Login, naming Supabase, Cloudflare, Rebrickable

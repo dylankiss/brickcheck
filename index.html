@@ -18,22 +18,8 @@
     />
     <meta name="theme-color" content="#d01012" />
     <title>BrickCheck</title>
-    <script>
-      // Apply the saved theme before the first paint; src/lib/theme.ts takes over after.
-      (function () {
-        var theme;
-        try {
-          theme = localStorage.getItem("theme");
-        } catch (e) {}
-        if (
-          theme === "dark" ||
-          (theme !== "light" &&
-            matchMedia("(prefers-color-scheme: dark)").matches)
-        ) {
-          document.documentElement.classList.add("dark");
-        }
-      })();
-    </script>
+    <!-- Applies the saved theme before the first paint. A file, not inline, so the Content-Security-Policy needs no exception for it. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

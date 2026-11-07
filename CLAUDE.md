@@ -34,6 +34,7 @@ Before committing, run `npm run lint`, `npm run format:check`, `npm test` and `n
 - New tables get RLS policies in the same migration.
 - Migrations are deployed to the hosted project: add a new migration, never edit an existing one.
 - In migrations, index every new foreign key, write `(select auth.uid())` in policies, and give every `security definer` function `set search_path = ''`.
+- A new third-party origin (script, frame, image or API) goes into the Content-Security-Policy in `public/_headers` in the same commit.
 - UI follows WCAG 2.2 AA: pair `text-neutral-500` with `dark:text-neutral-400`, label every control, keep 44px touch targets, and announce status with `role="status"` or `role="alert"`.
 - Commit messages follow Conventional Commits: `type(scope): summary`, lower case and imperative, with details in the body. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`, `perf`, `style`. Scopes are optional, e.g. `db`, `functions`, `ui`, `sync`, `pwa`.
 

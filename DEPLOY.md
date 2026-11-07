@@ -112,3 +112,11 @@ routes like `/join/<token>` work. `public/_headers` sets security headers and ke
    seconds per minifigure.
 3. Invite yourself from a second account in another browser and tap a part. It
    should appear on both screens.
+4. Check the Content-Security-Policy. `public/_headers` sends it as
+   `Content-Security-Policy-Report-Only`, so nothing is blocked yet. In a
+   desktop browser, open the developer tools console, then go through login
+   (email, Google, passkey), a set, an enlarged picture, your avatar and the
+   install prompt. A line starting with "Content-Security-Policy" is a
+   violation. When there are none, rename the header in `public/_headers` to
+   `Content-Security-Policy` and deploy to enforce it; repeat the walk-through
+   once. If something breaks, rename it back.
