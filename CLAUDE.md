@@ -1,35 +1,45 @@
 # BrickCheck
 
-Mobile-first PWA to check LEGO sets piece by piece, collaboratively.
-Read `ARCHITECTURE.md` before changing anything; keep it up to date.
+Mobile-first PWA to check LEGO sets piece by piece, collaboratively. The design is in `ARCHITECTURE.md`, the domain words in `GLOSSARY.md`.
+
+## Before changing code
+
+`ARCHITECTURE.md` is the reference for every change and every review. Read the sections for the area you touch, and update them in the same commit when a change departs from them:
+
+- Database, RLS, RPCs, migrations: _Data flow_, _Data model_, _Security rules_
+- Edge Functions: _Edge Functions_, _Security rules_, _Invites_
+- `src/` (pages, hooks, components): _Routes_, _Frontend conventions_, _Code style_
+- Login, passkeys, CAPTCHA, PWA: _Frontend conventions_
+- Hosting, auth settings, environment: _Deployment notes_, then `DEPLOY.md`
+- Any area: _Standards and gaps_ lists known deviations from industry standards; don't add new ones, and delete an entry when you fix it
 
 ## Commands
 
-- `npm run dev`: Vite dev server (needs `.env.local`, see `.env.example`)
-- `npm run build`: type-check and build
-- `npm run lint`: oxlint
-- `npm run format`: Prettier with its defaults (plus Tailwind class sorting); `npm run format:check` is the CI check
-- `npm test`: vitest (pure logic in `src/lib`)
+Before committing, run `npm run lint`, `npm run format:check`, `npm test` and `npm run build`. CI runs the same, plus `npm run test:db`.
+
+- `npm run format` and `npx oxlint --fix`: fix style (run `--fix` twice for nested cases, then format)
+- `npm run dev`: needs `.env.local` (see `.env.example`)
 - `npm run test:db`: pgTAP tests in `supabase/tests/database`
-- `npx supabase start` / `npx supabase db reset`: local stack (Docker)
-- `npx supabase functions serve`: run Edge Functions locally
-- `npm run import-catalog`: seed `lego_sets` from Rebrickable's CSV (needs `SUPABASE_URL`, `SUPABASE_SECRET_KEY`)
-- `npm run icons`: regenerate every icon in `public/` from the logo in `scripts/icons.mjs`; don't edit the icon files by hand
-- `npm run seed-demo -- <email>`: a demo catalog set and three Sets for that user on the local stack
-- `npm run smoke`: API smoke test against the local stack (with `npx supabase functions serve`)
-- `npm run e2e`: browser test of checking a set (local stack, `npx supabase functions serve` and `npm run dev`; uses Google Chrome)
-- `smoke`, `e2e` and `seed-demo` only run against the local stack and read its URL and keys from `npx supabase status` (`scripts/local-stack.mjs`). `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` override that, so unset a production key left in your shell
-- `npm run test:pwa`: PWA test (manifest, service worker, offline) against `npx vite preview --port 4173`
-- Deploying: see `DEPLOY.md`
+- `npx supabase start`, `db reset` and `functions serve`: the local stack (Docker)
+- `npm run smoke`, `e2e` and `seed-demo -- <email>` run only against the local stack. They read its URL and keys from `npx supabase status` (`scripts/local-stack.mjs`). `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` override that, so unset a production key left in your shell. `smoke` needs `functions serve`; `e2e` needs `functions serve`, `npm run dev` and Google Chrome.
+- `npm run test:pwa`: needs `npm run build`, then `npx vite preview --port 4173`
+- `npm run import-catalog`: seeds `lego_sets` from Rebrickable's CSV (needs `SUPABASE_URL`, `SUPABASE_SECRET_KEY`)
+- `npm run icons`: regenerates every icon in `public/` from `scripts/icons.mjs`; edit the logo there, never the icon files
+- Deploying: `DEPLOY.md`
 
 ## Rules
 
 - All data access goes through `src/lib/api.ts`.
-- The Rebrickable API is called only from Edge Functions.
-- New tables need RLS policies in the same migration.
-- Never edit a deployed migration; add a new one. (Nothing is deployed yet.)
-- Each step is reviewed by a separate fresh-context agent against `ARCHITECTURE.md`.
+- Call the Rebrickable API only from Edge Functions.
+- New tables get RLS policies in the same migration.
+- Migrations are deployed to the hosted project: add a new migration, never edit an existing one.
+- In migrations, index every new foreign key, write `(select auth.uid())` in policies, and give every `security definer` function `set search_path = ''`.
+- UI follows WCAG 2.2 AA: pair `text-neutral-500` with `dark:text-neutral-400`, label every control, keep 44px touch targets, and announce status with `role="status"` or `role="alert"`.
 - Commit messages follow Conventional Commits: `type(scope): summary`, lower case and imperative, with details in the body. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`, `perf`, `style`. Scopes are optional, e.g. `db`, `functions`, `ui`, `sync`, `pwa`.
+
+## Sandbox
+
+Claude works in Claude Code's sandbox (`.claude/settings.json`), which has no Docker. The Supabase CLI, `test:db`, `smoke` and `e2e` run outside it.
 
 ## Agent skills
 

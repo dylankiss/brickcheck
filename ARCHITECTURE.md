@@ -6,6 +6,7 @@ pieces. Several users can check the same set live, each on their own phone.
 
 This document is the reference for every change and every review. If a change
 deliberately departs from it, update this document in the same commit.
+`CLAUDE.md` says which sections to read for which kind of change.
 
 ## Stack (all free tiers)
 
@@ -19,9 +20,6 @@ deliberately departs from it, update this document in the same commit.
 | Images    | Hot-linked from Rebrickable's CDN (`cdn.rebrickable.com`)     |
 
 There is no custom server. The browser talks to Supabase only.
-
-Claude works in Claude Code's sandbox, set up in `.claude/settings.json`: no
-Docker, so the Supabase CLI and browser tests run outside it.
 
 ## Data flow
 
@@ -46,19 +44,19 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    is cached (`lego_sets.parts_fetched_at` set). Before calling Rebrickable it
    calls `claim_import`. That function atomically applies the per-user hourly
    limit and a global cap of 200 imports per hour, and refuses a second import
-   of the same set within 3 minutes. A failed import calls `release_import`,
-   so it can be retried at once; the attempt still counts towards the limits. Each Rebrickable
-   request has a 45 s timeout, because part details make Rebrickable slow
-   (about 40 ms per inventory line, fetched in pages of 500), and the whole
-   import has a 110 s budget (free Edge Functions stop at 150 s). Otherwise it reads everything from the API
-   first: the set, its parts, its minifigs, and each minifig's parts. Then it
-   writes it all in **one** `import_set(set, parts)` call (service role only).
-   `import_set` takes a per-set advisory lock and merges rows that share a line
-   key, summing their quantities (Rebrickable can list the same part and color
-   twice). It inserts with `on conflict do nothing` and stamps
-   `parts_fetched_at` last. Once a set is imported, its
-   inventory is **immutable**: `set_progress` references `inventory_lines.id`, so
-   rows are never updated, deleted or re-keyed.
+   of the same set within 3 minutes. A failed import calls `release_import`, so
+   it can be retried at once; the attempt still counts towards the limits. Each
+   Rebrickable request has a 45 s timeout, because part details make Rebrickable
+   slow (about 40 ms per inventory line, fetched in pages of 500), and the whole
+   import has a 110 s budget (free Edge Functions stop at 150 s). Otherwise it
+   reads everything from the API first: the set, its parts, its minifigs, and
+   each minifig's parts. Then it writes it all in **one** call to
+   `import_set(set, parts)` (service role only). `import_set` takes a per-set
+   advisory lock and merges rows that share a line key, summing their
+   quantities (Rebrickable can list the same part and color twice). It inserts
+   with `on conflict do nothing` and stamps `parts_fetched_at` last. Once a set
+   is imported, its inventory is **immutable**: `set_progress` references
+   `inventory_lines.id`, so rows are never updated, deleted or re-keyed.
 3. **Checking**: the UI shows one card per **part** (part number + color). A part can be backed
    by several inventory lines: the set's own line, minifig lines, and a spare
    line. A tap calls `adjust_part(set, part_num, color_id, delta)`. Increments
@@ -171,6 +169,8 @@ Everything except `/login` is behind `RequireAuth`.
 
 ## Frontend conventions
 
+### Structure
+
 ```
 src/
   lib/supabase.ts   the one supabase client
@@ -187,6 +187,30 @@ src/
   components/       presentational components; no data fetching
 ```
 
+- Pages and components never import `supabase` directly. They go through
+  `lib/api.ts`, usually via a hook. Components don't fetch data; the one
+  exception is `AuthProvider`, which holds app-level session state.
+- Database row types are written by hand in `lib/types.ts`.
+  `supabase gen types` could generate them now that the project is linked.
+- Every list read is paginated until a page comes back empty, whatever the
+  server's `max_rows`.
+- Mobile first: touch targets are at least 44px, and the app is usable one-handed.
+- Environment variables are documented where they are used: `.env.example`
+  (frontend), `supabase/.env.example` (local function secrets) and `DEPLOY.md`
+  (hosted). The hosted function secrets are `REBRICKABLE_API_KEY`,
+  `BRICKCHECK_SECRET_KEY` and `ALLOWED_ORIGINS` (comma-separated, `*`
+  wildcards).
+- **Theme**: `dark:` styles follow a `dark` class on `<html>`. It follows the
+  system setting unless the user picks Light or Dark (the button on My sets),
+  a per-device preference in `localStorage`. An inline script in `index.html`
+  applies it before the first paint; `lib/theme.ts` keeps it applied.
+- **Errors**: routes have an error page with a Reload button, and a failed
+  lazy chunk load (after a deploy) reloads the page into the new version.
+- Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
+  deploy point at production.
+
+### The set page (`useSet`)
+
 - **Presence**: the set channel only tracks the user's id; presence keys are
   chosen by clients, so they are never trusted for names. `useSet` loads the
   member list (again on every `changed` broadcast) and exposes `online` and
@@ -194,44 +218,7 @@ src/
   `version`, which other views (invites) depend on.
 - **Lost access**: when a refresh finds no set (deleted, or we were removed),
   `useSet` shows "not found" and leaves the channel.
-- **Name first**: `RequireAuth` asks users without a display name for one
-  before showing any page, including the join page. If the profile can't be
-  loaded it shows the error with a retry button instead of letting the person
-  in nameless. Only the newest profile request sets state, so a slow reply
-  after a sign-out or account switch is ignored.
-- **Login**: the login email carries a link and a 6-digit code
-  (`supabase/templates/login.html`). The code matters for the installed iOS
-  PWA, where the link opens Safari instead of the app. The template is a
-  table-based HTML email with inline styles (mail clients ignore most CSS),
-  light and dark colors, and the app icon loaded from `{{ .SiteURL }}`, so
-  the logo only shows once the Auth Site URL is the deployed address.
-- **Passkeys** (Supabase Auth, beta; `supabase.auth.signInWithPasskey`,
-  `registerPasskey`, `passkey.*`, on by default in the installed
-  `supabase-js`): the account page lists, adds and removes the user's
-  passkeys (`hooks/usePasskeys.ts`), and the login page has a "Log in with a
-  passkey" button, shown wherever `PublicKeyCredential` exists, including the
-  installed iOS app (where Google is hidden). Dismissing the browser prompt is
-  not an error. The button sends the CAPTCHA token like the email form does.
-  A passkey is bound to the domain it was created on, so moving the app to
-  another domain makes existing passkeys unusable; users fall back to an email
-  code and add a new one.
-- **CAPTCHA**: when `VITE_TURNSTILE_SITE_KEY` is set, the login form shows a
-  Cloudflare Turnstile widget (`components/Turnstile.tsx`, "interaction-only":
-  invisible unless Cloudflare wants a click) and sends its token as
-  `captchaToken` with `signInWithOtp` and the passkey login. `hooks/useCaptcha`
-  hides the lifecycle: the page renders its `widget`, disables buttons while
-  `pending`, and wraps each protected request in `use(token => ...)`, which
-  fetches a fresh token afterwards because a token works once. Without the key (local
-  development, e2e) there is no widget and no token, which matches the local
-  stack, where CAPTCHA is off. Google sign-in and `verifyOtp` don't send one.
-  Don't turn CAPTCHA on in Supabase before a build with the site key is live,
-  or email login stops working.
-- Pages and components never import `supabase` directly. They go through
-  `lib/api.ts`, usually via a hook. Components don't fetch data; the one
-  exception is `AuthProvider`, which holds app-level session state.
-- Database row types are written by hand in `lib/types.ts` for now. Switch to
-  `supabase gen types` once a linked project exists.
-- **Recovery** (`useSet`):
+- **Recovery**:
   - A tap times out after 10 s; a timeout takes the normal failure path.
   - A refresh requested while one runs schedules exactly one more run.
   - A failed first load is redone in full on the next reconnect or
@@ -240,7 +227,7 @@ src/
   - Async results from an earlier mount are discarded (generation counter).
   - A channel that is still leaving is awaited before the same topic is
     joined again.
-- **Optimistic taps** (`useSet`):
+- **Optimistic taps**:
   - A part's card shows the server's count plus its unacknowledged deltas.
   - Each part has at most one `adjust_part` call in flight. Taps made
     meanwhile are summed and sent next, so +1/−1 corrections apply in order.
@@ -253,67 +240,84 @@ src/
 - **Stable layout**: the grid's order and filtering are computed from a
   snapshot of the parts, which is refreshed 1.5 s after the last change (at
   most 5 s after the first deferred one), or at once when the filter or sort
-  changes. Cards don't jump under your thumb while
-  you tap. `PartCard` re-renders only when its counts change.
-- Every list read is paginated until a page comes back empty, whatever the
-  server's `max_rows`.
-- Mobile first: touch targets are at least 44px, and the app is usable one-handed.
-- Environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and
-  optionally `VITE_PUBLIC_URL`. Function secrets: `REBRICKABLE_API_KEY`,
-  `BRICKCHECK_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated, `*` wildcards).
-- **Theme**: `dark:` styles follow a `dark` class on `<html>`. It follows the
-  system setting unless the user picks Light or Dark (the button on My sets),
-  a per-device preference in `localStorage`. An inline script in `index.html`
-  applies it before the first paint; `lib/theme.ts` keeps it applied.
-- **Errors**: routes have an error page with a Reload button, and a failed
-  lazy chunk load (after a deploy) reloads the page into the new version.
-- **PWA** (`vite.config.ts`):
-  - The service worker precaches the app shell, and every navigation falls
-    back to `index.html`, so deep links and invite links open offline.
-  - Nothing is cached at runtime. Supabase (API, auth, realtime) must never
-    be. Rebrickable images send no CORS headers, so a service worker could
-    only store them as opaque responses, which count about 7 MB each against
-    the quota. The browser's HTTP cache keeps them instead (the CDN sends
-    `max-age=31536000`), and that also works offline.
-  - Login uses the implicit flow (tokens in the URL hash), which the fallback
-    leaves alone.
-  - Links to the app: the manifest has `id`, `scope` and
-    `launch_handler: navigate-existing`. Android Chrome then opens in-scope
-    links in the installed app and Chromium desktop reuses the open window.
-    iOS has no way to send a link to a home-screen app; it always opens in
-    Safari, which is why the login email also carries a code.
-  - The installed app checks for a new version every hour.
-  - Icons: `scripts/icons.mjs` (`npm run icons`) generates every icon in
-    `public/` from one logo definition: `favicon.svg` and the manifest icons
-    with rounded corners, plus full-bleed `apple-touch-icon.png` and
-    `maskable-512x512.png`, which iOS and Android mask themselves. The logo
-    fits Android's safe zone at full size.
-  - In the installed app (`display-mode: standalone`) the login page hides
-    Google, because OAuth would finish in Safari, outside the app. Email and
-    passkeys stay.
-  - Updates use `registerType: 'prompt'`: `UpdatePrompt` asks before
-    reloading, because a reload would drop taps in flight.
-  - Routes other than login and My sets are lazy-loaded. React and Supabase
-    are separate chunks, so an app update only re-downloads app code.
-- Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
-  deploy point at production.
+  changes. Cards don't jump under your thumb while you tap. `PartCard`
+  re-renders only when its counts change.
+
+### Login and account
+
+- **Name first**: `RequireAuth` asks users without a display name for one
+  before showing any page, including the join page. If the profile can't be
+  loaded it shows the error with a retry button instead of letting the person
+  in nameless. Only the newest profile request sets state, so a slow reply
+  after a sign-out or account switch is ignored.
+- **Login email**: it carries a link and a 6-digit code
+  (`supabase/templates/login.html`). The code matters for the installed iOS
+  PWA, where the link opens Safari instead of the app. The template is a
+  table-based HTML email with inline styles (mail clients ignore most CSS),
+  light and dark colors, and the app icon loaded from `{{ .SiteURL }}`, so
+  the logo only shows once the Auth Site URL is the deployed address.
+- **Installed app**: in `display-mode: standalone` the login page hides
+  Google, because OAuth would finish in Safari, outside the app. Email and
+  passkeys stay.
+- **Passkeys** (Supabase Auth, beta; `supabase.auth.signInWithPasskey`,
+  `registerPasskey`, `passkey.*`, on by default in the installed
+  `supabase-js`): the account page lists, adds and removes the user's
+  passkeys (`hooks/usePasskeys.ts`), and the login page has a "Log in with a
+  passkey" button, shown wherever `PublicKeyCredential` exists, including the
+  installed iOS app. Dismissing the browser prompt is not an error. The button
+  sends the CAPTCHA token like the email form does. A passkey is bound to the
+  domain it was created on, so moving the app to another domain makes existing
+  passkeys unusable; users fall back to an email code and add a new one.
+- **CAPTCHA**: when `VITE_TURNSTILE_SITE_KEY` is set, the login form shows a
+  Cloudflare Turnstile widget (`components/Turnstile.tsx`, "interaction-only":
+  invisible unless Cloudflare wants a click) and sends its token as
+  `captchaToken` with `signInWithOtp` and the passkey login. `hooks/useCaptcha`
+  hides the lifecycle: the page renders its `widget`, disables buttons while
+  `pending`, and wraps each protected request in `use(token => ...)`, which
+  fetches a fresh token afterwards because a token works once. Without the key
+  (local development, e2e) there is no widget and no token, which matches the
+  local stack, where CAPTCHA is off. Google sign-in and `verifyOtp` don't send
+  one. Don't turn CAPTCHA on in Supabase before a build with the site key is
+  live, or email login stops working.
+
+### PWA (`vite.config.ts`)
+
+- The service worker precaches the app shell, and every navigation falls
+  back to `index.html`, so deep links and invite links open offline.
+- Nothing is cached at runtime. Supabase (API, auth, realtime) must never
+  be. Rebrickable images send no CORS headers, so a service worker could
+  only store them as opaque responses, which count about 7 MB each against
+  the quota. The browser's HTTP cache keeps them instead (the CDN sends
+  `max-age=31536000`), and that also works offline.
+- Login uses the implicit flow (tokens in the URL hash), which the fallback
+  leaves alone.
+- Links to the app: the manifest has `id`, `scope` and
+  `launch_handler: navigate-existing`. Android Chrome then opens in-scope
+  links in the installed app and Chromium desktop reuses the open window.
+  iOS has no way to send a link to a home-screen app; it always opens in
+  Safari, which is why the login email also carries a code.
+- The installed app checks for a new version every hour. Updates use
+  `registerType: 'prompt'`: `UpdatePrompt` asks before reloading, because a
+  reload would drop taps in flight.
+- Icons: `scripts/icons.mjs` (`npm run icons`) generates every icon in
+  `public/` from one logo definition: `favicon.svg` and the manifest icons
+  with rounded corners, plus full-bleed `apple-touch-icon.png` and
+  `maskable-512x512.png`, which iOS and Android mask themselves. The logo
+  fits Android's safe zone at full size.
+- Routes other than login and My sets are lazy-loaded. React and Supabase
+  are separate chunks, so an app update only re-downloads app code.
 
 ## Code style
 
 Prettier formats everything with its default options, plus
-`prettier-plugin-tailwindcss` for class order (`.prettierrc.json`). Run
-`npm run format`; CI runs `npm run format:check`. SQL migrations, email
-templates, `public/` and lock files are skipped (`.prettierignore`). Don't
-hand-format or add overrides.
+`prettier-plugin-tailwindcss` for class order (`.prettierrc.json`); don't
+hand-format or add overrides. oxlint (`.oxlintrc.json`) enforces `interface`
+for object shapes (`type` for unions and aliases), no `any`, `import type`, and
+braces on every `if`, `else`, `for` and `while`. SQL migrations, email
+templates, `public/` and lock files are skipped by Prettier (`.prettierignore`).
 
-What the formatter doesn't decide:
+What no tool decides:
 
-- `interface` for object shapes, `type` for unions and aliases; no `any`;
-  `import type` for type-only imports. oxlint enforces all three
-  (`.oxlintrc.json`).
-- Always braces on `if`, `else`, `for` and `while`, even for one statement
-  (oxlint `curly`; `npx oxlint --fix` adds them, run it more than once for
-  nested cases, then `npm run format`).
 - TypeScript everywhere in `src`; the scripts in `scripts/` and `e2e/` are
   plain ES modules (`.mjs`).
 - Deno code (`supabase/functions`) imports local files with their `.ts`
@@ -368,6 +372,84 @@ Step-by-step instructions are in `DEPLOY.md`.
 - **Testing on a phone**: Vite listens on the LAN (`server.host`). Add the LAN
   URL to `additional_redirect_urls` so magic links work on the phone.
 
+## Standards and gaps
+
+Where the code stands against current industry standards, from an audit on
+2026-11-07 (WCAG 2.2 AA, OWASP, GitHub Actions hardening, Supabase's production
+checklist and database advisors, GDPR). The audit checked the code with
+measurements where it could: strictness flags, lint runs, SQL and contrast
+maths. Nothing here stops the app from working. Fix gaps before a wider launch,
+in this order, and delete an entry when it is fixed.
+
+Met, so keep it that way:
+
+- TypeScript runs with `strict` (the default in TypeScript 7),
+  `verbatimModuleSyntax` and `erasableSyntaxOnly`.
+- Every table has RLS with `to authenticated` policies, and policies write
+  `(select auth.uid())`. Every `security definer` function sets
+  `search_path = ''`. Views are `security_invoker`. pgTAP tests cover denied
+  access.
+- `npm audit` on the production dependencies found nothing on 2026-11-07. The
+  lockfile is committed and the workflows only get `contents: read`.
+- No cookies or tracking. `localStorage` only holds the theme.
+
+Gaps, highest impact first:
+
+1. **Backups**: the free Supabase plan has none and no point-in-time recovery.
+   Fix: a weekly `supabase db dump` workflow, or the Pro plan, and a dump
+   before every `db push`. Roll back with a new corrective migration.
+2. **Security headers**: `public/_headers` has no Content-Security-Policy,
+   HSTS or COOP. Fix: start with `Content-Security-Policy-Report-Only`
+   allowing `self`, Supabase (https and wss), `challenges.cloudflare.com`
+   (script and frame), `cdn.rebrickable.com` and Google avatar images. The
+   inline theme script in `index.html` needs its own file or a hash first.
+3. **CI and supply chain**: workflow actions use mutable tags, checkout keeps
+   credentials, and the catalog job runs `npm ci` with install scripts while a
+   secret is in scope. No Dependabot, no `npm audit` in CI, no job timeouts or
+   concurrency. Fix: pin actions to commit SHAs, `persist-credentials: false`,
+   `npm ci --ignore-scripts` in the catalog job, `.github/dependabot.yml` for
+   npm and github-actions, `npm audit --omit=dev --audit-level=high`.
+4. **Privacy**: no privacy policy page, although email, name and avatar are
+   stored and IP addresses reach Cloudflare and Rebrickable. Fix: a static
+   `/privacy` page linked from Login, naming Supabase, Cloudflare, Rebrickable
+   and Google.
+5. **Account deletion and export**: no "delete my account" (GDPR Art. 17 and 20).
+   Deleting an owner deletes their sets for everyone. Fix for now: a manual
+   procedure in `DEPLOY.md`; later a `delete-account` Edge Function.
+6. **Accessibility** (WCAG 2.2 AA): secondary text `text-neutral-500` has no
+   dark-mode pair (about 3.8 to 4.2:1, needs 4.5); avatar initials on the
+   yellow and orange backgrounds fail contrast; route changes move neither
+   focus nor announce; `Spinner` and `ProgressBar` have no role or label; no
+   `prefers-reduced-motion`; picture zoom is mouse-only; oxlint's `jsx-a11y`
+   reports 6 warnings.
+7. **Hosted settings missing from `DEPLOY.md`**: sign-ups, anonymous sign-ins
+   (keep off), Auth rate limits (the custom SMTP email limit is low), JWT
+   expiry, the Security and Performance advisors before launch, rotating
+   secrets (Supabase secret key, Rebrickable key, SMTP key, Turnstile secret).
+8. **Database tidy-up, one new migration**: index `set_progress(line_id)`,
+   `set_invites(created_by)` and `set_removals(user_id)`; prune
+   `set_import_log` (never pruned, and 200 imports per hour is a shared cap).
+   The membership helpers live in `public`, so the advisor's lint 0029 fires;
+   accepted, since they only return the caller's own data.
+9. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
+   and components are not, there is no coverage report, and CI skips
+   `test:pwa`. Fix: add vitest coverage, tests for `lib/errors.ts` and the
+   `useSet` sync logic, and a `test:pwa` CI step.
+10. **Strictness and lint**: `noUncheckedIndexedAccess` is off (7 errors to
+    fix in `src`). Add oxlint's `jsx-a11y` plugin, and run
+    `oxlint --deny-warnings` in CI so warnings fail.
+11. **Edge Functions**: `@supabase/supabase-js@2` is not pinned and there is no
+    lockfile; CORS allows any origin when `ALLOWED_ORIGINS` is unset (fine
+    locally, but a forgotten secret in production would open it).
+12. **Performance**: the part grid is not virtualised (matters around 5000
+    parts), the search box is not deferred, images lack `decoding="async"`.
+    Measure on a phone before changing.
+13. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
+    `console.error` it now; error reporting (with consent) later.
+14. **PWA polish**: manifest lacks `categories` and `screenshots`;
+    `orientation: portrait` blocks landscape; `theme-color` ignores dark mode;
+    no offline banner.
+
 ## Known limitations
 
 - Rebrickable throttling is per function invocation. Imports of different sets
@@ -375,6 +457,5 @@ Step-by-step instructions are in `DEPLOY.md`.
   is fine at hobby scale; a queue would fix it.
 - Sets for which Rebrickable has no inventory are not cached, so asking again
   costs one API call.
-
 - Sets that contain other sets (Rebrickable `/sets/{id}/sets/`) only import the
   parent set's own parts and minifigs.
