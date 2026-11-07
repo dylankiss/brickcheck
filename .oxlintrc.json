@@ -1,10 +1,11 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": ["react", "typescript", "oxc", "jsx-a11y"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
     "curly": ["error", "all"],
+    "jsx-a11y/prefer-tag-over-role": "off",
     "typescript/no-explicit-any": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/consistent-type-definitions": ["error", "interface"]

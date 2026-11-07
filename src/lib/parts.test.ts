@@ -68,11 +68,11 @@ describe("groupParts", () => {
 
   it("adds pending deltas, clamped to the part", () => {
     const lines = toLineMap([line({ quantity: 2, found_qty: 1 })]);
-    expect(groupParts(lines, new Map([[partKey("3001", 4), 5]]))[0].found).toBe(
-      2,
-    );
     expect(
-      groupParts(lines, new Map([[partKey("3001", 4), -5]]))[0].found,
+      groupParts(lines, new Map([[partKey("3001", 4), 5]]))[0]?.found,
+    ).toBe(2);
+    expect(
+      groupParts(lines, new Map([[partKey("3001", 4), -5]]))[0]?.found,
     ).toBe(0);
   });
 });
@@ -219,9 +219,9 @@ describe("missingAcrossSets", () => {
       ],
     );
     expect(missing).toHaveLength(1);
-    expect(missing[0].part.part_name).toBe("Brick 2 x 4");
-    expect(missing[0].missing).toBe(4);
-    expect(missing[0].sets).toEqual([
+    expect(missing[0]?.part.part_name).toBe("Brick 2 x 4");
+    expect(missing[0]?.missing).toBe(4);
+    expect(missing[0]?.sets).toEqual([
       { setId: "a", label: "House", missing: 3, canTickOff: true },
       { setId: "b", label: "Castle", missing: 1, canTickOff: true },
     ]);
@@ -250,7 +250,7 @@ describe("missingAcrossSets", () => {
       ],
     );
     expect(missing.map((m) => m.part.color_name)).toEqual(["Blue", "Red"]);
-    expect(missing[1].sets.map((c) => c.setId)).toEqual(["b", "a"]);
+    expect(missing[1]?.sets.map((c) => c.setId)).toEqual(["b", "a"]);
   });
 
   it("tells apart Sets with the same title (two copies of one Catalog set) by start date", () => {
@@ -261,7 +261,7 @@ describe("missingAcrossSets", () => {
       ],
       [line({ set_id: "a", quantity: 1 }), line({ set_id: "b", quantity: 2 })],
     );
-    expect(missing[0].sets.map((c) => c.label)).toEqual([
+    expect(missing[0]?.sets.map((c) => c.label)).toEqual([
       "House (started 3 Nov)",
       "House (started 1 Nov)",
     ]);
