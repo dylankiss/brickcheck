@@ -44,7 +44,8 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
    is cached (`lego_sets.parts_fetched_at` set). Before calling Rebrickable it
    calls `claim_import`. That function atomically applies the per-user hourly
    limit and a global cap of 200 imports per hour, and refuses a second import
-   of the same set within 3 minutes. A failed import calls `release_import`, so
+   of the same set within 3 minutes. It also deletes `set_import_log` rows
+   older than 7 days, so the log stays small. A failed import calls `release_import`, so
    it can be retried at once; the attempt still counts towards the limits. Each
    Rebrickable request has a 45 s timeout, because part details make Rebrickable
    slow (about 40 ms per inventory line, fetched in pages of 500), and the whole
@@ -115,10 +116,10 @@ and groups them by part and color.
   Default privileges keep it that way for future tables, sequences and
   functions, and a pgTAP test checks it.
 - The membership functions (`my_set_ids()`, `set_role_of`, `is_set_member`,
-  `is_set_helper`, `is_set_owner`, `shares_set_with`) are `security
-definer` with `search_path = ''` so that policies don't recurse into
-  `set_members`. Row policies use `set_id in (select my_set_ids())`, which
-  is evaluated once per query rather than once per row.
+  `is_set_helper`, `is_set_owner`, `shares_set_with`) are `security definer`
+  with `search_path = ''` so that policies don't recurse into `set_members`.
+  Row policies use `set_id in (select my_set_ids())`, which is evaluated once
+  per query rather than once per row.
 - Any logged-in user can read the set cache. Only the service role can write it.
 - `sets`, `set_members`, `set_progress` and the views are readable by
   members only. Views are `security_invoker = true`.
@@ -195,6 +196,13 @@ src/
 - Every list read is paginated until a page comes back empty, whatever the
   server's `max_rows`.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
+- **Accessibility** (WCAG 2.2 AA): `Header` moves focus to the page's `<h1>`
+  when a page opens (unless a field already has focus, like the catalog
+  search), so screen readers announce the new page. `Spinner` is a
+  `role="status"` with a hidden "Loading" label; `ProgressBar` has a name and a
+  text value. Secondary text is `text-neutral-500 dark:text-neutral-400`.
+  Transitions stop with `prefers-reduced-motion`; the spinner only slows down.
+  The picture zoom works with Enter and Space as well as taps.
 - Environment variables are documented where they are used: `.env.example`
   (frontend), `supabase/.env.example` (local function secrets) and `DEPLOY.md`
   (hosted). The hosted function secrets are `REBRICKABLE_API_KEY`,
@@ -312,8 +320,12 @@ src/
 Prettier formats everything with its default options, plus
 `prettier-plugin-tailwindcss` for class order (`.prettierrc.json`); don't
 hand-format or add overrides. oxlint (`.oxlintrc.json`) enforces `interface`
-for object shapes (`type` for unions and aliases), no `any`, `import type`, and
-braces on every `if`, `else`, `for` and `while`. SQL migrations, email
+for object shapes (`type` for unions and aliases), no `any`, `import type`,
+braces on every `if`, `else`, `for` and `while`, and the `jsx-a11y` accessibility
+rules (except `prefer-tag-over-role`, which would swap our styled `div`s for
+`<progress>` and `<output>`). `npm run lint` fails on warnings. TypeScript runs
+with `strict` and `noUncheckedIndexedAccess`, so indexing an array gives
+`T | undefined`. SQL migrations, email
 templates, `public/` and lock files are skipped by Prettier (`.prettierignore`).
 
 What no tool decides:
@@ -384,13 +396,16 @@ in this order, and delete an entry when it is fixed.
 Met, so keep it that way:
 
 - TypeScript runs with `strict` (the default in TypeScript 7),
-  `verbatimModuleSyntax` and `erasableSyntaxOnly`.
+  `noUncheckedIndexedAccess`, `verbatimModuleSyntax` and `erasableSyntaxOnly`.
 - Every table has RLS with `to authenticated` policies, and policies write
   `(select auth.uid())`. Every `security definer` function sets
   `search_path = ''`. Views are `security_invoker`. pgTAP tests cover denied
-  access.
-- `npm audit` on the production dependencies found nothing on 2026-11-07. The
-  lockfile is committed and the workflows only get `contents: read`.
+  access. Foreign keys have indexes.
+- CI: workflow actions are pinned to commit SHAs, checkout keeps no
+  credentials, the catalog job installs without scripts (a secret is in
+  scope), jobs have timeouts and concurrency, `npm audit` runs on the
+  production dependencies, and Dependabot proposes npm and action updates
+  weekly.
 - No cookies or tracking. `localStorage` only holds the theme.
 
 Gaps, highest impact first:
@@ -403,50 +418,38 @@ Gaps, highest impact first:
    allowing `self`, Supabase (https and wss), `challenges.cloudflare.com`
    (script and frame), `cdn.rebrickable.com` and Google avatar images. The
    inline theme script in `index.html` needs its own file or a hash first.
-3. **CI and supply chain**: workflow actions use mutable tags, checkout keeps
-   credentials, and the catalog job runs `npm ci` with install scripts while a
-   secret is in scope. No Dependabot, no `npm audit` in CI, no job timeouts or
-   concurrency. Fix: pin actions to commit SHAs, `persist-credentials: false`,
-   `npm ci --ignore-scripts` in the catalog job, `.github/dependabot.yml` for
-   npm and github-actions, `npm audit --omit=dev --audit-level=high`.
-4. **Privacy**: no privacy policy page, although email, name and avatar are
+3. **Privacy**: no privacy policy page, although email, name and avatar are
    stored and IP addresses reach Cloudflare and Rebrickable. Fix: a static
    `/privacy` page linked from Login, naming Supabase, Cloudflare, Rebrickable
    and Google.
-5. **Account deletion and export**: no "delete my account" (GDPR Art. 17 and 20).
+4. **Account deletion and export**: no "delete my account" (GDPR Art. 17 and 20).
    Deleting an owner deletes their sets for everyone. Fix for now: a manual
    procedure in `DEPLOY.md`; later a `delete-account` Edge Function.
-6. **Accessibility** (WCAG 2.2 AA): secondary text `text-neutral-500` has no
-   dark-mode pair (about 3.8 to 4.2:1, needs 4.5); avatar initials on the
-   yellow and orange backgrounds fail contrast; route changes move neither
-   focus nor announce; `Spinner` and `ProgressBar` have no role or label; no
-   `prefers-reduced-motion`; picture zoom is mouse-only; oxlint's `jsx-a11y`
-   reports 6 warnings.
-7. **Hosted settings missing from `DEPLOY.md`**: sign-ups, anonymous sign-ins
+5. **Accessibility is untested by hand**: the contrast, focus, label and
+   motion fixes are checked by arithmetic and lint, not with VoiceOver,
+   TalkBack, a keyboard or Lighthouse. Do a pass before a wider launch.
+6. **Hosted settings missing from `DEPLOY.md`**: sign-ups, anonymous sign-ins
    (keep off), Auth rate limits (the custom SMTP email limit is low), JWT
    expiry, the Security and Performance advisors before launch, rotating
    secrets (Supabase secret key, Rebrickable key, SMTP key, Turnstile secret).
-8. **Database tidy-up, one new migration**: index `set_progress(line_id)`,
-   `set_invites(created_by)` and `set_removals(user_id)`; prune
-   `set_import_log` (never pruned, and 200 imports per hour is a shared cap).
-   The membership helpers live in `public`, so the advisor's lint 0029 fires;
-   accepted, since they only return the caller's own data.
-9. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
+7. **Database migration not yet pushed**: `20261107000000` adds the three
+   missing indexes and the log pruning in `claim_import`. Run
+   `npx supabase db push`. The membership helpers live in `public`, so the
+   advisor's lint 0029 fires; accepted, since they only return the caller's
+   own data. The global cap of 200 imports per hour is shared by all users.
+8. **Tests**: only `lib/parts.ts` is unit-tested. Hooks, `api.ts` error mapping
    and components are not, there is no coverage report, and CI skips
    `test:pwa`. Fix: add vitest coverage, tests for `lib/errors.ts` and the
    `useSet` sync logic, and a `test:pwa` CI step.
-10. **Strictness and lint**: `noUncheckedIndexedAccess` is off (7 errors to
-    fix in `src`). Add oxlint's `jsx-a11y` plugin, and run
-    `oxlint --deny-warnings` in CI so warnings fail.
-11. **Edge Functions**: `@supabase/supabase-js@2` is not pinned and there is no
-    lockfile; CORS allows any origin when `ALLOWED_ORIGINS` is unset (fine
-    locally, but a forgotten secret in production would open it).
-12. **Performance**: the part grid is not virtualised (matters around 5000
+9. **Edge Functions**: `@supabase/supabase-js@2` is not pinned and there is no
+   lockfile; CORS allows any origin when `ALLOWED_ORIGINS` is unset (fine
+   locally, but a forgotten secret in production would open it).
+10. **Performance**: the part grid is not virtualised (matters around 5000
     parts), the search box is not deferred, images lack `decoding="async"`.
     Measure on a phone before changing.
-13. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
+11. **Monitoring**: none. `RouteError` shows a message but logs nothing. Fix:
     `console.error` it now; error reporting (with consent) later.
-14. **PWA polish**: manifest lacks `categories` and `screenshots`;
+12. **PWA polish**: manifest lacks `categories` and `screenshots`;
     `orientation: portrait` blocks landscape; `theme-color` ignores dark mode;
     no offline banner.
 
