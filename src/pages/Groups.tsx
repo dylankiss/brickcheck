@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Avatar } from "../components/Avatar";
+import { GroupInvites } from "../components/GroupInvites";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useGroups } from "../hooks/useGroups";
@@ -149,6 +150,7 @@ function GroupCard({
           {membersError}
         </p>
       )}
+      {isOwner && <GroupInvites groupId={group.id} groupName={group.name} />}
       {members && (
         <ul className="flex flex-col gap-2">
           {members.map((m) => (

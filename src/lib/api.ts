@@ -8,6 +8,7 @@ import type {
   SetRole,
   SetSummary,
   Group,
+  GroupInvitePreview,
   GroupMember,
   Invite,
   InvitePreview,
@@ -421,6 +422,72 @@ export async function getInvitePreview(
 /** Joins the invite's set; returns its id. */
 export async function acceptInvite(token: string): Promise<string> {
   const { data, error } = await supabase.rpc("accept_invite", {
+    p_token: token,
+  });
+  if (error) {
+    fail(error);
+  }
+  return data;
+}
+
+// Group invites (Owners only, except preview and accept)
+
+export function listGroupInvites(groupId: string): Promise<Invite[]> {
+  return fetchAll((from, to) =>
+    supabase
+      .from("group_invites")
+      .select("token, role, expires_at")
+      .eq("group_id", groupId)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at")
+      .order("token")
+      .range(from, to),
+  );
+}
+
+export async function createGroupInvite(
+  groupId: string,
+  role: Invite["role"],
+): Promise<Invite> {
+  const { data, error } = await supabase
+    .from("group_invites")
+    .insert({ group_id: groupId, role })
+    .select("token, role, expires_at")
+    .single();
+  if (error) {
+    fail(error);
+  }
+  return data;
+}
+
+export async function deleteGroupInvite(token: string): Promise<void> {
+  const { error } = await supabase
+    .from("group_invites")
+    .delete()
+    .eq("token", token);
+  if (error) {
+    fail(error);
+  }
+}
+
+export const groupInviteUrl = (token: string) =>
+  `${PUBLIC_URL}/join/group/${token}`;
+
+export async function getGroupInvitePreview(
+  token: string,
+): Promise<GroupInvitePreview | null> {
+  const { data, error } = await supabase.rpc("group_invite_preview", {
+    p_token: token,
+  });
+  if (error) {
+    fail(error);
+  }
+  return (data as GroupInvitePreview[])[0] ?? null;
+}
+
+/** Joins the invite's Group; returns its id. At most 20 members. */
+export async function acceptGroupInvite(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc("accept_group_invite", {
     p_token: token,
   });
   if (error) {

@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useSetContext } from "../hooks/useSetContext";
 import { useMembers } from "../hooks/useMembers";
 import { inviteUrl } from "../lib/api";
+import { shareLink } from "../lib/share";
 import type { Invite } from "../lib/types";
 
 const roleLabel = {
@@ -13,26 +14,6 @@ const roleLabel = {
   helper: "Helper",
   viewer: "Viewer",
 } as const;
-
-async function shareLink(
-  url: string,
-  title: string,
-): Promise<"shared" | "copied"> {
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title,
-        text: `Help me check "${title}" in BrickCheck`,
-        url,
-      });
-      return "shared";
-    } catch {
-      // Cancelled or unavailable: fall back to copying.
-    }
-  }
-  await navigator.clipboard.writeText(url);
-  return "copied";
-}
 
 export default function Manage() {
   const navigate = useNavigate();
@@ -67,7 +48,13 @@ export default function Manage() {
 
   async function send(token: string) {
     try {
-      if ((await shareLink(inviteUrl(token), set.title)) === "copied") {
+      if (
+        (await shareLink(
+          inviteUrl(token),
+          set.title,
+          `Help me check "${set.title}" in BrickCheck`,
+        )) === "copied"
+      ) {
         setCopied(token);
         setTimeout(() => setCopied(null), 2000);
       }

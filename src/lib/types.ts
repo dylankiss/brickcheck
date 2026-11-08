@@ -116,6 +116,15 @@ export interface Invite {
   expires_at: string;
 }
 
+/** What a Group invite link leads to (group_invite_preview RPC). */
+export interface GroupInvitePreview {
+  group_id: string;
+  group_name: string;
+  role: Exclude<SetRole, "owner">;
+  invited_by: string | null;
+  already_member: boolean;
+}
+
 /** What an invite link leads to (invite_preview RPC). */
 export interface InvitePreview {
   set_id: string;
