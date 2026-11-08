@@ -75,7 +75,7 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 4. **Live sync**: a trigger on `set_progress` sends a `progress` broadcast
    (`{line_id, found_qty, updated_at, updated_by}`) to the **private** Realtime channel
    `set:<id>`. RLS policies on `realtime.messages` let only members of the
-   set receive broadcasts and send presence there. A `changed` broadcast
+   set (per-Set or through its Group) receive broadcasts and send presence there. A `changed` broadcast
    (from triggers on `sets` and `set_members`) tells open pages to refresh
    the summary. A removed member's page then finds no set and shows "not
    found". There is **one channel per
@@ -99,8 +99,27 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 | `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` and `reset_set_progress` RPCs only                                                    |
 | `set_invites`          | invite tokens                                                         | the owner                                                                                           |
 | `set_removals`         | who the owner removed, and when                                       | trigger on `set_members` delete                                                                     |
+| `groups`               | a named set of people sharing access to its Sets (GLOSSARY.md)        | `create_group` RPC; `name` by the Group's Owners                                                    |
+| `group_members`        | who is in a Group (`owner`, `helper`, `viewer`)                       | trigger (creator as Owner); invites, role changes and removals come in later steps                  |
 | `set_lines` (view)     | every line that counts for a set, with `found_qty`                    | —                                                                                                   |
-| `set_summaries` (view) | per set: catalog set info, my role, needed, found                     | —                                                                                                   |
+| `set_summaries` (view) | per set: catalog set info, my effective role, needed, found, Group    | —                                                                                                   |
+
+**Groups** (ADR 0001): `sets.group_id` is an optional reference to a Group (a Set
+is in at most one; `on delete restrict`, so a Group with Sets can't be deleted).
+Access is **derived**: the membership helpers take Group membership into
+account when access is checked, and nothing is copied into `set_members`. The
+effective role on a Set is the highest of the per-Set role and the Group role
+(`set_role_of` takes `min()` of the `owner, helper, viewer` enum), and a Group
+Owner is an Owner of every Set in the Group. A Group role never shows up in
+`set_members`; `set_summaries.my_role` is the effective role, and `group_name`
+is null for someone who can read the Set but not the Group. `create_group(name)`
+is the only way to create a Group (no insert grant): it makes the creator the
+Owner, and a trigger caps each person at 10 created Groups (error code `54000`,
+serialised per person with an advisory lock). Only Group Owners can rename. A
+Set can be given a Group at creation if its creator is an Owner or Helper of
+that Group (`sets_before_insert`). Group invites, member management, moving
+Sets in and out, the 20-member cap and Group deletion are later steps of the
+Groups work (issue #3).
 
 An inventory line (`inventory_lines`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
@@ -122,13 +141,20 @@ and groups them by part and color.
 - The membership functions (`my_set_ids()`, `set_role_of`, `is_set_member`,
   `is_set_helper`, `is_set_owner`, `shares_set_with`) are `security definer`
   with `search_path = ''` so that policies don't recurse into `set_members`.
+  They also consider Groups (`my_group_ids()`, `group_role_of`,
+  `is_group_owner` are the Group equivalents), so policies and the Realtime
+  channel policies, which only call the helpers, cover Group members without
+  changes. `sets` deletion follows `is_set_owner`, so a Group Owner can delete a
+  Group's Sets. `groups` and `group_members` are readable by the Group's
+  members only.
   Row policies use `set_id in (select my_set_ids())`, which is evaluated once
   per query rather than once per row.
 - Any logged-in user can read the set cache. Only the service role can write it.
 - `sets`, `set_members`, `set_progress` and the views are readable by
   members only. Views are `security_invoker = true`.
 - `profiles` are readable by the user themselves and by people they share a
-  set with.
+  set or a Group with (`shares_set_with`; a Group counts before it has Sets).
+  Email is never in `profiles`, so Group members never see it.
 - Only the owner can reset a set's counts (`reset_set_progress`, which checks
   `is_set_owner`); helpers can still correct single parts with taps.
 - Column-level grants limit writes: updates to `sets(title)`,
@@ -171,6 +197,7 @@ and groups them by part and color.
 | ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | `/login`            | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                  |
 | `/`                 | MySets            | my sets; asks email users for a display name once                                                            |
+| `/groups`           | Groups            | create, list and rename (Owners) your Groups, and show their members and roles; linked from My sets          |
 | `/account`          | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets |
 | `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)           |
 | `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                                    |
