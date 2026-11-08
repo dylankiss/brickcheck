@@ -43,6 +43,13 @@ export default function MySets() {
             No sets yet. Add one and start checking.
           </p>
         )}
+        <Link
+          to="/groups"
+          className="flex min-h-11 items-center justify-between rounded-2xl px-3 text-sm font-semibold text-brick ring-1 ring-brick"
+        >
+          Groups
+          <span aria-hidden>›</span>
+        </Link>
         {sets?.some((c) => !isComplete(c)) && (
           <Link
             to="/missing"
@@ -65,7 +72,9 @@ export default function MySets() {
                   {set.title === set.catalog_name
                     ? set.set_num
                     : `${set.set_num} · ${set.catalog_name}`}
-                  {set.my_role !== "owner" && " · shared with you"}
+                  {set.group_name
+                    ? ` · ${set.group_name}`
+                    : set.my_role !== "owner" && " · shared with you"}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <ProgressBar
