@@ -123,7 +123,8 @@ Owner is an Owner of every Set in the Group. A Group role never shows up in
 is null for someone who can read the Set but not the Group. `create_group(name)`
 is the only way to create a Group (no insert grant): it makes the creator the
 Owner, and a trigger caps each person at 10 created Groups (error code `54000`,
-serialised per person with an advisory lock). Only Group Owners can rename. A
+serialised per person with an advisory lock). Only Group Owners can rename, and
+a trigger stores the name trimmed. A
 Set can be given a Group at creation if its creator is an Owner or Helper of
 that Group (`sets_before_insert`). A `before insert` trigger on `group_members`
 caps a Group at 20 members (error code `54000`, serialised per Group with an
@@ -151,7 +152,10 @@ another member to owner first."; serialised per Group with an advisory lock;
 skipped when the Group or the person's profile is already being deleted), and
 `group_members_drop_adder_access` (after delete) removes the person's per-Set
 Owner row, which adding a Set gave them, on Sets they added in that Group.
-Their Sets stay in the Group, and they lose access to them. Other per-Set
+Their Sets stay in the Group, and they lose access to them. When a role is
+lowered, `group_members_lower_adder_access` (after update of `role`) lowers that
+same per-Set row to the new role, so a Helper demoted to Viewer cannot still tick
+off parts or delete the Sets they added (raising a role restores nothing). Other per-Set
 members, and Sets they added outside the Group, are untouched. The `sets`
 read rule lets an adder read their own row only while they can still reach it
 (not in a Group, or still in it). Removal is recorded by
@@ -303,7 +307,14 @@ src/
   the Set in or out through `moveSetToGroup`; a separate "Through the group"
   list shows the Group's members read-only, marked "· group", so they are not
   mistaken for per-Set members (those are the only ones with role controls).
-  The list is empty for someone who cannot read the Group.
+  The list is empty for someone who cannot read the Group. Manage fetches
+  `useGroups` only for an Owner of a Set that is in no Group, and shows "Leave
+  set" only to people with a per-Set row (`set_members`): someone with access
+  only through the Group is pointed to the Groups page, where they leave the
+  Group. My sets resets its filter to All when the chosen Group is no longer an
+  option, and AddSet drops a chosen Group that is no longer a valid target.
+  JoinGroup shows "invalid or expired" only when the invite is not found; other
+  errors get their own message and a retry button.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - **Accessibility** (WCAG 2.2 AA): `Header` moves focus to the page's `<h1>`
   when a page opens (unless a field already has focus, like the catalog

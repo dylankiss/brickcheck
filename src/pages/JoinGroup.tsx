@@ -8,7 +8,7 @@ const roleText = { helper: "tick off parts", viewer: "follow along" } as const;
 export default function JoinGroup() {
   const { token = "" } = useParams();
   const navigate = useNavigate();
-  const { preview, error, accept } = useGroupInvite(token);
+  const { preview, error, retry, accept } = useGroupInvite(token);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
@@ -33,9 +33,16 @@ export default function JoinGroup() {
   return (
     <>
       <Header title="Join a group" back="/" />
-      {(error || joinError) && <ErrorBanner message={(error || joinError)!} />}
+      {joinError && <ErrorBanner message={joinError} />}
       <main className="mx-auto flex max-w-sm flex-col gap-4 p-4">
-        {preview ? (
+        {error ? (
+          <div role="alert" className="flex flex-col items-center gap-3 py-12">
+            <p className="text-center text-neutral-500 dark:text-neutral-400">
+              Could not check this invite link: {error}
+            </p>
+            <Button onClick={retry}>Try again</Button>
+          </div>
+        ) : preview ? (
           <>
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-white p-4 text-center ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
               <p className="text-lg font-semibold">{preview.group_name}</p>

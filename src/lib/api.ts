@@ -285,7 +285,7 @@ export async function renameGroup(
 ): Promise<void> {
   const { data, error } = await supabase
     .from("groups")
-    .update({ name })
+    .update({ name: name.trim() })
     .eq("id", groupId)
     .select("id");
   if (error) {
