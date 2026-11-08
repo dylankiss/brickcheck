@@ -28,6 +28,9 @@ export interface SetSummary {
   my_role: SetRole | null;
   needed: number;
   found: number;
+  group_id: string | null;
+  /** Null when the Set has no Group, or the viewer is not in it. */
+  group_name: string | null;
 }
 
 /** Row of the `set_lines` view: one inventory line that counts for a set. */
@@ -66,6 +69,8 @@ export interface NewSet {
   title: string;
   include_spares: boolean;
   include_minifigs: boolean;
+  /** The Set's Group, if any; the creator must be an Owner or Helper of it. */
+  group_id?: string;
 }
 
 export interface Profile {
@@ -83,6 +88,21 @@ export interface Passkey {
 }
 
 export interface Member {
+  user_id: string;
+  role: SetRole;
+  joined_at: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+/** A Group I am in, with my role. */
+export interface Group {
+  id: string;
+  name: string;
+  my_role: SetRole;
+}
+
+export interface GroupMember {
   user_id: string;
   role: SetRole;
   joined_at: string;

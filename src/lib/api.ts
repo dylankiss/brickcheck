@@ -7,6 +7,8 @@ import type {
   InventoryLine,
   SetRole,
   SetSummary,
+  Group,
+  GroupMember,
   Invite,
   InvitePreview,
   CatalogSet,
@@ -223,6 +225,82 @@ export async function adjustPart(
     );
   }
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------------------
+
+/** The Groups I am in, with my role, by name. */
+export async function listGroups(me: string): Promise<Group[]> {
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("groups")
+      .select("id, name, group_members!inner(role)")
+      .eq("group_members.user_id", me)
+      .order("name")
+      .order("id")
+      .range(from, to),
+  );
+  return data.map(({ group_members, ...group }) => {
+    const mine = Array.isArray(group_members)
+      ? group_members[0]
+      : group_members;
+    return { ...group, my_role: (mine?.role ?? "viewer") as SetRole };
+  });
+}
+
+/** Creates a Group; the creator becomes its Owner. At most 10 per person. */
+export async function createGroup(name: string): Promise<string> {
+  const { data, error } = await supabase.rpc("create_group", { p_name: name });
+  if (error) {
+    fail(error);
+  }
+  return data;
+}
+
+/** Owner only. */
+export async function renameGroup(
+  groupId: string,
+  name: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("groups")
+    .update({ name })
+    .eq("id", groupId)
+    .select("id");
+  if (error) {
+    fail(error);
+  }
+  if (data.length === 0) {
+    throw new ApiError("Only an owner can rename the group");
+  }
+}
+
+export async function listGroupMembers(
+  groupId: string,
+): Promise<GroupMember[]> {
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("group_members")
+      .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
+      .eq("group_id", groupId)
+      .order("joined_at")
+      .order("user_id")
+      .range(from, to),
+  );
+  return data.map(({ profiles, ...member }) => {
+    const profile = (Array.isArray(profiles) ? profiles[0] : profiles) as Pick<
+      Profile,
+      "display_name" | "avatar_url"
+    > | null;
+    return {
+      ...member,
+      role: member.role as SetRole,
+      display_name: profile?.display_name ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

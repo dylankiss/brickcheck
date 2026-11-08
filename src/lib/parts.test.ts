@@ -205,6 +205,8 @@ function aSet(id: string, overrides: Partial<SetSummary> = {}): SetSummary {
     my_role: "owner",
     needed: 0,
     found: 0,
+    group_id: null,
+    group_name: null,
     ...overrides,
   };
 }
