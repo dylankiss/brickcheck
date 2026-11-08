@@ -35,11 +35,11 @@ _Avoid_: Fig part, minifig piece
 ### People
 
 **Owner**:
-The person who added a Set. They can do everything a Helper can, and only they can invite people, change roles, remove members or delete the Set.
+A person who manages a Set: the one who added it, or an Owner of the Group it is in. A Group can have several Owners, and a Group's Owner is an Owner of every Set in it. They can do everything a Helper can, and only Owners can invite people, change roles, remove members, reset counts or delete the Set. A Group always keeps at least one Owner.
 _Avoid_: Admin, creator
 
 **Helper**:
-A member of a Set who can tick off parts and rename the Set.
+A member of a Set, or of its Group, who can tick off parts and rename the Set. A Group role applies to every Set in the Group; when someone has both, the higher role wins.
 _Avoid_: Editor, collaborator, contributor
 
 **Viewer**:
@@ -48,6 +48,14 @@ _Avoid_: Spectator, guest, read-only member
 
 **Invite**:
 A link the Owner shares to let someone join a Set as a Helper or a Viewer, until it expires or the Owner revokes it. It never changes the role of someone who is already a member.
+_Avoid_: Share link, join link
+
+**Group**:
+A named set of people who share access to the Sets in it. A person can be in several Groups; a Set is in at most one.
+_Avoid_: Household, team, family, workspace
+
+**Group invite**:
+A link a Group Owner shares to let someone join a Group, until it expires or is revoked. It never changes the role of someone who is already a member. Not an Invite, which is for one Set.
 _Avoid_: Share link, join link
 
 ### Inventory and progress
