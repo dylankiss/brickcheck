@@ -33,7 +33,7 @@ select public.import_set(
 create temporary table ctx (
   g uuid, g2 uuid, set_in_group uuid, private_set uuid,
   helper_token uuid, viewer_token uuid, expired_token uuid, g2_token uuid,
-  messages_before int
+  messages_before int, private_before int
 );
 insert into ctx values (null, null, null, null, null, null, null, null, null);
 grant all on ctx to authenticated;
@@ -146,6 +146,9 @@ update ctx set expired_token = (select token from i);
 update ctx set messages_before = (
   select count(*)::int from realtime.messages
   where topic = 'set:' || set_in_group::text and event = 'changed'
+), private_before = (
+  select count(*)::int from realtime.messages
+  where topic = 'set:' || private_set::text and event = 'changed'
 );
 set local role authenticated;
 
@@ -219,7 +222,8 @@ select is(
 );
 select is(
   (select count(*)::int from realtime.messages
-   where topic = 'set:' || (select private_set from ctx)::text and event = 'changed'),
+   where topic = 'set:' || (select private_set from ctx)::text and event = 'changed')
+  - (select private_before from ctx),
   0,
   'a Group change is not broadcast on a Set outside the Group'
 );

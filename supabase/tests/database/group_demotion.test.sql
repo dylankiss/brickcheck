@@ -89,8 +89,8 @@ select throws_ok(
 select is(pg_temp.delete_set((select s_b from ctx)), 0, 'nor delete it');
 select is(
   public.set_role_of((select s_d from ctx))::text,
-  'helper',
-  'they are a Helper on other people''s Sets, per their Group role'
+  'viewer',
+  'they are a Viewer on other people''s Sets, per their Group role'
 );
 select is(
   public.set_role_of((select s_out from ctx))::text,
