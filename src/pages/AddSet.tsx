@@ -20,7 +20,11 @@ export default function AddSet() {
   const { groups } = useGroups(session!.user.id);
   // Only Groups where I am an Owner or Helper can take a new Set.
   const targets = (groups ?? []).filter((g) => g.my_role !== "viewer");
-  const [groupId, setGroupId] = useState("");
+  const [chosenGroupId, setGroupId] = useState("");
+  // A chosen Group I can no longer add to (demoted, or left) is dropped.
+  const groupId = targets.some((g) => g.id === chosenGroupId)
+    ? chosenGroupId
+    : "";
   const [catalogSet, setCatalogSet] = useState<CatalogSet | null>(null);
   const [title, setTitle] = useState("");
   const [includeSpares, setIncludeSpares] = useState(false);

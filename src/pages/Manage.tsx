@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Avatar } from "../components/Avatar";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -38,9 +38,12 @@ export default function Manage() {
     resetCounts,
     deleteSet,
   } = useMembers(setId, me, isOwner, set.group_id, version, reloadMembers);
-  const { groups } = useGroups(me);
+  // Only an Owner of a Set that is in no Group can move it into one.
+  const { groups } = useGroups(me, isOwner && !set.group_id);
   // Groups the Set could go into: where I am an Owner or Helper.
   const targets = (groups ?? []).filter((g) => g.my_role !== "viewer");
+  // A per-Set row exists only for people added to this Set, not for Group-only access.
+  const hasOwnRow = (members ?? []).some((m) => m.user_id === me);
   const [target, setTarget] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -308,13 +311,26 @@ export default function Manage() {
             Reset counts
           </Button>
         )}
-        <Button
-          variant="secondary"
-          onClick={leaveOrDelete}
-          className="text-red-700 dark:text-red-400"
-        >
-          {isOwner ? "Delete set" : "Leave set"}
-        </Button>
+        {isOwner || hasOwnRow ? (
+          <Button
+            variant="secondary"
+            onClick={leaveOrDelete}
+            className="text-red-700 dark:text-red-400"
+          >
+            {isOwner ? "Delete set" : "Leave set"}
+          </Button>
+        ) : (
+          members && (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              You have access to this set through its group. To lose it, leave
+              the group on the{" "}
+              <Link to="/groups" className="font-semibold text-brick underline">
+                Groups page
+              </Link>
+              .
+            </p>
+          )
+        )}
       </main>
     </>
   );

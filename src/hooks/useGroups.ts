@@ -3,8 +3,8 @@ import { useOnVisible } from "./useOnVisible";
 import { createGroup, listGroups, renameGroup } from "../lib/api";
 import type { Group } from "../lib/types";
 
-/** The user's Groups, refreshed whenever the page becomes visible again. */
-export function useGroups(me: string) {
+/** The user's Groups, refreshed whenever the page becomes visible again. Fetches nothing while `enabled` is false. */
+export function useGroups(me: string, enabled = true) {
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,10 +21,12 @@ export function useGroups(me: string) {
   );
 
   useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- refresh only sets state after awaiting the fetch
-    refresh();
-  }, [refresh]);
-  useOnVisible(() => void refresh());
+    if (enabled) {
+      // oxlint-disable-next-line react/set-state-in-effect -- refresh only sets state after awaiting the fetch
+      refresh();
+    }
+  }, [refresh, enabled]);
+  useOnVisible(() => enabled && void refresh());
 
   /** Runs a change, then reloads the list; returns whether it worked. */
   async function change(action: () => Promise<unknown>): Promise<boolean> {

@@ -25,10 +25,17 @@ export default function MySets() {
         .map((c) => [c.group_id!, c.group_name!]),
     ),
   ].sort((a, b) => a[1].localeCompare(b[1]));
+  // A chosen Group that dropped out of the options (left, or its last Set moved out) counts as All.
+  const activeFilter =
+    filter === "all" ||
+    filter === "none" ||
+    groupOptions.some(([id]) => id === filter)
+      ? filter
+      : "all";
   const shown = (sets ?? []).filter(
     (c) =>
-      filter === "all" ||
-      (filter === "none" ? !c.group_id : c.group_id === filter),
+      activeFilter === "all" ||
+      (activeFilter === "none" ? !c.group_id : c.group_id === activeFilter),
   );
 
   return (
@@ -77,7 +84,7 @@ export default function MySets() {
           <label className="flex items-center gap-2 text-sm">
             <span className="font-medium">Group</span>
             <select
-              value={filter}
+              value={activeFilter}
               onChange={(e) => setFilter(e.target.value)}
               className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
             >

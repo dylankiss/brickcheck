@@ -10,7 +10,9 @@ export function useGroupInvite(token: string) {
   const [preview, setPreview] = useState<GroupInvitePreview | null | undefined>(
     valid ? undefined : null,
   );
+  // Set when the preview could not be fetched (not the same as "not found").
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!valid) {
@@ -24,7 +26,13 @@ export function useGroupInvite(token: string) {
     return () => {
       current = false;
     };
-  }, [token, valid]);
+  }, [token, valid, attempt]);
 
-  return { preview, error, accept: () => acceptGroupInvite(token) };
+  function retry() {
+    setError(null);
+    setPreview(undefined);
+    setAttempt((n) => n + 1);
+  }
+
+  return { preview, error, retry, accept: () => acceptGroupInvite(token) };
 }
