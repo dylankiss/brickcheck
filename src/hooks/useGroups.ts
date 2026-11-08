@@ -42,6 +42,7 @@ export function useGroups(me: string) {
     groups,
     error,
     clearError: () => setError(null),
+    reload: refresh,
     create: (name: string) => change(() => createGroup(name)),
     rename: (groupId: string, name: string) =>
       change(() => renameGroup(groupId, name)),

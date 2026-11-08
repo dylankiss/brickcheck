@@ -370,10 +370,9 @@ select ok(
   'a non-member cannot join the Set''s channel'
 );
 
-reset role;
+select pg_temp.login('a');
 delete from public.group_members
 where group_id = (select group_id from ctx) and user_id = '00000000-0000-0000-0000-00000000000b';
-set local role authenticated;
 select pg_temp.login('b');
 select ok(
   not public.is_set_member(public.set_id_from_topic('set:' || (select s1 from ctx))),
