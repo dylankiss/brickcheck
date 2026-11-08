@@ -341,6 +341,58 @@ export async function removeGroupMember(
   }
 }
 
+/**
+ * Leaves a Group: deletes my own membership. The last Owner cannot leave (the
+ * database says so). Sets I added stay in the Group and I lose access to them.
+ */
+export async function leaveGroup(groupId: string, me: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", me)
+    .select("user_id");
+  if (error) {
+    fail(error);
+  }
+  if (data.length === 0) {
+    throw new ApiError("You are not in this group");
+  }
+}
+
+/** The Sets I added that are in a Group (what leaving would give up). */
+export async function listMySetsInGroup(
+  groupId: string,
+  me: string,
+): Promise<{ id: string; title: string }[]> {
+  const { data, error } = await supabase
+    .from("set_summaries")
+    .select("id, title")
+    .eq("group_id", groupId)
+    .eq("owner_id", me)
+    .order("created_at", { ascending: false })
+    .order("id");
+  if (error) {
+    fail(error);
+  }
+  return data;
+}
+
+/** Owner only: deletes a Group. It must have no Sets (the database says so). */
+export async function deleteGroup(groupId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("groups")
+    .delete()
+    .eq("id", groupId)
+    .select("id");
+  if (error) {
+    fail(error);
+  }
+  if (data.length === 0) {
+    throw new ApiError("Only an owner can delete the group");
+  }
+}
+
 export async function listGroupMembers(
   groupId: string,
 ): Promise<GroupMember[]> {

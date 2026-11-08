@@ -5,7 +5,11 @@ import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useGroups } from "../hooks/useGroups";
 import {
+  deleteGroup,
+  leaveGroup,
   listGroupMembers,
+  listMySetsInGroup,
+  moveSetToGroup,
   removeGroupMember,
   setGroupMemberRole,
 } from "../lib/api";
@@ -86,7 +90,58 @@ function GroupCard({
   const [name, setName] = useState(group.name);
   const [members, setMembers] = useState<GroupMember[] | null>(null);
   const [membersError, setMembersError] = useState<string | null>(null);
+  // Set while the leave warning is open: the Sets I added to this Group.
+  const [leaving, setLeaving] = useState<
+    { id: string; title: string }[] | null
+  >(null);
   const isOwner = group.my_role === "owner";
+
+  async function startLeaving() {
+    try {
+      setLeaving(await listMySetsInGroup(group.id, me));
+      setMembersError(null);
+    } catch (e) {
+      setMembersError((e as Error).message);
+    }
+  }
+
+  async function moveOut(setId: string) {
+    try {
+      await moveSetToGroup(setId, null);
+      setLeaving(await listMySetsInGroup(group.id, me));
+      setMembersError(null);
+    } catch (e) {
+      setMembersError((e as Error).message);
+    }
+  }
+
+  async function leave() {
+    try {
+      await leaveGroup(group.id, me);
+      setLeaving(null);
+      setMembersError(null);
+      await reload();
+    } catch (e) {
+      setMembersError((e as Error).message);
+    }
+  }
+
+  async function removeGroup() {
+    if (
+      !window.confirm(
+        `Delete "${group.name}"? This removes the group and its member list. Sets are not affected, because a group with sets can't be deleted.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteGroup(group.id);
+      setMembersError(null);
+      await reload();
+    } catch (e) {
+      setMembersError((e as Error).message);
+    }
+  }
 
   async function toggleMembers() {
     if (members) {
@@ -181,6 +236,77 @@ function GroupCard({
             Members
           </button>
         </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
+          onClick={() => void startLeaving()}
+          aria-expanded={leaving !== null}
+          aria-label={`Leave ${group.name}`}
+        >
+          Leave
+        </button>
+        {isOwner && (
+          <button
+            className="min-h-11 px-2 text-sm text-red-700 dark:text-red-300"
+            onClick={() => void removeGroup()}
+            aria-label={`Delete ${group.name}`}
+          >
+            Delete
+          </button>
+        )}
+      </div>
+      {leaving && (
+        <section
+          aria-label={`Leave ${group.name}`}
+          className="flex flex-col gap-2 rounded-xl bg-neutral-100 p-3 dark:bg-neutral-800"
+        >
+          <p>
+            Leave &quot;{group.name}&quot;? You will lose access to its sets.
+            {isOwner && " A group needs at least one owner."}
+          </p>
+          {leaving.length > 0 ? (
+            <>
+              <p>
+                You added {leaving.length === 1 ? "this set" : "these sets"}. If
+                you leave anyway,{" "}
+                {leaving.length === 1 ? "it stays" : "they stay"} in the group
+                and you lose access. Move out first to keep{" "}
+                {leaving.length === 1 ? "it" : "them"}.
+              </p>
+              <ul className="flex flex-col gap-1">
+                {leaving.map((set) => (
+                  <li key={set.id} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate">{set.title}</span>
+                    <button
+                      className="min-h-11 px-2 text-sm font-semibold text-brick"
+                      onClick={() => void moveOut(set.id)}
+                      aria-label={`Move ${set.title} out of ${group.name}`}
+                    >
+                      Move out
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              You added no sets to this group.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button type="button" onClick={() => void leave()}>
+              {leaving.length > 0 ? "Leave anyway" : "Leave group"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setLeaving(null)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </section>
       )}
       {membersError && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-300">

@@ -155,8 +155,18 @@ Their Sets stay in the Group, and they lose access to them. Other per-Set
 members, and Sets they added outside the Group, are untouched. The `sets`
 read rule lets an adder read their own row only while they can still reach it
 (not in a Group, or still in it). Removal is recorded by
-`record_group_removal` (see _Invites_). Group deletion is a later step of the
-Groups work (issue #3).
+`record_group_removal` (see _Invites_). **Leaving**: any member deletes their
+own `group_members` row (policy "group_members: leave"), so both triggers above
+apply as for a removal: the last Owner cannot leave (`23514`), and Sets the
+leaver added stay in the Group while they lose access (unless someone gave them
+a per-Set role, which is kept). Leaving is not recorded as a removal. The UI
+warns first and offers `move_set_to_group(set, null)` for the Sets they added.
+**Deleting a Group**: Owners only (policy "groups: owner deletes"), and only
+when it has no Sets. `groups_before_delete` (security definer, so Sets the
+Owner cannot read still count) raises `55000` ("A group with sets cannot be
+deleted. Move or delete its sets first.") before the `on delete restrict`
+foreign key would raise a raw violation. Deleting cascades to members, invites
+and removals.
 
 An inventory line (`inventory_lines`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
@@ -190,9 +200,10 @@ and groups them by part and color.
   `move_set_to_group` is `security definer`, executable by `authenticated` only,
   and checks `is_set_owner` and the caller's Group role itself.
   `group_members` can be updated (`role` column only) and deleted by the
-  Group's Owners only; a member cannot leave through it yet. The last Owner
-  cannot be demoted or removed (`group_members_guard_last_owner`, whoever does
-  it).
+  Group's Owners only, and any member can delete their own row (leave). The
+  last Owner cannot be demoted, removed or leave (`group_members_guard_last_owner`,
+  whoever does it). `groups` can be deleted by the Group's Owners only, and not
+  while the Group has Sets (`groups_before_delete`).
   Row policies use `set_id in (select my_set_ids())`, which is evaluated once
   per query rather than once per row.
 - Any logged-in user can read the set cache. Only the service role can write it.
@@ -239,20 +250,20 @@ and groups them by part and color.
 
 ## Routes
 
-| Path                 | Page              | Notes                                                                                                                                                                                        |
-| -------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/login`             | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                                                                                                  |
-| `/`                  | MySets            | my sets, with a Group label and a Group filter; asks email users for a display name once                                                                                                     |
-| `/groups`            | Groups            | create, list and rename (Owners) your Groups, show their members and roles, change roles, promote and remove members (Owners), create and revoke Group invites (Owners); linked from My sets |
-| `/account`           | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets                                                                                 |
-| `/missing`           | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)                                                                                           |
-| `/new`               | AddSet            | catalog search → `fetch-set` → create set, with an optional Group (where you are Owner or Helper)                                                                                            |
-| `/join/:token`       | Join              | invite preview → `accept_invite`                                                                                                                                                             |
-| `/join/group/:token` | JoinGroup         | Group invite preview → `accept_group_invite`, then the Groups page                                                                                                                           |
-| `/sets/:id`          | SetLayout         | owns `useSet` (one channel, presence) for its children                                                                                                                                       |
-| `/sets/:id` (index)  | SetPage           | the grid of part cards; the header icon opens Manage and shows who is online instead when others are                                                                                         |
-| `/sets/:id/missing`  | Missing           | missing list and exports                                                                                                                                                                     |
-| `/sets/:id/manage`   | Manage            | Manage: Group (move in or out), members, members through the Group, roles, invite links, reset counts, leave or delete                                                                       |
+| Path                 | Page              | Notes                                                                                                                                                                                                                                                                                                               |
+| -------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`             | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                                                                                                                                                                                                                         |
+| `/`                  | MySets            | my sets, with a Group label and a Group filter; asks email users for a display name once                                                                                                                                                                                                                            |
+| `/groups`            | Groups            | create, list and rename (Owners) your Groups, show their members and roles, change roles, promote and remove members (Owners), create and revoke Group invites (Owners), leave (with a warning listing the Sets you added and a Move out button for each) and delete (Owners, only when empty); linked from My sets |
+| `/account`           | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets                                                                                                                                                                                                        |
+| `/missing`           | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)                                                                                                                                                                                                                  |
+| `/new`               | AddSet            | catalog search → `fetch-set` → create set, with an optional Group (where you are Owner or Helper)                                                                                                                                                                                                                   |
+| `/join/:token`       | Join              | invite preview → `accept_invite`                                                                                                                                                                                                                                                                                    |
+| `/join/group/:token` | JoinGroup         | Group invite preview → `accept_group_invite`, then the Groups page                                                                                                                                                                                                                                                  |
+| `/sets/:id`          | SetLayout         | owns `useSet` (one channel, presence) for its children                                                                                                                                                                                                                                                              |
+| `/sets/:id` (index)  | SetPage           | the grid of part cards; the header icon opens Manage and shows who is online instead when others are                                                                                                                                                                                                                |
+| `/sets/:id/missing`  | Missing           | missing list and exports                                                                                                                                                                                                                                                                                            |
+| `/sets/:id/manage`   | Manage            | Manage: Group (move in or out), members, members through the Group, roles, invite links, reset counts, leave or delete                                                                                                                                                                                              |
 
 Everything except `/login` is behind `RequireAuth`.
 
@@ -499,8 +510,9 @@ They mirror the per-Set Invites, for a Group (`group_invites`, `group_removals`)
   removes someone (a delete on `group_members` by another user, recorded by a
   trigger), links created before the removal no longer work for that person
   (neither preview nor accept); a newer link does, and accepting it clears the
-  record. Leaving on your own, and deleting a Group or an account, are not
-  recorded. A removal also ends access to the Group's Sets at once, and open
+  record. Leaving on your own (any member can, see _Data model_), and deleting a
+  Group or an account, are not recorded, so an older link still works for
+  someone who left. Deleting a Group removes its invites. A removal also ends access to the Group's Sets at once, and open
   pages get the refresh broadcast.
 - `group_invite_preview(token)` shows the Group name, the inviter and whether
   you are already a member, with no row for an invalid token.
