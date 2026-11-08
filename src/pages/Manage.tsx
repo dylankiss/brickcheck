@@ -4,6 +4,7 @@ import { Avatar } from "../components/Avatar";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useSetContext } from "../hooks/useSetContext";
+import { useGroups } from "../hooks/useGroups";
 import { useMembers } from "../hooks/useMembers";
 import { inviteUrl } from "../lib/api";
 import { shareLink } from "../lib/share";
@@ -25,6 +26,7 @@ export default function Manage() {
   const me = session!.user.id;
   const {
     invites,
+    groupMembers,
     error,
     clearError,
     invite,
@@ -32,9 +34,14 @@ export default function Manage() {
     setRole,
     remove,
     leave,
+    moveToGroup,
     resetCounts,
     deleteSet,
-  } = useMembers(setId, me, isOwner, version, reloadMembers);
+  } = useMembers(setId, me, isOwner, set.group_id, version, reloadMembers);
+  const { groups } = useGroups(me);
+  // Groups the Set could go into: where I am an Owner or Helper.
+  const targets = (groups ?? []).filter((g) => g.my_role !== "viewer");
+  const [target, setTarget] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const onlineIds = new Set(online.map((o) => o.user_id));
@@ -72,6 +79,19 @@ export default function Manage() {
     }
     if (await (isOwner ? deleteSet() : leave())) {
       navigate("/", { replace: true });
+    }
+  }
+
+  async function moveOut() {
+    const question = `Move "${set.title}" out of ${set.group_name ? `"${set.group_name}"` : "its group"}? People who have access only through the group lose it. Members added to this set keep their roles.`;
+    if (window.confirm(question)) {
+      await moveToGroup(null);
+    }
+  }
+
+  async function moveIn() {
+    if (target && (await moveToGroup(target))) {
+      setTarget("");
     }
   }
 
@@ -143,6 +163,48 @@ export default function Manage() {
           </section>
         )}
 
+        {isOwner && (set.group_id || targets.length > 0) && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-semibold">Group</h2>
+            {set.group_id ? (
+              <>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  This set is in{" "}
+                  {set.group_name ? `"${set.group_name}"` : "a group"}. Everyone
+                  in the group has access to it.
+                </p>
+                <Button variant="secondary" onClick={moveOut}>
+                  Move out of group
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  Put this set in a group to share it with everyone in it.
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                    aria-label="Group to move this set into"
+                    className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+                  >
+                    <option value="">Choose a group</option>
+                    {targets.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button onClick={moveIn} disabled={!target}>
+                    Move in
+                  </Button>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         <section className="flex flex-col gap-3">
           <h2 className="font-semibold">Members</h2>
           {!members ? (
@@ -202,6 +264,40 @@ export default function Manage() {
             </ul>
           )}
         </section>
+
+        {set.group_id && groupMembers.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-semibold">
+              Through the group{set.group_name ? ` "${set.group_name}"` : ""}
+            </h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              These people have access to this set because they are in the
+              group, with their role in it. Manage them on the Groups page.
+            </p>
+            <ul className="flex flex-col gap-2">
+              {groupMembers.map((m) => (
+                <li
+                  key={m.user_id}
+                  className="flex items-center gap-3 rounded-xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800"
+                >
+                  <Avatar name={m.display_name} url={m.avatar_url} />
+                  <span className="min-w-0 flex-1 truncate">
+                    {m.display_name || "Unnamed builder"}
+                    {m.user_id === me && (
+                      <span className="text-neutral-500 dark:text-neutral-400">
+                        {" "}
+                        (you)
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {roleLabel[m.role]} · group
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {isOwner && (
           <Button

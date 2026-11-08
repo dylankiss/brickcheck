@@ -143,6 +143,24 @@ export async function updateSet(
   }
 }
 
+/**
+ * Moves a Set into a Group (the Set's Owner, into a Group they own or help in)
+ * or, with `null`, out of its Group (the Set's Owner or a Group Owner, who then
+ * becomes its Owner).
+ */
+export async function moveSetToGroup(
+  setId: string,
+  groupId: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc("move_set_to_group", {
+    p_set_id: setId,
+    p_group_id: groupId,
+  });
+  if (error) {
+    fail(error);
+  }
+}
+
 /** Owner only: sets every part's found count in the set back to zero. */
 export async function resetSetProgress(setId: string): Promise<void> {
   const { error } = await supabase.rpc("reset_set_progress", {
