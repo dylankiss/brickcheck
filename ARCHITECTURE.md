@@ -88,21 +88,23 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 
 ## Data model
 
-| Table / view           | Purpose                                                               | Written by                                                                                          |
-| ---------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `profiles`             | display name and avatar per auth user (the email is never exposed)    | trigger on `auth.users`, the user themselves                                                        |
-| `lego_sets`            | set catalog and metadata                                              | catalog script, `import_set` (service role)                                                         |
-| `inventory_lines`      | cached inventory lines                                                | `import_set` (service role)                                                                         |
-| `set_import_log`       | Rebrickable fetches per user, for rate limiting                       | `fetch-set` (service role)                                                                          |
-| `sets`                 | one physical set being checked: a copy of a catalog set (GLOSSARY.md) | owner insert; `title` by helpers                                                                    |
-| `set_members`          | who can see or edit a set (`owner`, `helper`, `viewer`)               | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member |
-| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` and `reset_set_progress` RPCs only                                                    |
-| `set_invites`          | invite tokens                                                         | the owner                                                                                           |
-| `set_removals`         | who the owner removed, and when                                       | trigger on `set_members` delete                                                                     |
-| `groups`               | a named set of people sharing access to its Sets (GLOSSARY.md)        | `create_group` RPC; `name` by the Group's Owners                                                    |
-| `group_members`        | who is in a Group (`owner`, `helper`, `viewer`)                       | trigger (creator as Owner); invites, role changes and removals come in later steps                  |
-| `set_lines` (view)     | every line that counts for a set, with `found_qty`                    | —                                                                                                   |
-| `set_summaries` (view) | per set: catalog set info, my effective role, needed, found, Group    | —                                                                                                   |
+| Table / view           | Purpose                                                               | Written by                                                                                           |
+| ---------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `profiles`             | display name and avatar per auth user (the email is never exposed)    | trigger on `auth.users`, the user themselves                                                         |
+| `lego_sets`            | set catalog and metadata                                              | catalog script, `import_set` (service role)                                                          |
+| `inventory_lines`      | cached inventory lines                                                | `import_set` (service role)                                                                          |
+| `set_import_log`       | Rebrickable fetches per user, for rate limiting                       | `fetch-set` (service role)                                                                           |
+| `sets`                 | one physical set being checked: a copy of a catalog set (GLOSSARY.md) | owner insert; `title` by helpers                                                                     |
+| `set_members`          | who can see or edit a set (`owner`, `helper`, `viewer`)               | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member  |
+| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` and `reset_set_progress` RPCs only                                                     |
+| `set_invites`          | invite tokens                                                         | the owner                                                                                            |
+| `set_removals`         | who the owner removed, and when                                       | trigger on `set_members` delete                                                                      |
+| `groups`               | a named set of people sharing access to its Sets (GLOSSARY.md)        | `create_group` RPC; `name` by the Group's Owners                                                     |
+| `group_members`        | who is in a Group (`owner`, `helper`, `viewer`)                       | trigger (creator as Owner), `accept_group_invite` RPC; role changes and removals come in later steps |
+| `group_invites`        | Group invite tokens                                                   | the Group's Owners                                                                                   |
+| `group_removals`       | who an Owner removed from a Group, and when                           | trigger on `group_members` delete                                                                    |
+| `set_lines` (view)     | every line that counts for a set, with `found_qty`                    | —                                                                                                    |
+| `set_summaries` (view) | per set: catalog set info, my effective role, needed, found, Group    | —                                                                                                    |
 
 **Groups** (ADR 0001): `sets.group_id` is an optional reference to a Group (a Set
 is in at most one; `on delete restrict`, so a Group with Sets can't be deleted).
@@ -117,9 +119,13 @@ is the only way to create a Group (no insert grant): it makes the creator the
 Owner, and a trigger caps each person at 10 created Groups (error code `54000`,
 serialised per person with an advisory lock). Only Group Owners can rename. A
 Set can be given a Group at creation if its creator is an Owner or Helper of
-that Group (`sets_before_insert`). Group invites, member management, moving
-Sets in and out, the 20-member cap and Group deletion are later steps of the
-Groups work (issue #3).
+that Group (`sets_before_insert`). A `before insert` trigger on `group_members`
+caps a Group at 20 members (error code `54000`, serialised per Group with an
+advisory lock). Group invites are described under _Invites_. A trigger on
+`group_members` (insert, update, delete) sends the usual `changed` broadcast to
+the channel of each of the Group's Sets, so open pages refresh when someone
+joins (and later when someone leaves or is removed). Member management, moving
+Sets in and out and Group deletion are later steps of the Groups work (issue #3).
 
 An inventory line (`inventory_lines`) is unique on
 `(set_num, part_num, color_id, is_spare, fig_num)` with `NULLS NOT DISTINCT`.
@@ -146,7 +152,10 @@ and groups them by part and color.
   channel policies, which only call the helpers, cover Group members without
   changes. `sets` deletion follows `is_set_owner`, so a Group Owner can delete a
   Group's Sets. `groups` and `group_members` are readable by the Group's
-  members only.
+  members only. `group_invites` is readable, creatable (`group_id`, `role`,
+  `expires_at` columns only) and deletable by the Group's Owners only;
+  `group_removals` has no policies and no grants (security definer functions
+  only). Invites expire within 30 days and never carry the `owner` role.
   Row policies use `set_id in (select my_set_ids())`, which is evaluated once
   per query rather than once per row.
 - Any logged-in user can read the set cache. Only the service role can write it.
@@ -193,19 +202,20 @@ and groups them by part and color.
 
 ## Routes
 
-| Path                | Page              | Notes                                                                                                        |
-| ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| `/login`            | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                  |
-| `/`                 | MySets            | my sets; asks email users for a display name once                                                            |
-| `/groups`           | Groups            | create, list and rename (Owners) your Groups, and show their members and roles; linked from My sets          |
-| `/account`          | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets |
-| `/missing`          | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)           |
-| `/new`              | AddSet            | catalog search → `fetch-set` → create set                                                                    |
-| `/join/:token`      | Join              | invite preview → `accept_invite`                                                                             |
-| `/sets/:id`         | SetLayout         | owns `useSet` (one channel, presence) for its children                                                       |
-| `/sets/:id` (index) | SetPage           | the grid of part cards; the header icon opens Manage and shows who is online instead when others are         |
-| `/sets/:id/missing` | Missing           | missing list and exports                                                                                     |
-| `/sets/:id/manage`  | Manage            | Manage: members, roles, invite links, reset counts (owner), leave or delete                                  |
+| Path                 | Page              | Notes                                                                                                                                     |
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`             | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                                               |
+| `/`                  | MySets            | my sets; asks email users for a display name once                                                                                         |
+| `/groups`            | Groups            | create, list and rename (Owners) your Groups, show their members and roles, create and revoke Group invites (Owners); linked from My sets |
+| `/account`           | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets                              |
+| `/missing`           | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)                                        |
+| `/new`               | AddSet            | catalog search → `fetch-set` → create set                                                                                                 |
+| `/join/:token`       | Join              | invite preview → `accept_invite`                                                                                                          |
+| `/join/group/:token` | JoinGroup         | Group invite preview → `accept_group_invite`, then the Groups page                                                                        |
+| `/sets/:id`          | SetLayout         | owns `useSet` (one channel, presence) for its children                                                                                    |
+| `/sets/:id` (index)  | SetPage           | the grid of part cards; the header icon opens Manage and shows who is online instead when others are                                      |
+| `/sets/:id/missing`  | Missing           | missing list and exports                                                                                                                  |
+| `/sets/:id/manage`   | Manage            | Manage: members, roles, invite links, reset counts (owner), leave or delete                                                               |
 
 Everything except `/login` is behind `RequireAuth`.
 
@@ -425,6 +435,24 @@ JWT-checked.
 - A removal is recorded in `set_removals`. Links created before the removal
   no longer work for that person (neither preview nor accept); a newer link
   does, and accepting it clears the record. Leaving on your own isn't recorded.
+
+### Group invites
+
+They mirror the per-Set Invites, for a Group (`group_invites`, `group_removals`).
+
+- A Group Owner creates one: a random uuid token, a role of `helper` or
+  `viewer` (never `owner`), and an expiry (7 days by default, 30 at most). An
+  Owner can revoke it by deleting it. Non-Owners and non-members can neither
+  read nor create them.
+- `accept_group_invite(token)` works only for an unexpired token. An existing
+  member is returned the Group id with their role untouched (no downgrade, no
+  upgrade, even when the Group is full); otherwise the user is added with the
+  invite's role. The 20-member cap is enforced by the trigger on `group_members`
+  (error `54000`). Removals work as for Sets (`group_removals`).
+- `group_invite_preview(token)` shows the Group name, the inviter and whether
+  you are already a member, with no row for an invalid token.
+- `/join/group/<token>` survives login like `/join/<token>`; after joining the
+  app opens the Groups page.
 
 ## Deployment notes
 
