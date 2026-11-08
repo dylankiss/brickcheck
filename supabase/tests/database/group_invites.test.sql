@@ -301,12 +301,9 @@ select is(
 -- Removal blocks older links; leaving does not
 ------------------------------------------------------------------------------
 
--- Alice removes Erin (there is no delete policy yet, so as the table owner
--- while acting as Alice).
+-- Alice, the Owner, removes Erin.
 select pg_temp.login('a');
-reset role;
 delete from public.group_members where user_id = '00000000-0000-0000-0000-00000000000e';
-set local role authenticated;
 
 select pg_temp.login('e');
 select throws_ok(
@@ -397,10 +394,10 @@ select lives_ok(
   'a member of a full Group can still open its invite'
 );
 
-reset role;
+-- Alice, the Owner, removes a member to free a place.
+select pg_temp.login('a');
 delete from public.group_members
 where group_id = (select g2 from ctx) and user_id = '10000000-0000-0000-0000-000000000001';
-set local role authenticated;
 select pg_temp.login('d');
 select lives_ok(
   $$ select public.accept_group_invite(g2_token) from ctx $$,

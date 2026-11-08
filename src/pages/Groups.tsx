@@ -4,7 +4,11 @@ import { GroupInvites } from "../components/GroupInvites";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useGroups } from "../hooks/useGroups";
-import { listGroupMembers } from "../lib/api";
+import {
+  listGroupMembers,
+  removeGroupMember,
+  setGroupMemberRole,
+} from "../lib/api";
 import type { Group, GroupMember } from "../lib/types";
 
 const roleLabel = {
@@ -15,7 +19,7 @@ const roleLabel = {
 
 export default function Groups() {
   const { session } = useAuth();
-  const { groups, error, clearError, create, rename } = useGroups(
+  const { groups, error, clearError, create, rename, reload } = useGroups(
     session!.user.id,
   );
   const [name, setName] = useState("");
@@ -53,7 +57,13 @@ export default function Groups() {
         )}
         <ul className="flex flex-col gap-3">
           {groups?.map((group) => (
-            <GroupCard key={group.id} group={group} rename={rename} />
+            <GroupCard
+              key={group.id}
+              group={group}
+              me={session!.user.id}
+              rename={rename}
+              reload={reload}
+            />
           ))}
         </ul>
       </main>
@@ -63,9 +73,13 @@ export default function Groups() {
 
 function GroupCard({
   group,
+  me,
   rename,
+  reload,
 }: {
   group: Group;
+  me: string;
+  reload: () => Promise<unknown>;
   rename: (groupId: string, name: string) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -84,6 +98,29 @@ function GroupCard({
       setMembersError(null);
     } catch (e) {
       setMembersError((e as Error).message);
+    }
+  }
+
+  /** Changes a member, then reloads the list (and my own role, in case it moved). */
+  async function changeMember(action: () => Promise<void>) {
+    try {
+      await action();
+      setMembers(await listGroupMembers(group.id));
+      setMembersError(null);
+    } catch (e) {
+      setMembersError((e as Error).message);
+    }
+    await reload();
+  }
+
+  function remove(m: GroupMember) {
+    const name = m.display_name || "this member";
+    const question =
+      m.user_id === me
+        ? `Remove yourself from "${group.name}"? You will lose access to its sets, including ones you added; they stay in the group.`
+        : `Remove ${name} from "${group.name}"? They lose access to its sets, including ones they added; the sets stay in the group. Links you sent before won't let them back in.`;
+    if (window.confirm(question)) {
+      void changeMember(() => removeGroupMember(group.id, m.user_id));
     }
   }
 
@@ -158,10 +195,46 @@ function GroupCard({
               <Avatar name={m.display_name} url={m.avatar_url} />
               <span className="min-w-0 flex-1 truncate">
                 {m.display_name || "Unnamed builder"}
+                {m.user_id === me && (
+                  <span className="text-neutral-500 dark:text-neutral-400">
+                    {" "}
+                    (you)
+                  </span>
+                )}
               </span>
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                {roleLabel[m.role]}
-              </span>
+              {isOwner ? (
+                <>
+                  <select
+                    value={m.role}
+                    onChange={(e) =>
+                      void changeMember(() =>
+                        setGroupMemberRole(
+                          group.id,
+                          m.user_id,
+                          e.target.value as GroupMember["role"],
+                        ),
+                      )
+                    }
+                    className="min-h-11 rounded-lg bg-transparent px-1 text-sm"
+                    aria-label={`Role of ${m.display_name || "member"}`}
+                  >
+                    <option value="owner">{roleLabel.owner}</option>
+                    <option value="helper">{roleLabel.helper}</option>
+                    <option value="viewer">{roleLabel.viewer}</option>
+                  </select>
+                  <button
+                    className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
+                    onClick={() => remove(m)}
+                    aria-label={`Remove ${m.display_name || "member"}`}
+                  >
+                    Remove
+                  </button>
+                </>
+              ) : (
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {roleLabel[m.role]}
+                </span>
+              )}
             </li>
           ))}
         </ul>

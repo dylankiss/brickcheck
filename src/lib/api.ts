@@ -296,6 +296,51 @@ export async function renameGroup(
   }
 }
 
+/**
+ * Owner only: promote to Owner, or change to Helper or Viewer. The last Owner
+ * cannot be demoted (the database says so).
+ */
+export async function setGroupMemberRole(
+  groupId: string,
+  userId: string,
+  role: SetRole,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("group_members")
+    .update({ role })
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .select("user_id");
+  if (error) {
+    fail(error);
+  }
+  if (data.length === 0) {
+    throw new ApiError("Only an owner can change roles");
+  }
+}
+
+/**
+ * Owner only: removes any member, including another Owner or yourself. The
+ * last Owner cannot be removed (the database says so).
+ */
+export async function removeGroupMember(
+  groupId: string,
+  userId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .select("user_id");
+  if (error) {
+    fail(error);
+  }
+  if (data.length === 0) {
+    throw new ApiError("Only an owner can remove members");
+  }
+}
+
 export async function listGroupMembers(
   groupId: string,
 ): Promise<GroupMember[]> {
