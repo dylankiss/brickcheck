@@ -7,13 +7,20 @@ import {
 } from "../components/EnlargedPicture";
 import { catalogSetPicture, type Picture } from "../components/pictures";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
+import { useAuth } from "../hooks/useAuth";
 import { useCatalogSearch } from "../hooks/useCatalogSearch";
+import { useGroups } from "../hooks/useGroups";
 import { createSet, fetchCatalogSet } from "../lib/api";
 import type { CatalogSet } from "../lib/types";
 
 export default function AddSet() {
   const navigate = useNavigate();
   const search = useCatalogSearch();
+  const { session } = useAuth();
+  const { groups } = useGroups(session!.user.id);
+  // Only Groups where I am an Owner or Helper can take a new Set.
+  const targets = (groups ?? []).filter((g) => g.my_role !== "viewer");
+  const [groupId, setGroupId] = useState("");
   const [catalogSet, setCatalogSet] = useState<CatalogSet | null>(null);
   const [title, setTitle] = useState("");
   const [includeSpares, setIncludeSpares] = useState(false);
@@ -43,6 +50,7 @@ export default function AddSet() {
         title: title.trim() || catalogSet.name,
         include_spares: includeSpares,
         include_minifigs: includeMinifigs,
+        group_id: groupId || undefined,
       });
       navigate(`/sets/${id}`, { replace: true });
     } catch (err) {
@@ -112,6 +120,28 @@ export default function AddSet() {
                 Handy if you own several copies, e.g. "Castle – blue box".
               </span>
             </label>
+
+            {targets.length > 0 && (
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">Group</span>
+                <select
+                  name="group"
+                  value={groupId}
+                  onChange={(e) => setGroupId(e.target.value)}
+                  className="min-h-12 rounded-xl bg-white px-4 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+                >
+                  <option value="">None (only people you invite)</option>
+                  {targets.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Everyone in the group gets access to this set.
+                </span>
+              </label>
+            )}
 
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>

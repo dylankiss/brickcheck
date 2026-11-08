@@ -16,6 +16,20 @@ export default function MySets() {
   const { sets, error } = useMySets();
   const { profile } = useAuth();
   const [enlarged, setEnlarged] = useState<Picture | null>(null);
+  // "all", "none" (Sets in no Group) or a Group id.
+  const [filter, setFilter] = useState("all");
+  const groupOptions = [
+    ...new Map(
+      (sets ?? [])
+        .filter((c) => c.group_id && c.group_name)
+        .map((c) => [c.group_id!, c.group_name!]),
+    ),
+  ].sort((a, b) => a[1].localeCompare(b[1]));
+  const shown = (sets ?? []).filter(
+    (c) =>
+      filter === "all" ||
+      (filter === "none" ? !c.group_id : c.group_id === filter),
+  );
 
   return (
     <>
@@ -59,7 +73,33 @@ export default function MySets() {
             <span aria-hidden>›</span>
           </Link>
         )}
-        {sets?.map((set) => (
+        {groupOptions.length > 0 && (
+          <label className="flex items-center gap-2 text-sm">
+            <span className="font-medium">Group</span>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+            >
+              <option value="all">All sets</option>
+              <option value="none">Not in a group</option>
+              {groupOptions.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {sets && sets.length > 0 && shown.length === 0 && (
+          <p
+            role="status"
+            className="py-8 text-center text-neutral-500 dark:text-neutral-400"
+          >
+            No sets in this group.
+          </p>
+        )}
+        {shown.map((set) => (
           // The whole card opens the set; the picture on top of it (a sibling, not nested) enlarges.
           <div key={set.id} className="relative">
             <Link
@@ -72,10 +112,17 @@ export default function MySets() {
                   {set.title === set.catalog_name
                     ? set.set_num
                     : `${set.set_num} · ${set.catalog_name}`}
-                  {set.group_name
-                    ? ` · ${set.group_name}`
-                    : set.my_role !== "owner" && " · shared with you"}
+                  {!set.group_name &&
+                    set.my_role !== "owner" &&
+                    " · shared with you"}
                 </p>
+                {set.group_name && (
+                  <p className="mt-1">
+                    <span className="inline-block rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                      Group: {set.group_name}
+                    </span>
+                  </p>
+                )}
                 <div className="mt-2 flex items-center gap-2">
                   <ProgressBar
                     found={set.found}
