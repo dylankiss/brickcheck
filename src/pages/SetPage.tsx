@@ -69,7 +69,7 @@ export default function SetPage() {
 
   return (
     <>
-      <Header title={summary!.title} back="/sets">
+      <Header title={summary!.title} back="/sets" hideOnScroll>
         <div className="flex items-center gap-3 pb-2">
           <Link
             to={`/sets/${setId}/manage`}

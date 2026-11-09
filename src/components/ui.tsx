@@ -7,6 +7,7 @@ import {
   type SelectHTMLAttributes,
 } from "react";
 import { Link } from "react-router";
+import { useHideOnScroll } from "../hooks/useHideOnScroll";
 import { useLanguage } from "../hooks/useLanguage";
 import { OfflineBanner } from "./OfflineBanner";
 
@@ -63,13 +64,17 @@ export function Button({
 export function Header({
   title,
   back,
+  hideOnScroll = false,
   children,
 }: {
   title: ReactNode;
   back?: string;
+  /** Slide the header out of view while scrolling down. A button brings it back; so does the top of the page. */
+  hideOnScroll?: boolean;
   children?: ReactNode;
 }) {
   const { t } = useLanguage();
+  const { hidden, show } = useHideOnScroll(hideOnScroll);
   // A new page moves focus to its heading, so screen readers announce it and
   // keyboard users start at the top. A field that took focus itself (the
   // catalog search) keeps it.
@@ -86,28 +91,46 @@ export function Header({
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
-      <OfflineBanner />
-      <div className="flex min-h-14 items-center gap-2">
-        {back && (
-          <Link
-            to={back}
-            className="-ml-2 flex size-11 items-center justify-center rounded-full text-2xl"
-            aria-label={t("common.back")}
+    <>
+      <header
+        // Out of view means out of reach too: no tabbing into a hidden header.
+        inert={hidden}
+        className={`sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95 ${
+          hideOnScroll ? "transition-transform duration-200" : ""
+        } ${hidden ? "-translate-y-full" : ""}`}
+      >
+        <OfflineBanner />
+        <div className="flex min-h-14 items-center gap-2">
+          {back && (
+            <Link
+              to={back}
+              className="-ml-2 flex size-11 items-center justify-center rounded-full text-2xl"
+              aria-label={t("common.back")}
+            >
+              ‹
+            </Link>
+          )}
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="min-w-0 flex-1 truncate text-lg font-bold outline-none"
           >
-            ‹
-          </Link>
-        )}
-        <h1
-          ref={heading}
-          tabIndex={-1}
-          className="min-w-0 flex-1 truncate text-lg font-bold outline-none"
+            {title}
+          </h1>
+        </div>
+        {children}
+      </header>
+      {hidden && (
+        <button
+          type="button"
+          onClick={show}
+          className="fixed right-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 flex size-12 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg dark:bg-white dark:text-neutral-900"
+          aria-label={t("common.showFilters")}
         >
-          {title}
-        </h1>
-      </div>
-      {children}
-    </header>
+          <SearchIcon />
+        </button>
+      )}
+    </>
   );
 }
 
@@ -233,6 +256,23 @@ function BrickIcon({ className = "" }: { className?: string }) {
 
 /** Two people: the link to who is on a Set, shown while nobody else is online. */
 /** Sliders: the entry to a set's management page (members, invites, reset, delete). */
+export function SearchIcon({ className = "size-6" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className={className}
+      aria-hidden
+    >
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="M15 15l5 5" />
+    </svg>
+  );
+}
+
 export function SettingsIcon({ className = "size-6" }: { className?: string }) {
   return (
     <svg
