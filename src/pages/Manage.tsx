@@ -5,6 +5,7 @@ import { Button, ErrorBanner, Header, Select, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useSetContext } from "../hooks/useSetContext";
 import { useGroups } from "../hooks/useGroups";
+import { useLanguage } from "../hooks/useLanguage";
 import { useMembers } from "../hooks/useMembers";
 import { inviteUrl } from "../lib/api";
 import { shareLink } from "../lib/share";
@@ -18,6 +19,7 @@ const roleLabel = {
 
 export default function Manage() {
   const navigate = useNavigate();
+  const { date } = useLanguage();
   const { session } = useAuth();
   const { setId, summary, version, online, members, reloadMembers } =
     useSetContext();
@@ -144,8 +146,7 @@ export default function Manage() {
                     className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800"
                   >
                     <span className="flex-1">
-                      {roleLabel[i.role]} link · expires{" "}
-                      {new Date(i.expires_at).toLocaleDateString()}
+                      {roleLabel[i.role]} link · expires {date(i.expires_at)}
                     </span>
                     <button
                       className="min-h-11 px-2 font-semibold text-brick"

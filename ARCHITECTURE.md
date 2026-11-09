@@ -286,6 +286,8 @@ src/
   lib/types.ts      domain types shared by api, hooks and UI
   lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
   lib/theme.ts      light/dark preference (localStorage) and the `dark` class
+  lib/i18n.ts       translations: t(), plurals, language choice, date and number formats (unit-tested)
+  lib/messages/     the texts: en/<area>.ts (source), nl/<area>.ts (translation), one index each
   hooks/            React state built on lib/api and lib/theme (useAuth, useSet, useTheme, ...);
                     useCaptcha wraps the Turnstile widget and token lifecycle
   pages/            route components
@@ -346,6 +348,38 @@ src/
   system setting unless the user picks Light or Dark (the button on the start screen),
   a per-device preference in `localStorage`. `public/theme-init.js` (a blocking script
   in `index.html`) applies it before the first paint; `lib/theme.ts` keeps it applied.
+- **Languages** (English and Dutch; `lib/i18n.ts`, `lib/messages/`): no library.
+  English is the source. `messages/en/<area>.ts` defines every key (`area.screen.item`,
+  e.g. `account.name.label`), grouped by screen or area, one file per area, merged in
+  `en/index.ts`; `messages/nl/` mirrors it, and its type (`Messages`) fails the build
+  when a key has no Dutch text. Add texts to your own area's file only (new area:
+  one file in each folder plus one import and spread line in each index). A text is a
+  string with `{placeholders}`, or a plural object (`{ one, other }`, the forms
+  `Intl.PluralRules` needs for the language) that needs a `count` param. Components
+  call `const { t, date, number } = useLanguage()` and write `t("account.save")`,
+  `t("sets.count", { count })`; never build "1 set" / "2 sets" by hand, and never
+  translate Rebrickable names (set, part, color, minifigure). `date()` and `number()`
+  format for the language (`en-GB` and `nl-NL` locales); no `toLocaleDateString()`.
+  **Punctuation**: a text that is a sentence (a hint, a message, a question)
+  ends with a full stop, `?` or `!`, in every language. Titles, labels, buttons,
+  placeholders, short status lines and fragments (a list such as "Heads, torsos,
+  legs") do not. Error texts follow the same rule, each on its own merits:
+  "Only an owner can delete the group." is a sentence, "Invalid delta" a fragment,
+  and a Dutch text is judged as Dutch ("Je bent niet ingelogd." for the fragment
+  "Not logged in"). No semicolons in a text: use two sentences.
+  A key missing in a language shows the English text. Each language is one lazily
+  loaded chunk (`import("./messages/nl")`), precached by the service worker (the
+  `js` glob). `LanguageProvider` (in `main.tsx`, around the app) loads the chunk of
+  the language before the first render, keeps `<html lang>` in step and updates every
+  screen on a change without reload; code outside React (`lib/parts.ts`) reads
+  `getActiveLanguage()`. The language is the saved choice (`localStorage` key
+  `language`, set by the picker on the Account page, per device) or else the browser's
+  (Dutch if it starts with `nl`, otherwise English). The picker lists each language
+  in its own name. The PWA manifest stays English, and the e2e flow pins its browser
+  locale to `en`. Tests (`lib/i18n.test.ts`) check plurals, fallback, language choice
+  and key and placeholder parity of English and Dutch. To add a language: a
+  `messages/<lang>/` folder, a `LANGUAGES` and `loadMessages` entry in `lib/i18n.ts`,
+  a locale in `LOCALES`, and its parity test case.
 - **Errors**: routes have an error page with a Reload button, and a failed
   lazy chunk load (after a deploy) reloads the page into the new version.
 - Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
@@ -587,7 +621,7 @@ Met, so keep it that way:
 - Security headers include an enforced Content-Security-Policy (see Security
   rules). The Cloudflare Turnstile frame logs its own CSP and `eval` errors in
   the console; they come from Cloudflare's page, not from ours.
-- No cookies or tracking. `localStorage` only holds the theme.
+- No cookies or tracking. `localStorage` only holds the theme and the language.
 
 Gaps, highest impact first:
 

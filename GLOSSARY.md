@@ -95,3 +95,15 @@ The words above are the English source. Each language keeps the same meanings an
 | Viewer   | kijker      |
 | Invite   | uitnodiging |
 | Group    | groep       |
+
+Words chosen while translating the interface (not domain terms):
+
+| English  | Dutch       |
+| -------- | ----------- |
+| Account  | account     |
+| Language | taal        |
+| Passkey  | passkey     |
+| Email    | e-mail      |
+| Sign out | uitloggen   |
+| Save     | opslaan     |
+| Remove   | verwijderen |
