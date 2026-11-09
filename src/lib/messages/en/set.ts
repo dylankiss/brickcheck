@@ -23,6 +23,7 @@ export const set = {
   "set.viewOnly": "You can view this set but not change it.",
   "set.allFound": "All pieces found! 🎉",
   "set.noMatch": "No parts match the filter.",
+  "set.updateOrder": "Update order",
 
   // Filter bar
   "set.filter.search": "Search parts",

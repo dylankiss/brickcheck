@@ -448,11 +448,12 @@ src/
     one held is ignored.
   - A failed call drops its delta, shows the error and refetches progress.
 - **Stable layout**: the grid's order and filtering are computed from a
-  snapshot of the parts, which is refreshed 1.5 s after the last change (at
-  most 5 s after the first deferred one), or at once when the filter or sort
-  changes. Cards don't jump under your thumb while you tap. `PartCard`
-  re-renders only when its counts change.
-
+  snapshot of the parts. Cards never move on their own: a completed card stays
+  where it is (green, dimmed) so a tap always lands on the card you aimed at,
+  also after a pause. The snapshot is refreshed when the filter or sort
+  changes, when the number of parts changes (first load), or when the user
+  presses "Update order", a floating button that appears only while a fresh
+  layout would differ. `PartCard` re-renders only when its counts change.
 - **Color filter** (`ColorFilter`): one button showing the chosen color, which
   opens a full-screen native `<dialog>` with a swatch grid and a search by
   name; a ✕ next to the button clears it. The Set page and Missing in all sets
