@@ -11,6 +11,7 @@ import { NamePrompt } from "./components/NamePrompt";
 import { Spinner } from "./components/ui";
 import { UpdatePrompt } from "./components/UpdatePrompt";
 import { useAuth } from "./hooks/useAuth";
+import { useLanguage } from "./hooks/useLanguage";
 import Home from "./pages/Home";
 import MySets from "./pages/MySets";
 import Login from "./pages/Login";
@@ -30,6 +31,7 @@ const Account = lazy(() => import("./pages/Account"));
 function RequireAuth() {
   const { session, profile, profileError, refreshProfile, loading } = useAuth();
   const location = useLocation();
+  const { t } = useLanguage();
   if (loading) {
     return <Spinner />;
   }
@@ -47,13 +49,15 @@ function RequireAuth() {
   if (profileError) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 p-4 text-center">
-        <p className="text-lg font-semibold">Couldn't load your account.</p>
+        <p className="text-lg font-semibold">
+          {t("common.profileError.title")}
+        </p>
         <p className="text-neutral-500 dark:text-neutral-400">{profileError}</p>
         <button
           className="min-h-11 rounded-xl bg-brick px-4 font-semibold text-white"
           onClick={() => refreshProfile()}
         >
-          Try again
+          {t("common.tryAgain")}
         </button>
       </main>
     );
@@ -73,17 +77,18 @@ function RequireAuth() {
 window.addEventListener("vite:preloadError", () => window.location.reload());
 
 function RouteError() {
+  const { t } = useLanguage();
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 p-4 text-center">
-      <p className="text-lg font-semibold">Something went wrong.</p>
+      <p className="text-lg font-semibold">{t("common.routeError.title")}</p>
       <p className="text-neutral-500 dark:text-neutral-400">
-        BrickCheck may have just been updated.
+        {t("common.routeError.hint")}
       </p>
       <button
         className="min-h-11 rounded-xl bg-brick px-4 font-semibold text-white"
         onClick={() => window.location.reload()}
       >
-        Reload
+        {t("common.routeError.reload")}
       </button>
     </main>
   );

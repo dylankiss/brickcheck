@@ -1,4 +1,6 @@
+import { useLanguage } from "../hooks/useLanguage";
 import { useTheme } from "../hooks/useTheme";
+import type { MessageKey } from "../lib/i18n";
 import type { Theme } from "../lib/theme";
 
 const NEXT: Record<Theme, Theme> = {
@@ -6,21 +8,25 @@ const NEXT: Record<Theme, Theme> = {
   light: "dark",
   dark: "system",
 };
-const LABEL: Record<Theme, string> = {
-  system: "System",
-  light: "Light",
-  dark: "Dark",
+const LABEL: Record<Theme, MessageKey> = {
+  system: "common.theme.system",
+  light: "common.theme.light",
+  dark: "common.theme.dark",
 };
 
 /** Cycles the theme: system → light → dark. */
 export function ThemeButton() {
+  const { t } = useLanguage();
   const [theme, setTheme] = useTheme();
   return (
     <button
       type="button"
       onClick={() => setTheme(NEXT[theme])}
       className="flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm text-neutral-500 dark:text-neutral-400"
-      aria-label={`Theme: ${LABEL[theme]}. Switch to ${LABEL[NEXT[theme]]}.`}
+      aria-label={t("common.theme.label", {
+        current: t(LABEL[theme]),
+        next: t(LABEL[NEXT[theme]]),
+      })}
     >
       <svg
         viewBox="0 0 24 24"
@@ -47,7 +53,7 @@ export function ThemeButton() {
           </>
         )}
       </svg>
-      {LABEL[theme]}
+      {t(LABEL[theme])}
     </button>
   );
 }
