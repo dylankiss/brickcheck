@@ -7,7 +7,7 @@ export const sets = {
 
   "sets.home.mySets": "My sets",
   "sets.home.groups": "Groups",
-  "sets.home.missingCard": "Found a piece? See where it goes",
+  "sets.home.missingCard": "Where does this piece go?",
   "sets.home.noSets": "No sets yet",
   "sets.home.allComplete": "{sets}, all complete",
   "sets.home.someIncomplete": "{sets}, {count} not complete",
