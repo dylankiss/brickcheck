@@ -46,7 +46,7 @@ export default function MissingAcrossSets() {
   return (
     <>
       <Header title={t("set.missingAll.title")} back="/">
-        <div className="flex flex-col gap-2 pb-3">
+        <div className="flex gap-2 pb-3">
           <input
             name="part-search"
             type="search"
@@ -54,7 +54,7 @@ export default function MissingAcrossSets() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("set.filter.search")}
             aria-label={t("set.filter.searchLabel")}
-            className="min-h-11 w-full rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+            className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
           {colors.length > 0 && (
             <ColorFilter
