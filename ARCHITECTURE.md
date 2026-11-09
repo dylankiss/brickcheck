@@ -257,9 +257,10 @@ and groups them by part and color.
 | Path                 | Page              | Notes                                                                                                                                                                                                                                                                                                               |
 | -------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/login`             | Login             | magic link, 6-digit code, passkey, or Google; returns to the requested path                                                                                                                                                                                                                                         |
-| `/`                  | MySets            | my sets, with a Group label and a Group filter; asks email users for a display name once                                                                                                                                                                                                                            |
+| `/`                  | Home              | the start screen: cards for My sets, Groups and "Found a piece?", each with a status line; the avatar (Account) and theme button; asks email users for a display name once                                                                                                                                          |
+| `/sets`              | MySets            | my sets, with a Group label and a Group filter                                                                                                                                                                                                                                                                      |
 | `/groups`            | Groups            | create, list and rename (Owners) your Groups, show their members and roles, change roles, promote and remove members (Owners), create and revoke Group invites (Owners), leave (with a warning listing the Sets you added and a Move out button for each) and delete (Owners, only when empty); linked from My sets |
-| `/account`           | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on My sets                                                                                                                                                                                                        |
+| `/account`           | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on the start screen                                                                                                                                                                                               |
 | `/missing`           | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)                                                                                                                                                                                                                  |
 | `/new`               | AddSet            | catalog search → `fetch-set` → create set, with an optional Group (where you are Owner or Helper)                                                                                                                                                                                                                   |
 | `/join/:token`       | Join              | invite preview → `accept_invite`                                                                                                                                                                                                                                                                                    |
@@ -315,6 +316,15 @@ src/
   option, and AddSet drops a chosen Group that is no longer a valid target.
   JoinGroup shows "invalid or expired" only when the invite is not found; other
   errors get their own message and a retry button.
+- **Start screen** (`/`): login and the "page not found" fallback land here.
+  Its three cards link to My sets (`/sets`), Groups and Missing in all sets, and
+  show a status line built from data the app already loads (`useMySets`,
+  `useGroups`), so it needs no new queries. Back arrows go to the screen you
+  came from: Groups, Missing in all sets, Account and the join pages go back to
+  the start screen; Add a set and the Set pages go back to My sets.
+- **Selects** use `Select` (`components/ui.tsx`), which sets a fixed height and
+  draws its own arrow: iOS Safari ignores `min-height` on a native select and
+  draws it too short for the 44px touch target.
 - **My sets keeps its last list** in memory, per user (`useMySets`). Coming back
   to the page shows it at once and refreshes it in the background, so there is no
   spinner on a revisit. Pictures are never cached by the app: the browser's HTTP
@@ -333,7 +343,7 @@ src/
   `BRICKCHECK_SECRET_KEY` and `ALLOWED_ORIGINS` (comma-separated, `*`
   wildcards).
 - **Theme**: `dark:` styles follow a `dark` class on `<html>`. It follows the
-  system setting unless the user picks Light or Dark (the button on My sets),
+  system setting unless the user picks Light or Dark (the button on the start screen),
   a per-device preference in `localStorage`. `public/theme-init.js` (a blocking script
   in `index.html`) applies it before the first paint; `lib/theme.ts` keeps it applied.
 - **Errors**: routes have an error page with a Reload button, and a failed
@@ -445,7 +455,7 @@ src/
   with rounded corners, plus full-bleed `apple-touch-icon.png` and
   `maskable-512x512.png`, which iOS and Android mask themselves. The logo
   fits Android's safe zone at full size.
-- Routes other than login and My sets are lazy-loaded. React and Supabase
+- Routes other than login, the start screen and My sets are lazy-loaded. React and Supabase
   are separate chunks, so an app update only re-downloads app code.
 
 ## Code style

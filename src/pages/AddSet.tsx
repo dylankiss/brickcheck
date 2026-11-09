@@ -6,7 +6,7 @@ import {
   EnlargedPicture,
 } from "../components/EnlargedPicture";
 import { catalogSetPicture, type Picture } from "../components/pictures";
-import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
+import { Button, ErrorBanner, Header, Select, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useCatalogSearch } from "../hooks/useCatalogSearch";
 import { useGroups } from "../hooks/useGroups";
@@ -65,7 +65,7 @@ export default function AddSet() {
 
   return (
     <>
-      <Header title="Add a set" back="/" />
+      <Header title="Add a set" back="/sets" />
       {error && <ErrorBanner message={error} onClose={() => setError(null)} />}
       <main className="mx-auto max-w-2xl p-4">
         {!catalogSet ? (
@@ -128,11 +128,12 @@ export default function AddSet() {
             {targets.length > 0 && (
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Group</span>
-                <select
+                <Select
                   name="group"
+                  tall
                   value={groupId}
                   onChange={(e) => setGroupId(e.target.value)}
-                  className="min-h-12 rounded-xl bg-white px-4 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+                  className="w-full"
                 >
                   <option value="">None (only people you invite)</option>
                   {targets.map((g) => (
@@ -140,7 +141,7 @@ export default function AddSet() {
                       {g.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
                   Everyone in the group gets access to this set.
                 </span>

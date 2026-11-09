@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Avatar } from "../components/Avatar";
-import { ThemeButton } from "../components/ThemeButton";
 import {
   EnlargeableThumbnail,
   EnlargedPicture,
 } from "../components/EnlargedPicture";
 import { setPicture, type Picture } from "../components/pictures";
-import { ErrorBanner, Header, ProgressBar, Spinner } from "../components/ui";
-import { useAuth } from "../hooks/useAuth";
+import {
+  ErrorBanner,
+  Header,
+  ProgressBar,
+  Select,
+  Spinner,
+} from "../components/ui";
 import { useMySets } from "../hooks/useMySets";
-import { isComplete } from "../lib/parts";
 
 export default function MySets() {
   const { sets, error } = useMySets();
-  const { profile } = useAuth();
   const [enlarged, setEnlarged] = useState<Picture | null>(null);
   // "all", "none" (Sets in no Group) or a Group id.
   const [filter, setFilter] = useState("all");
@@ -40,22 +41,7 @@ export default function MySets() {
 
   return (
     <>
-      <Header title="My sets">
-        <div className="absolute top-[calc(env(safe-area-inset-top)+0.375rem)] right-2 flex items-center">
-          <ThemeButton />
-          <Link
-            to="/account"
-            className="flex min-h-11 min-w-11 items-center justify-center"
-            aria-label="Account"
-          >
-            <Avatar
-              name={profile?.display_name ?? null}
-              url={profile?.avatar_url}
-              size="size-8"
-            />
-          </Link>
-        </div>
-      </Header>
+      <Header title="My sets" back="/" />
       {error && <ErrorBanner message={error} />}
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-28">
         {!sets && !error && <Spinner />}
@@ -64,29 +50,13 @@ export default function MySets() {
             No sets yet. Add one and start checking.
           </p>
         )}
-        <Link
-          to="/groups"
-          className="flex min-h-11 items-center justify-between rounded-2xl px-3 text-sm font-semibold text-brick ring-1 ring-brick"
-        >
-          Groups
-          <span aria-hidden>›</span>
-        </Link>
-        {sets?.some((c) => !isComplete(c)) && (
-          <Link
-            to="/missing"
-            className="flex min-h-11 items-center justify-between rounded-2xl px-3 text-sm font-semibold text-brick ring-1 ring-brick"
-          >
-            Found a piece? See where it goes
-            <span aria-hidden>›</span>
-          </Link>
-        )}
         {groupOptions.length > 0 && (
           <label className="flex items-center gap-2 text-sm">
             <span className="font-medium">Group</span>
-            <select
+            <Select
               value={activeFilter}
               onChange={(e) => setFilter(e.target.value)}
-              className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+              className="min-w-0 flex-1"
             >
               <option value="all">All sets</option>
               <option value="none">Not in a group</option>
@@ -95,7 +65,7 @@ export default function MySets() {
                   {name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         {sets && sets.length > 0 && shown.length === 0 && (

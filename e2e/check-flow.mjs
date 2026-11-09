@@ -159,9 +159,10 @@ try {
   const a = await loginPage(browser, `alice${Date.now()}@example.com`, {
     name: "Alice",
   });
-  ok(true, "magic link logs in and lands on My sets");
+  ok(true, "magic link logs in and lands on the start screen");
 
   // New set
+  await a.getByRole("link", { name: /My sets/ }).click();
   await a.getByText("+ Add a set").click();
   await a
     .getByPlaceholder("Set number or name")
@@ -351,12 +352,13 @@ try {
   ok(true, "a removed member cannot rejoin with the old link");
 
   // My sets list
-  await a.goto(`${APP}/`);
+  await a.goto(`${APP}/sets`);
   await a.getByText("8/11").waitFor();
   await a.screenshot({ path: `${OUT}/5-sets.png` });
   ok(true, "My sets shows progress");
 
   // Missing in all sets: see where a found piece goes and tick it off there
+  await a.goto(`${APP}/`);
   await a.getByRole("link", { name: /See where it goes/ }).click();
   const foundOne = a.getByRole("button", {
     name: `Found one Brick 2 x 4, Red for Demo Castle ${SET_NUM.slice(-4)}`,

@@ -11,6 +11,7 @@ import { NamePrompt } from "./components/NamePrompt";
 import { Spinner } from "./components/ui";
 import { UpdatePrompt } from "./components/UpdatePrompt";
 import { useAuth } from "./hooks/useAuth";
+import Home from "./pages/Home";
 import MySets from "./pages/MySets";
 import Login from "./pages/Login";
 
@@ -94,7 +95,8 @@ const router = createBrowserRouter([
     element: <RequireAuth />,
     errorElement: <RouteError />,
     children: [
-      { path: "/", element: <MySets /> },
+      { path: "/", element: <Home /> },
+      { path: "/sets", element: <MySets /> },
       { path: "/new", element: <AddSet /> },
       { path: "/missing", element: <MissingAcrossSets /> },
       { path: "/groups", element: <Groups /> },

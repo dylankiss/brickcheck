@@ -75,7 +75,7 @@ export default function SetPage() {
 
   return (
     <>
-      <Header title={summary!.title} back="/">
+      <Header title={summary!.title} back="/sets">
         <div className="flex items-center gap-3 pb-2">
           <Link
             to={`/sets/${setId}/manage`}

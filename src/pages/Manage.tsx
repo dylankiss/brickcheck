@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Avatar } from "../components/Avatar";
-import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
+import { Button, ErrorBanner, Header, Select, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useSetContext } from "../hooks/useSetContext";
 import { useGroups } from "../hooks/useGroups";
@@ -81,7 +81,7 @@ export default function Manage() {
       return;
     }
     if (await (isOwner ? deleteSet() : leave())) {
-      navigate("/", { replace: true });
+      navigate("/sets", { replace: true });
     }
   }
 
@@ -186,11 +186,11 @@ export default function Manage() {
                   Put this set in a group to share it with everyone in it.
                 </p>
                 <div className="flex gap-2">
-                  <select
+                  <Select
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     aria-label="Group to move this set into"
-                    className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+                    className="min-w-0 flex-1"
                   >
                     <option value="">Choose a group</option>
                     {targets.map((g) => (
@@ -198,7 +198,7 @@ export default function Manage() {
                         {g.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <Button onClick={moveIn} disabled={!target}>
                     Move in
                   </Button>

@@ -1,5 +1,6 @@
 import type { PartColor, SortMode, PartFilter } from "../lib/parts";
 import { Chip, ColorChips } from "./ColorChips";
+import { Select } from "./ui";
 
 interface Props {
   filter: PartFilter;
@@ -28,16 +29,15 @@ export function FilterBar({
           aria-label="Search parts by name, number or color"
           className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
         />
-        <select
+        <Select
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortMode)}
-          className="min-h-11 rounded-xl bg-white px-2 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           aria-label="Sort by"
         >
           <option value="color">Color</option>
           <option value="part">Part</option>
           <option value="missing">Most missing</option>
-        </select>
+        </Select>
       </div>
       <ColorChips
         colors={colors}
