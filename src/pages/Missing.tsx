@@ -4,6 +4,7 @@ import {
   EnlargedPart,
 } from "../components/EnlargedPicture";
 import { Button, ColorSwatch, Header } from "../components/ui";
+import { useLanguage } from "../hooks/useLanguage";
 import { useSetContext } from "../hooks/useSetContext";
 import {
   missingParts,
@@ -23,6 +24,7 @@ function download(filename: string, content: string, type: string) {
 }
 
 export default function Missing() {
+  const { t } = useLanguage();
   const { setId, summary: set, parts } = useSetContext();
   const summary = set!;
   const missing = useMemo(() => missingParts(parts), [parts]);
@@ -33,17 +35,22 @@ export default function Missing() {
   const base = `${summary.set_num}-missing`;
   return (
     <>
-      <Header title={`Missing · ${summary.title}`} back={`/sets/${setId}`} />
+      <Header
+        title={t("set.missing.title", { title: summary.title })}
+        back={`/sets/${setId}`}
+      />
       <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
         {missing.length === 0 ? (
           <p className="py-12 text-center text-lg">
-            Nothing is missing. This set is complete! 🎉
+            {t("set.missing.complete")}
           </p>
         ) : (
           <>
             <p className="text-neutral-500 dark:text-neutral-400">
-              {total} {total === 1 ? "piece" : "pieces"} in {missing.length}{" "}
-              {missing.length === 1 ? "part" : "parts"} still to find.
+              {t("set.missing.summary", {
+                pieces: t("set.count.pieces", { count: total }),
+                parts: t("set.count.parts", { count: missing.length }),
+              })}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -52,7 +59,7 @@ export default function Missing() {
                   download(`${base}.csv`, toRebrickableCsv(missing), "text/csv")
                 }
               >
-                Rebrickable CSV
+                {t("set.missing.csv")}
               </Button>
               <Button
                 variant="secondary"
@@ -60,13 +67,12 @@ export default function Missing() {
                   download(`${base}.xml`, bricklink.xml, "application/xml")
                 }
               >
-                BrickLink wanted list
+                {t("set.missing.bricklink")}
               </Button>
             </div>
             {bricklink.skipped.length > 0 && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                {bricklink.skipped.length} part(s) have no BrickLink id and are
-                left out of the BrickLink file.
+                {t("set.missing.skipped", { count: bricklink.skipped.length })}
               </p>
             )}
             <ul className="flex flex-col gap-2">

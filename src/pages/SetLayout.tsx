@@ -1,6 +1,7 @@
 import { Outlet, useParams } from "react-router";
 import { ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../hooks/useLanguage";
 import { useSet } from "../hooks/useSet";
 import { SetContext } from "../hooks/useSetContext";
 
@@ -12,17 +13,18 @@ export default function SetLayoutRoute() {
 
 function SetLayout({ setId }: { setId: string }) {
   const { session } = useAuth();
+  const { t } = useLanguage();
   const set = useSet(setId, session!.user.id);
 
   if (set.status === "loading") {
-    return <Spinner label="Loading parts…" />;
+    return <Spinner label={t("set.loading")} />;
   }
   if (set.status === "not-found") {
     return (
       <>
-        <Header title="Set not found" back="/sets" />
+        <Header title={t("set.notFound.title")} back="/sets" />
         <p className="p-8 text-center text-neutral-500 dark:text-neutral-400">
-          This set doesn't exist or isn't shared with you.
+          {t("set.notFound.text")}
         </p>
       </>
     );
@@ -31,7 +33,7 @@ function SetLayout({ setId }: { setId: string }) {
     return (
       <>
         <Header title="BrickCheck" back="/sets" />
-        <ErrorBanner message={set.error ?? "Could not load this set"} />
+        <ErrorBanner message={set.error ?? t("set.loadError")} />
       </>
     );
   }

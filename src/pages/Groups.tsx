@@ -4,6 +4,7 @@ import { GroupInvites } from "../components/GroupInvites";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useGroups } from "../hooks/useGroups";
+import { useLanguage } from "../hooks/useLanguage";
 import {
   deleteGroup,
   leaveGroup,
@@ -15,13 +16,14 @@ import {
 } from "../lib/api";
 import type { Group, GroupMember } from "../lib/types";
 
-const roleLabel = {
-  owner: "Owner",
-  helper: "Helper",
-  viewer: "Viewer",
+const roleKey = {
+  owner: "groups.role.owner",
+  helper: "groups.role.helper",
+  viewer: "groups.role.viewer",
 } as const;
 
 export default function Groups() {
+  const { t } = useLanguage();
   const { session } = useAuth();
   const { groups, error, clearError, create, rename, reload } = useGroups(
     session!.user.id,
@@ -37,7 +39,7 @@ export default function Groups() {
 
   return (
     <>
-      <Header title="Groups" back="/" />
+      <Header title={t("groups.title")} back="/" />
       {error && <ErrorBanner message={error} onClose={clearError} />}
       <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
         <form onSubmit={submit} className="flex gap-2">
@@ -45,18 +47,18 @@ export default function Groups() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
-            placeholder="New group name"
-            aria-label="New group name"
+            placeholder={t("groups.newName")}
+            aria-label={t("groups.newName")}
             className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
           <Button type="submit" disabled={!name.trim()}>
-            Create
+            {t("groups.create")}
           </Button>
         </form>
         {!groups && !error && <Spinner />}
         {groups?.length === 0 && (
           <p className="py-8 text-center text-neutral-500 dark:text-neutral-400">
-            No groups yet. Create one to share many sets with the same people.
+            {t("groups.none")}
           </p>
         )}
         <ul className="flex flex-col gap-3">
@@ -86,6 +88,7 @@ function GroupCard({
   reload: () => Promise<unknown>;
   rename: (groupId: string, name: string) => Promise<boolean>;
 }) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(group.name);
   const [members, setMembers] = useState<GroupMember[] | null>(null);
@@ -127,11 +130,7 @@ function GroupCard({
   }
 
   async function removeGroup() {
-    if (
-      !window.confirm(
-        `Delete "${group.name}"? This removes the group and its member list. Sets are not affected, because a group with sets can't be deleted.`,
-      )
-    ) {
+    if (!window.confirm(t("groups.deleteConfirm", { name: group.name }))) {
       return;
     }
     try {
@@ -169,11 +168,11 @@ function GroupCard({
   }
 
   function remove(m: GroupMember) {
-    const name = m.display_name || "this member";
+    const name = m.display_name || t("groups.member.thisMember");
     const question =
       m.user_id === me
-        ? `Remove yourself from "${group.name}"? You will lose access to its sets, including ones you added; they stay in the group.`
-        : `Remove ${name} from "${group.name}"? They lose access to its sets, including ones they added; the sets stay in the group. Links you sent before won't let them back in.`;
+        ? t("groups.member.removeSelfConfirm", { group: group.name })
+        : t("groups.member.removeConfirm", { name, group: group.name });
     if (window.confirm(question)) {
       void changeMember(() => removeGroupMember(group.id, m.user_id));
     }
@@ -194,11 +193,11 @@ function GroupCard({
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
-            aria-label={`New name for ${group.name}`}
+            aria-label={t("groups.newNameFor", { name: group.name })}
             className="min-h-11 min-w-0 flex-1 rounded-xl bg-transparent px-3 ring-1 ring-neutral-300 dark:ring-neutral-700"
           />
           <Button type="submit" disabled={!name.trim()}>
-            Save
+            {t("groups.save")}
           </Button>
           <Button
             type="button"
@@ -208,7 +207,7 @@ function GroupCard({
               setEditing(false);
             }}
           >
-            Cancel
+            {t("groups.cancel")}
           </Button>
         </form>
       ) : (
@@ -216,16 +215,16 @@ function GroupCard({
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{group.name}</p>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Your role: {roleLabel[group.my_role]}
+              {t("groups.yourRole", { role: t(roleKey[group.my_role]) })}
             </p>
           </div>
           {isOwner && (
             <button
               className="min-h-11 px-2 font-semibold text-brick"
               onClick={() => setEditing(true)}
-              aria-label={`Rename ${group.name}`}
+              aria-label={t("groups.renameLabel", { name: group.name })}
             >
-              Rename
+              {t("groups.rename")}
             </button>
           )}
           <button
@@ -233,7 +232,7 @@ function GroupCard({
             onClick={toggleMembers}
             aria-expanded={members !== null}
           >
-            Members
+            {t("groups.members")}
           </button>
         </div>
       )}
@@ -242,38 +241,32 @@ function GroupCard({
           className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
           onClick={() => void startLeaving()}
           aria-expanded={leaving !== null}
-          aria-label={`Leave ${group.name}`}
+          aria-label={t("groups.leaveLabel", { name: group.name })}
         >
-          Leave
+          {t("groups.leave")}
         </button>
         {isOwner && (
           <button
             className="min-h-11 px-2 text-sm text-red-700 dark:text-red-300"
             onClick={() => void removeGroup()}
-            aria-label={`Delete ${group.name}`}
+            aria-label={t("groups.deleteLabel", { name: group.name })}
           >
-            Delete
+            {t("groups.delete")}
           </button>
         )}
       </div>
       {leaving && (
         <section
-          aria-label={`Leave ${group.name}`}
+          aria-label={t("groups.leaveLabel", { name: group.name })}
           className="flex flex-col gap-2 rounded-xl bg-neutral-100 p-3 dark:bg-neutral-800"
         >
           <p>
-            Leave &quot;{group.name}&quot;? You will lose access to its sets.
-            {isOwner && " A group needs at least one owner."}
+            {t("groups.leave.question", { name: group.name })}
+            {isOwner && ` ${t("groups.leave.lastOwner")}`}
           </p>
           {leaving.length > 0 ? (
             <>
-              <p>
-                You added {leaving.length === 1 ? "this set" : "these sets"}. If
-                you leave anyway,{" "}
-                {leaving.length === 1 ? "it stays" : "they stay"} in the group
-                and you lose access. Move out first to keep{" "}
-                {leaving.length === 1 ? "it" : "them"}.
-              </p>
+              <p>{t("groups.leave.added", { count: leaving.length })}</p>
               <ul className="flex flex-col gap-1">
                 {leaving.map((set) => (
                   <li key={set.id} className="flex items-center gap-2">
@@ -281,9 +274,12 @@ function GroupCard({
                     <button
                       className="min-h-11 px-2 text-sm font-semibold text-brick"
                       onClick={() => void moveOut(set.id)}
-                      aria-label={`Move ${set.title} out of ${group.name}`}
+                      aria-label={t("groups.leave.moveOutLabel", {
+                        title: set.title,
+                        name: group.name,
+                      })}
                     >
-                      Move out
+                      {t("groups.leave.moveOut")}
                     </button>
                   </li>
                 ))}
@@ -291,19 +287,21 @@ function GroupCard({
             </>
           ) : (
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              You added no sets to this group.
+              {t("groups.leave.addedNone")}
             </p>
           )}
           <div className="flex gap-2">
             <Button type="button" onClick={() => void leave()}>
-              {leaving.length > 0 ? "Leave anyway" : "Leave group"}
+              {leaving.length > 0
+                ? t("groups.leave.anyway")
+                : t("groups.leave.group")}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={() => setLeaving(null)}
             >
-              Cancel
+              {t("groups.cancel")}
             </Button>
           </div>
         </section>
@@ -320,11 +318,11 @@ function GroupCard({
             <li key={m.user_id} className="flex items-center gap-3">
               <Avatar name={m.display_name} url={m.avatar_url} />
               <span className="min-w-0 flex-1 truncate">
-                {m.display_name || "Unnamed builder"}
+                {m.display_name || t("groups.member.unnamed")}
                 {m.user_id === me && (
                   <span className="text-neutral-500 dark:text-neutral-400">
                     {" "}
-                    (you)
+                    {t("groups.member.you")}
                   </span>
                 )}
               </span>
@@ -342,23 +340,27 @@ function GroupCard({
                       )
                     }
                     className="min-h-11 rounded-lg bg-transparent px-1 text-sm"
-                    aria-label={`Role of ${m.display_name || "member"}`}
+                    aria-label={t("groups.member.roleOf", {
+                      name: m.display_name || t("groups.member.member"),
+                    })}
                   >
-                    <option value="owner">{roleLabel.owner}</option>
-                    <option value="helper">{roleLabel.helper}</option>
-                    <option value="viewer">{roleLabel.viewer}</option>
+                    <option value="owner">{t(roleKey.owner)}</option>
+                    <option value="helper">{t(roleKey.helper)}</option>
+                    <option value="viewer">{t(roleKey.viewer)}</option>
                   </select>
                   <button
                     className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
                     onClick={() => remove(m)}
-                    aria-label={`Remove ${m.display_name || "member"}`}
+                    aria-label={t("groups.member.removeLabel", {
+                      name: m.display_name || t("groups.member.member"),
+                    })}
                   >
-                    Remove
+                    {t("groups.member.remove")}
                   </button>
                 </>
               ) : (
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {roleLabel[m.role]}
+                  {t(roleKey[m.role])}
                 </span>
               )}
             </li>

@@ -10,6 +10,7 @@ import {
   ProgressBar,
   SettingsIcon,
 } from "../components/ui";
+import { useLanguage } from "../hooks/useLanguage";
 import { useSetContext } from "../hooks/useSetContext";
 import {
   filterParts,
@@ -30,6 +31,7 @@ const MAX_DEFER_MS = 5000;
 export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
     useSetContext();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<PartFilter>({
     query: "",
     colorId: null,
@@ -79,7 +81,7 @@ export default function SetPage() {
         <div className="flex items-center gap-3 pb-2">
           <Link
             to={`/sets/${setId}/manage`}
-            aria-label="Manage set"
+            aria-label={t("set.manage")}
             className="flex min-h-9 items-center"
           >
             {others.length ? (
@@ -96,7 +98,7 @@ export default function SetPage() {
             to={`/sets/${setId}/missing`}
             className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-brick ring-1 ring-brick"
           >
-            Missing {needed - found}
+            {t("set.missingButton", { count: needed - found })}
           </Link>
         </div>
         <FilterBar
@@ -110,7 +112,7 @@ export default function SetPage() {
       {error && <ErrorBanner message={error} onClose={clearError} />}
       {!canEdit && (
         <p className="px-4 pt-3 text-sm text-neutral-500 dark:text-neutral-400">
-          You can view this set but not change it.
+          {t("set.viewOnly")}
         </p>
       )}
       <main className="grid grid-cols-2 gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -125,9 +127,7 @@ export default function SetPage() {
         ))}
         {order.length === 0 && (
           <p className="col-span-full py-12 text-center text-neutral-500 dark:text-neutral-400">
-            {found === needed
-              ? "All pieces found! 🎉"
-              : "No parts match the filter."}
+            {found === needed ? t("set.allFound") : t("set.noMatch")}
           </p>
         )}
       </main>

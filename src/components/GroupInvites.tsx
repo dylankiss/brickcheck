@@ -10,7 +10,16 @@ import { shareLink } from "../lib/share";
 import type { Invite } from "../lib/types";
 import { Button } from "./ui";
 
-const roleLabel = { helper: "Helper", viewer: "Viewer" } as const;
+const keys = {
+  helper: {
+    link: "groups.invite.linkHelper",
+    revoke: "groups.invite.revokeHelper",
+  },
+  viewer: {
+    link: "groups.invite.linkViewer",
+    revoke: "groups.invite.revokeViewer",
+  },
+} as const;
 
 /** Create, share and revoke the Group invites of a Group. Owners only. */
 export function GroupInvites({
@@ -20,7 +29,7 @@ export function GroupInvites({
   groupId: string;
   groupName: string;
 }) {
-  const { date } = useLanguage();
+  const { t, date } = useLanguage();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -44,14 +53,14 @@ export function GroupInvites({
       const how = await shareLink(
         groupInviteUrl(token),
         groupName,
-        `Join "${groupName}" in BrickCheck`,
+        t("groups.invite.shareText", { name: groupName }),
       );
       if (how === "copied") {
         setCopied(token);
         setTimeout(() => setCopied(null), 2000);
       }
     } catch {
-      setError("Could not copy the link");
+      setError(t("groups.invite.copyError"));
     }
   }
 
@@ -78,17 +87,18 @@ export function GroupInvites({
 
   return (
     <section
-      aria-label={`Invite people to ${groupName}`}
+      aria-label={t("groups.invite.label", { name: groupName })}
       className="flex flex-col gap-2"
     >
       <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        Send a link. Anyone who opens it and logs in joins this group, with
-        access to all its sets. Links expire after 7 days.
+        {t("groups.invite.hint")}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <Button onClick={() => create("helper")}>Invite helpers</Button>
+        <Button onClick={() => create("helper")}>
+          {t("groups.invite.helpers")}
+        </Button>
         <Button variant="secondary" onClick={() => create("viewer")}>
-          Invite viewers
+          {t("groups.invite.viewers")}
         </Button>
       </div>
       {error && (
@@ -104,20 +114,22 @@ export function GroupInvites({
               className="flex items-center gap-2 rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 dark:bg-neutral-800 dark:ring-neutral-700"
             >
               <span className="flex-1">
-                {roleLabel[i.role]} link · expires {date(i.expires_at)}
+                {t(keys[i.role].link, { date: date(i.expires_at) })}
               </span>
               <button
                 className="min-h-11 px-2 font-semibold text-brick"
                 onClick={() => send(i.token)}
               >
-                {copied === i.token ? "Copied!" : "Share"}
+                {copied === i.token
+                  ? t("groups.invite.copied")
+                  : t("groups.invite.share")}
               </button>
               <button
                 className="min-h-11 px-2 text-neutral-500 dark:text-neutral-400"
                 onClick={() => revoke(i.token)}
-                aria-label={`Revoke ${roleLabel[i.role]} link`}
+                aria-label={t(keys[i.role].revoke)}
               >
-                Revoke
+                {t("groups.invite.revoke")}
               </button>
             </li>
           ))}

@@ -1,6 +1,5 @@
 // Pure logic for Sets: lines -> parts, filtering, sorting, missing lists (one Set or all), exports.
 // Which lines count is decided in SQL (set_lines); nothing here re-implements it.
-import { formatDate, getActiveLanguage } from "./i18n";
 import type { SetRole, SetSummary, InventoryLine, LineProgress } from "./types";
 
 /** One part (part number + color), summed over its inventory lines. */
@@ -242,6 +241,8 @@ export interface MissingAcross {
 export function missingAcrossSets(
   sets: SetSummary[],
   lines: InventoryLine[],
+  /** How a title reads when another Set has it too: "House (started 3 Nov)". */
+  startedLabel: (title: string, createdAt: string) => string,
 ): MissingAcross[] {
   const linesBySet = new Map<string, InventoryLine[]>();
   for (const l of lines) {
@@ -255,10 +256,7 @@ export function missingAcrossSets(
   }
   const label = (c: SetSummary) =>
     titleCount.get(c.title)! > 1
-      ? `${c.title} (started ${formatDate(getActiveLanguage(), c.created_at, {
-          day: "numeric",
-          month: "short",
-        })})`
+      ? startedLabel(c.title, c.created_at)
       : c.title;
   const result = new Map<string, MissingAcross>();
   for (const c of sets) {

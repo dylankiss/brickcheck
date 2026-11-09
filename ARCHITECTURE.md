@@ -371,8 +371,9 @@ src/
   loaded chunk (`import("./messages/nl")`), precached by the service worker (the
   `js` glob). `LanguageProvider` (in `main.tsx`, around the app) loads the chunk of
   the language before the first render, keeps `<html lang>` in step and updates every
-  screen on a change without reload; code outside React (`lib/parts.ts`) reads
-  `getActiveLanguage()`. The language is the saved choice (`localStorage` key
+  screen on a change without reload; code outside React reads `getActiveLanguage()`,
+  but pure helpers in `lib/parts.ts` take the text they need from the caller (the
+  start-date label of `missingAcrossSets`), so it follows the language. The language is the saved choice (`localStorage` key
   `language`, set by the picker on the Account page, per device) or else the browser's
   (Dutch if it starts with `nl`, otherwise English). The picker lists each language
   in its own name. The PWA manifest stays English, and the e2e flow pins its browser
