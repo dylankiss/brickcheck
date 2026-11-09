@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
@@ -22,12 +22,6 @@ import {
   type PartFilter,
 } from "../lib/parts";
 
-// Cards keep their place while you tap; the grid re-sorts and re-filters this
-// long after the last change, so a card never moves under your thumb. Steady
-// activity (a busy collaborator) defers it at most MAX_DEFER_MS.
-const SETTLE_MS = 1500;
-const MAX_DEFER_MS = 5000;
-
 export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
     useSetContext();
@@ -41,24 +35,14 @@ export default function SetPage() {
   // The Part whose picture is enlarged, by key, so its counts stay live.
   const [enlarged, setEnlarged] = useState<string | null>(null);
 
-  // The parts the current layout was computed from: refreshed after a quiet
-  // period, and right away when the filter or sort changes.
+  // The parts the current layout was computed from. Cards never move on their
+  // own, so a tap lands where you aimed: the layout is refreshed only when the
+  // filter or sort changes, when the parts themselves change (first load), or
+  // when you press "Update order".
   const [basis, setBasis] = useState<Part[]>(parts);
-  const deferredSince = useRef<number | null>(null);
-  useEffect(() => {
-    const now = Date.now();
-    deferredSince.current ??= now;
-    const delay = Math.max(
-      0,
-      Math.min(SETTLE_MS, deferredSince.current + MAX_DEFER_MS - now),
-    );
-    const timer = setTimeout(() => {
-      deferredSince.current = null;
-      setBasis(parts);
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [parts]);
-  const layoutBasis = basis.length === parts.length ? basis : parts;
+  if (basis.length !== parts.length) {
+    setBasis(parts);
+  }
   const changeFilter = (next: PartFilter) => {
     setFilter(next);
     setBasis(parts);
@@ -68,9 +52,17 @@ export default function SetPage() {
     setBasis(parts);
   };
   const order = useMemo(
-    () => sortParts(filterParts(layoutBasis, filter), sort).map((p) => p.key),
-    [layoutBasis, filter, sort],
+    () => sortParts(filterParts(basis, filter), sort).map((p) => p.key),
+    [basis, filter, sort],
   );
+  // Whether a fresh layout would differ: a part was completed, undone or
+  // changed by someone else since the cards were laid out.
+  const stale = useMemo(() => {
+    const fresh = sortParts(filterParts(parts, filter), sort);
+    return (
+      fresh.length !== order.length || fresh.some((p, i) => p.key !== order[i])
+    );
+  }, [parts, filter, sort, order]);
   const byKey = useMemo(() => new Map(parts.map((p) => [p.key, p])), [parts]);
   const colors = useMemo(() => partColors(parts), [parts]);
   const { found, needed } = totals(parts);
@@ -131,6 +123,15 @@ export default function SetPage() {
           </p>
         )}
       </main>
+      {stale && (
+        <button
+          type="button"
+          onClick={() => setBasis(parts)}
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-20 min-h-11 -translate-x-1/2 rounded-full bg-neutral-900 px-5 text-sm font-semibold text-white shadow-lg dark:bg-white dark:text-neutral-900"
+        >
+          {t("set.updateOrder")}
+        </button>
+      )}
       <EnlargedPart
         part={enlarged ? (byKey.get(enlarged) ?? null) : null}
         onClose={() => setEnlarged(null)}

@@ -20,6 +20,7 @@ export const set = {
   "set.viewOnly": "Je kunt deze set bekijken, maar niet wijzigen.",
   "set.allFound": "Alle stukjes gevonden! 🎉",
   "set.noMatch": "Geen onderdelen gevonden voor deze filter.",
+  "set.updateOrder": "Volgorde bijwerken",
 
   "set.filter.search": "Onderdelen zoeken",
   "set.filter.searchLabel": "Zoek onderdelen op naam, nummer of kleur",
