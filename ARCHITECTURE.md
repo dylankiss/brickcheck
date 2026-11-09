@@ -315,6 +315,10 @@ src/
   option, and AddSet drops a chosen Group that is no longer a valid target.
   JoinGroup shows "invalid or expired" only when the invite is not found; other
   errors get their own message and a retry button.
+- **My sets keeps its last list** in memory, per user (`useMySets`). Coming back
+  to the page shows it at once and refreshes it in the background, so there is no
+  spinner on a revisit. Pictures are never cached by the app: the browser's HTTP
+  cache serves them (see `vite.config.ts`).
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - **Accessibility** (WCAG 2.2 AA): `Header` moves focus to the page's `<h1>`
   when a page opens (unless a field already has focus, like the catalog
