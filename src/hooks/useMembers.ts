@@ -89,12 +89,15 @@ export function useMembers(
     error,
     clearError: () => setError(null),
     invite: async (role: Invite["role"]) => {
-      let created: Invite | null = null;
-      await run(async () => {
-        created = await createInvite(setId, role);
+      setError(null);
+      try {
+        const created = await createInvite(setId, role);
         await refreshInvites();
-      });
-      return created as Invite | null;
+        return created;
+      } catch (e) {
+        setError((e as Error).message);
+        return null;
+      }
     },
     revokeInvite: (token: string) =>
       run(() => deleteInvite(token).then(refreshInvites)),

@@ -70,10 +70,10 @@ export function Turnstile({
       return;
     }
     let widgetId: string | undefined;
-    let cancelled = false;
+    const unmounted = new AbortController();
     loadScript().then(
       () => {
-        if (cancelled || !window.turnstile) {
+        if (unmounted.signal.aborted || !window.turnstile) {
           return;
         }
         widgetId = window.turnstile.render(element, {
@@ -89,13 +89,13 @@ export function Turnstile({
         });
       },
       (err: Error) => {
-        if (!cancelled) {
+        if (!unmounted.signal.aborted) {
           onTokenRef.current(null, err.message);
         }
       },
     );
     return () => {
-      cancelled = true;
+      unmounted.abort();
       if (widgetId) {
         window.turnstile?.remove(widgetId);
       }
