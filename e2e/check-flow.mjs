@@ -362,7 +362,7 @@ try {
 
   // Missing in all sets: see where a found piece goes and tick it off there
   await a.goto(`${APP}/`);
-  await a.getByRole("link", { name: /See where it goes/ }).click();
+  await a.getByRole("link", { name: /Where does this piece go/ }).click();
   const foundOne = a.getByRole("button", {
     name: `Found one Brick 2 x 4, Red for Demo Castle ${SET_NUM.slice(-4)}`,
   });
