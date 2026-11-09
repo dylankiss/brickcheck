@@ -13,6 +13,8 @@ export const account = {
     "This is the address you log in with. It can't be changed here.",
   "account.language.label": "Language",
   "account.language.hint": "Used on this device.",
+  "account.language.failed":
+    "Couldn't switch the language. Check your connection and try again.",
   "account.passkeys.title": "Passkeys",
   "account.passkeys.hint":
     "Log in with Face ID, Touch ID or your password manager, without waiting for an email.",

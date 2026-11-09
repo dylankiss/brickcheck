@@ -13,7 +13,7 @@ describe("start screen, My sets and Add a set in Dutch", () => {
     expect(tNl("sets.groupCount", { count: 1 })).toBe("1 groep");
     expect(tNl("sets.groupCount", { count: 3 })).toBe("3 groepen");
     expect(tNl("sets.pieces", { count: 1 })).toBe("1 stukje");
-    expect(tNl("sets.pieces", { count: 1200 })).toBe("1200 stukjes");
+    expect(tNl("sets.pieces", { count: 1200 })).toBe("1.200 stukjes");
     expect(tEn("sets.pieces", { count: 1 })).toBe("1 piece");
   });
 

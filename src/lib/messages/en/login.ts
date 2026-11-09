@@ -17,4 +17,7 @@ export const login = {
   "login.passkey": "Log in with a passkey",
   "login.or": "or",
   "login.google": "Continue with Google",
+  "login.captcha.loadFailed": "Could not load the CAPTCHA.",
+  "login.captcha.failed":
+    "The security check failed. Reload the page and try again.",
 };

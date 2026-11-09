@@ -82,10 +82,15 @@ export function initialLanguage(): Language {
   return resolveLanguage(getStoredLanguage(), browser);
 }
 
-function fill(text: string, params?: Params): string {
-  return text.replace(/\{(\w+)\}/g, (whole, name: string) =>
-    params && name in params ? String(params[name]) : whole,
-  );
+/** Fills the {placeholders}; a number is formatted for the language (1,234 / 1.234), a string stays as it is. */
+function fill(language: Language, text: string, params?: Params): string {
+  return text.replace(/\{(\w+)\}/g, (whole, name: string) => {
+    const value = params?.[name];
+    if (value === undefined) {
+      return whole;
+    }
+    return typeof value === "number" ? formatNumber(language, value) : value;
+  });
 }
 
 /**
@@ -105,15 +110,19 @@ export function createTranslator(
       return key;
     }
     if (typeof message === "string") {
-      return fill(message, params);
+      return fill(language, message, params);
     }
     const form = rules.select(Number(params?.count ?? 0));
-    return fill(message[form] ?? message.other, params);
+    return fill(language, message[form] ?? message.other, params);
   };
 }
 
-// English dates stay day-first (3 Nov), as before; en-GB also fits the Dutch order.
-const LOCALES: Record<Language, string> = { en: "en-GB", nl: "nl-NL" };
+// English follows the browser's locale (undefined), so a US reader gets 11/3/2026;
+// Dutch is always nl-NL.
+const LOCALES: Record<Language, string | undefined> = {
+  en: undefined,
+  nl: "nl-NL",
+};
 
 export function formatDate(
   language: Language,
@@ -123,6 +132,17 @@ export function formatDate(
   return new Intl.DateTimeFormat(LOCALES[language], options).format(
     new Date(date),
   );
+}
+
+/** "3 Nov" / "3 nov": the day-first label that must read the same for any English reader. */
+export function formatDayMonth(
+  language: Language,
+  date: string | Date,
+): string {
+  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "nl-NL", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(date));
 }
 
 export function formatNumber(

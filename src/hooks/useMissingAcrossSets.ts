@@ -19,7 +19,7 @@ const busyKey = (setId: string, part: Part) => `${setId}|${part.key}`;
  * again; not live like a Set's own page.
  */
 export function useMissingAcrossSets() {
-  const { t, date } = useLanguage();
+  const { t, dayMonth } = useLanguage();
   const [data, setData] = useState<{
     sets: SetSummary[];
     lines: InventoryLine[];
@@ -97,10 +97,10 @@ export function useMissingAcrossSets() {
       missingAcrossSets(data.sets, data.lines, (title, createdAt) =>
         t("set.missing.started", {
           title,
-          date: date(createdAt, { day: "numeric", month: "short" }),
+          date: dayMonth(createdAt),
         }),
       ),
-    [data, t, date],
+    [data, t, dayMonth],
   );
   return { missing, error, clearError: () => setError(null), isBusy, tickOff };
 }

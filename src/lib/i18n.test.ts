@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createTranslator,
   formatDate,
+  formatDayMonth,
   formatNumber,
   getStoredLanguage,
   resolveLanguage,
@@ -42,6 +43,14 @@ describe("t", () => {
     const t = createTranslator("nl", {} as Messages, sampleEn);
     expect(t(key("test.greeting"), { name: "Sam" })).toBe("Hello Sam");
     expect(t(key("test.sets"), { count: 2 })).toBe("2 sets");
+  });
+
+  it("formats numeric params for the language", () => {
+    const tEn = createTranslator("en", sampleEn, sampleEn);
+    expect(tEn(key("test.sets"), { count: 1234 })).toBe("1,234 sets");
+    const tNl = createTranslator("nl", sampleNl, sampleEn);
+    expect(tNl(key("test.sets"), { count: 1234 })).toBe("1.234 sets");
+    expect(tNl(key("test.greeting"), { name: "1234" })).toBe("Hallo 1234");
   });
 
   it("never shows blank for an unknown key", () => {
@@ -100,9 +109,13 @@ describe("language choice", () => {
 describe("dates and numbers", () => {
   it("follow the language", () => {
     const day = "2026-11-03T12:00:00Z";
-    const short = { day: "numeric", month: "short" } as const;
-    expect(formatDate("en", day, short)).toBe("3 Nov");
-    expect(formatDate("nl", day, short)).toBe("3 nov");
+    expect(formatDayMonth("en", day)).toBe("3 Nov");
+    expect(formatDayMonth("nl", day)).toBe("3 nov");
+    // English numeric dates follow the browser locale, Dutch is always nl-NL.
+    expect(formatDate("en", day)).toBe(
+      new Intl.DateTimeFormat(undefined).format(new Date(day)),
+    );
+    expect(formatDate("nl", day)).toBe("3-11-2026");
     expect(formatNumber("en", 1234567.5)).toBe("1,234,567.5");
     expect(formatNumber("nl", 1234567.5)).toBe("1.234.567,5");
   });

@@ -31,7 +31,7 @@ const MAX_DEFER_MS = 5000;
 export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
     useSetContext();
-  const { t } = useLanguage();
+  const { t, number } = useLanguage();
   const [filter, setFilter] = useState<PartFilter>({
     query: "",
     colorId: null,
@@ -92,7 +92,7 @@ export default function SetPage() {
           </Link>
           <ProgressBar found={found} needed={needed} className="flex-1" />
           <span className="text-sm font-semibold tabular-nums">
-            {found}/{needed}
+            {number(found)}/{number(needed)}
           </span>
           <Link
             to={`/sets/${setId}/missing`}
