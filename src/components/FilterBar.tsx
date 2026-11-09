@@ -1,6 +1,6 @@
 import { useLanguage } from "../hooks/useLanguage";
 import type { PartColor, SortMode, PartFilter } from "../lib/parts";
-import { Chip, ColorChips } from "./ColorChips";
+import { Chip, ColorFilter } from "./ColorFilter";
 import { Select } from "./ui";
 
 interface Props {
@@ -41,11 +41,12 @@ export function FilterBar({
           <option value="missing">{t("set.filter.sortMissing")}</option>
         </Select>
       </div>
-      <ColorChips
-        colors={colors}
-        colorId={filter.colorId}
-        onColorChange={(colorId) => onFilterChange({ ...filter, colorId })}
-      >
+      <div className="flex flex-wrap gap-2">
+        <ColorFilter
+          colors={colors}
+          colorId={filter.colorId}
+          onColorChange={(colorId) => onFilterChange({ ...filter, colorId })}
+        />
         <Chip
           active={filter.hideFound}
           onClick={() =>
@@ -54,7 +55,7 @@ export function FilterBar({
         >
           {t("set.filter.hideFound")}
         </Chip>
-      </ColorChips>
+      </div>
     </div>
   );
 }
