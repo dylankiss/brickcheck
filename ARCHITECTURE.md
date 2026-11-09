@@ -471,8 +471,9 @@ src/
   slides out of view on a short scroll down and then stays out however you
   scroll, because looking for a piece means scrolling up and down for a while and
   a header that comes and goes is distracting. It returns near the top of the
-  page, while a field has focus, or from a round button at the bottom right
-  (`common.showFilters`); the next scroll down hides it again. It moves with a
+  page, while a text field has focus (a scroll of more than about 200px hides
+  it anyway, so a field left focused cannot pin it), or from a round button at
+  the bottom right (`common.showFilters`); the next scroll down hides it again. It moves with a
   transform, so the layout never shifts, and it is `inert` while hidden. Other
   pages keep a plain sticky header.
 - **Filter bar** (`FilterBar`): the search field, then three 44px icon-only
