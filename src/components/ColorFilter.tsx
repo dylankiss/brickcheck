@@ -174,7 +174,7 @@ function ColorPicker({
                       trans={color.is_trans}
                       className="size-10"
                     />
-                    <span className="line-clamp-2 break-words">
+                    <span className="line-clamp-2 wrap-break-word">
                       {color.name}
                     </span>
                   </button>
