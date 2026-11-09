@@ -193,7 +193,7 @@ export function ColorSwatch({
 }) {
   return (
     <span
-      className={`inline-block shrink-0 rounded-full ring-1 ring-black/20 ${trans ? "opacity-60" : ""} ${className}`}
+      className={`inline-block shrink-0 rounded-full ring-1 ring-black/20 dark:ring-white/40 ${trans ? "opacity-60" : ""} ${className}`}
       style={{ backgroundColor: rgb ? `#${rgb}` : "transparent" }}
     />
   );
