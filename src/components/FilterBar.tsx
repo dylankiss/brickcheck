@@ -35,14 +35,16 @@ export function FilterBar({
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortMode)}
           aria-label={t("set.filter.sortLabel")}
+          className="w-32 shrink-0"
         >
           <option value="color">{t("set.filter.sortColor")}</option>
           <option value="part">{t("set.filter.sortPart")}</option>
           <option value="missing">{t("set.filter.sortMissing")}</option>
         </Select>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2">
         <ColorFilter
+          className="flex-1"
           colors={colors}
           colorId={filter.colorId}
           onColorChange={(colorId) => onFilterChange({ ...filter, colorId })}

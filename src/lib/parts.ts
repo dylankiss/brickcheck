@@ -6,6 +6,8 @@ import type { SetRole, SetSummary, InventoryLine, LineProgress } from "./types";
 export interface Part {
   key: string;
   part_num: string;
+  /** LEGO's number for this part in this color, as the manual's parts list prints it (when known). */
+  element_id: string | null;
   part_name: string;
   part_cat_id: number | null;
   color_id: number;
@@ -31,6 +33,10 @@ export interface PartFilter {
 
 export const partKey = (partNum: string, colorId: number) =>
   `${partNum}|${colorId}`;
+
+/** The number a Part is known by on screen: the manual's element id, else the part number. */
+export const partNumber = (part: Pick<Part, "element_id" | "part_num">) =>
+  part.element_id ?? part.part_num;
 
 /** How a Part is named to people and screen readers: "Brick 2 x 4, Red". */
 export const partLabel = (part: Pick<Part, "part_name" | "color_name">) =>
@@ -104,6 +110,7 @@ export function groupParts(
       part = {
         key,
         part_num: line.part_num,
+        element_id: line.element_id,
         part_name: line.part_name,
         part_cat_id: line.part_cat_id,
         color_id: line.color_id,
@@ -123,6 +130,7 @@ export function groupParts(
     part.needed += line.quantity;
     part.found += line.found_qty;
     part.img_url ??= line.img_url;
+    part.element_id ??= line.element_id;
     part.has_minifig_lines ||= line.fig_num !== null;
     part.has_spare_lines ||= line.is_spare;
   }
@@ -155,6 +163,7 @@ export function filterParts(parts: Part[], filter: PartFilter): Part[] {
       (filter.colorId === null || p.color_id === filter.colorId) &&
       (!query ||
         p.part_num.toLowerCase().includes(query) ||
+        p.element_id?.includes(query) ||
         p.part_name.toLowerCase().includes(query) ||
         p.color_name.toLowerCase().includes(query)),
   );

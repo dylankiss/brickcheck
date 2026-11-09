@@ -10,6 +10,7 @@ import {
   missingParts,
   sortParts,
   partKey,
+  partNumber,
   partLabel,
   toBrickLinkXml,
   toLineMap,
@@ -329,5 +330,29 @@ describe("missingAcrossSets", () => {
       ["a", 0],
       ["b", 1],
     ]);
+  });
+});
+
+describe("element ids", () => {
+  const [part] = groupParts(
+    toLineMap([line({ element_id: null }), line({ element_id: "300121" })]),
+  );
+
+  it("shows the manual's element id, else the part number", () => {
+    expect(partNumber(part!)).toBe("300121");
+    expect(partNumber({ element_id: null, part_num: "3001" })).toBe("3001");
+  });
+
+  it("finds a part by its element id", () => {
+    expect(
+      filterParts([part!], { query: "3001", colorId: null, hideFound: false }),
+    ).toHaveLength(1);
+    expect(
+      filterParts([part!], {
+        query: "300121",
+        colorId: null,
+        hideFound: false,
+      }),
+    ).toHaveLength(1);
   });
 });
