@@ -460,6 +460,13 @@ src/
   compact text. The count sits on the picture's bottom-left corner and the "−"
   button on its bottom-right, both marks 28px in a 44px touch target, so a card is just the picture, the number
   and the color. The "minifig" and "spare" labels sit on the picture's top-left corner.
+- **Tick feedback** (`TickToast`): each tick shows a bar at the bottom with the
+  part's picture, its new count ("4/5") and Undo, for 4 seconds or until the next
+  tick, because a finger resting on a card hides the card itself. Screen readers
+  get the full sentence ("{number} · {color}: 4 of 5 found") from a hidden text in
+  the `role="status"` region. Undo sends a −1 for that part through the normal tap
+  path. Un-ticking with "−" clears the bar. The 10 ms vibration of `useSet.tap`
+  stays.
 - **Header on the Set page** (`Header` with `hideOnScroll`, `useHideOnScroll`): it
   slides out of view on a short scroll down and then stays out however you
   scroll, because looking for a piece means scrolling up and down for a while and

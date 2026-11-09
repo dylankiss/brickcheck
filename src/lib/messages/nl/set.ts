@@ -21,6 +21,8 @@ export const set = {
   "set.allFound": "Alle stukjes gevonden! 🎉",
   "set.noMatch": "Geen onderdelen gevonden voor deze filter.",
   "set.updateOrder": "Volgorde bijwerken",
+  "set.tick.added": "{number} · {color}: {found} van {needed} gevonden",
+  "set.tick.undo": "Ongedaan maken",
 
   "set.filter.search": "Onderdelen zoeken",
   "set.filter.searchLabel": "Zoek onderdelen op naam, nummer of kleur",
