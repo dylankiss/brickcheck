@@ -4,6 +4,7 @@ import { Button, ErrorBanner } from "../components/ui";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { useAuth } from "../hooks/useAuth";
 import { useCaptcha } from "../hooks/useCaptcha";
+import { useLanguage } from "../hooks/useLanguage";
 import {
   passkeysSupported,
   signInWithEmail,
@@ -13,6 +14,7 @@ import {
 } from "../lib/api";
 
 export default function Login() {
+  const { t } = useLanguage();
   const { session } = useAuth();
   const location = useLocation();
   // Where to return after login, e.g. an invite link (ARCHITECTURE.md, "Invites").
@@ -38,9 +40,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const captcha = useCaptcha();
   const [error, setError] = useState<string | null>(
-    linkError
-      ? "That login link has expired or was already used. Ask for a new one, or use the code from the email."
-      : null,
+    linkError ? t("login.linkExpired") : null,
   );
 
   if (session) {
@@ -105,7 +105,7 @@ export default function Login() {
         <img src="/favicon.svg" alt="" className="mx-auto mb-3 size-16" />
         <h1 className="text-3xl font-bold">BrickCheck</h1>
         <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-          Sort your sets piece by piece, together.
+          {t("login.tagline")}
         </p>
       </div>
 
@@ -115,8 +115,8 @@ export default function Login() {
       {sent ? (
         <form onSubmit={submitCode} className="flex flex-col gap-3">
           <p className="rounded-2xl bg-green-100 p-4 text-center text-green-900 dark:bg-green-950 dark:text-green-100">
-            Check your inbox: we sent a login link to <strong>{email}</strong>.
-            Tap it, or type the 6-digit code here.
+            {t("login.sent.intro")} <strong>{email}</strong>.{" "}
+            {t("login.sent.outro")}
           </p>
           <input
             id="code"
@@ -130,17 +130,17 @@ export default function Login() {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             placeholder="123456"
             className="min-h-12 rounded-xl bg-white px-4 text-center text-2xl tracking-[0.4em] ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
-            aria-label="Login code"
+            aria-label={t("login.code.label")}
           />
           <Button type="submit" disabled={busy || code.length < 6}>
-            {busy ? "Checking…" : "Log in with code"}
+            {busy ? t("login.code.checking") : t("login.code.submit")}
           </Button>
           <button
             type="button"
             onClick={() => setSent(false)}
             className="min-h-11 text-sm text-neutral-500 dark:text-neutral-400"
           >
-            Use a different email
+            {t("login.code.otherEmail")}
           </button>
         </form>
       ) : (
@@ -151,19 +151,19 @@ export default function Login() {
             type="email"
             required
             autoComplete="email"
-            aria-label="Email address"
+            aria-label={t("login.email.label")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t("login.email.placeholder")}
             className="min-h-12 rounded-xl bg-white px-4 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
           {captcha.widget}
           <Button type="submit" disabled={busy || captcha.pending}>
             {busy
-              ? "Sending…"
+              ? t("login.email.sending")
               : captcha.pending
-                ? "Checking your browser…"
-                : "Email me a login link"}
+                ? t("login.email.captcha")
+                : t("login.email.submit")}
           </Button>
           {passkeysSupported() && (
             <Button
@@ -172,7 +172,7 @@ export default function Login() {
               disabled={busy || captcha.pending}
               onClick={passkey}
             >
-              Log in with a passkey
+              {t("login.passkey")}
             </Button>
           )}
         </form>
@@ -182,11 +182,11 @@ export default function Login() {
         <>
           <div className="flex items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
             <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
-            or
+            {t("login.or")}
             <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
           </div>
           <Button variant="secondary" onClick={google}>
-            Continue with Google
+            {t("login.google")}
           </Button>
         </>
       )}

@@ -12,9 +12,11 @@ import {
   Select,
   Spinner,
 } from "../components/ui";
+import { useLanguage } from "../hooks/useLanguage";
 import { useMySets } from "../hooks/useMySets";
 
 export default function MySets() {
+  const { t } = useLanguage();
   const { sets, error } = useMySets();
   const [enlarged, setEnlarged] = useState<Picture | null>(null);
   // "all", "none" (Sets in no Group) or a Group id.
@@ -41,25 +43,25 @@ export default function MySets() {
 
   return (
     <>
-      <Header title="My sets" back="/" />
+      <Header title={t("sets.my.title")} back="/" />
       {error && <ErrorBanner message={error} />}
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-28">
         {!sets && !error && <Spinner />}
         {sets?.length === 0 && (
           <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
-            No sets yet. Add one and start checking.
+            {t("sets.my.empty")}
           </p>
         )}
         {groupOptions.length > 0 && (
           <label className="flex items-center gap-2 text-sm">
-            <span className="font-medium">Group</span>
+            <span className="font-medium">{t("sets.my.group")}</span>
             <Select
               value={activeFilter}
               onChange={(e) => setFilter(e.target.value)}
               className="min-w-0 flex-1"
             >
-              <option value="all">All sets</option>
-              <option value="none">Not in a group</option>
+              <option value="all">{t("sets.my.allSets")}</option>
+              <option value="none">{t("sets.my.noGroup")}</option>
               {groupOptions.map(([id, name]) => (
                 <option key={id} value={id}>
                   {name}
@@ -73,7 +75,7 @@ export default function MySets() {
             role="status"
             className="py-8 text-center text-neutral-500 dark:text-neutral-400"
           >
-            No sets in this group.
+            {t("sets.my.emptyGroup")}
           </p>
         )}
         {shown.map((set) => (
@@ -91,12 +93,12 @@ export default function MySets() {
                     : `${set.set_num} · ${set.catalog_name}`}
                   {!set.group_name &&
                     set.my_role !== "owner" &&
-                    " · shared with you"}
+                    ` · ${t("sets.my.sharedWithYou")}`}
                 </p>
                 {set.group_name && (
                   <p className="mt-1">
                     <span className="inline-block rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                      Group: {set.group_name}
+                      {t("sets.my.groupChip", { name: set.group_name })}
                     </span>
                   </p>
                 )}
@@ -127,7 +129,7 @@ export default function MySets() {
         to="/new"
         className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] flex min-h-14 items-center rounded-full bg-brick px-6 font-semibold text-white shadow-lg"
       >
-        + Add a set
+        {t("sets.my.add")}
       </Link>
       <EnlargedPicture picture={enlarged} onClose={() => setEnlarged(null)} />
     </>

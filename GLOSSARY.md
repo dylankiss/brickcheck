@@ -98,25 +98,30 @@ The words above are the English source. Each language keeps the same meanings an
 
 Words chosen while translating the interface (not domain terms):
 
-| English         | Dutch              |
-| --------------- | ------------------ |
-| Account         | account            |
-| Language        | taal               |
-| Passkey         | passkey            |
-| Email           | e-mail             |
-| Sign out        | uitloggen          |
-| Save            | opslaan            |
-| Remove          | verwijderen        |
-| Delete          | verwijderen        |
-| Share           | delen              |
-| Revoke          | intrekken          |
-| Cancel          | annuleren          |
-| Create          | aanmaken           |
-| Rename          | hernoemen          |
-| Members         | leden              |
-| Leave           | verlaten           |
-| Spare (badge)   | reserve            |
-| Minifig (badge) | minifig            |
-| Reset counts    | aantallen resetten |
-| Unnamed builder | naamloze bouwer    |
-| (you)           | (jij)              |
+| English                        | Dutch              |
+| ------------------------------ | ------------------ |
+| Account                        | account            |
+| Language                       | taal               |
+| Passkey                        | passkey            |
+| Email                          | e-mail             |
+| Sign out                       | uitloggen          |
+| Save                           | opslaan            |
+| Remove                         | verwijderen        |
+| Log in                         | inloggen           |
+| Minifigure                     | minifiguur         |
+| Join                           | meedoen            |
+| Spare parts                    | reserveonderdelen  |
+| Theme                          | thema              |
+| Delete                         | verwijderen        |
+| Share                          | delen              |
+| Revoke                         | intrekken          |
+| Cancel                         | annuleren          |
+| Create                         | aanmaken           |
+| Rename                         | hernoemen          |
+| Members                        | leden              |
+| Leave                          | verlaten           |
+| Spare (badge on a part card)   | reserve            |
+| Minifig (badge on a part card) | minifig            |
+| Reset counts                   | aantallen resetten |
+| Unnamed builder                | naamloze bouwer    |
+| (you)                          | (jij)              |

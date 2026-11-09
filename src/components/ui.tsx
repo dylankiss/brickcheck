@@ -7,6 +7,7 @@ import {
   type SelectHTMLAttributes,
 } from "react";
 import { Link } from "react-router";
+import { useLanguage } from "../hooks/useLanguage";
 import { OfflineBanner } from "./OfflineBanner";
 
 export function ProgressBar({
@@ -18,16 +19,17 @@ export function ProgressBar({
   needed: number;
   className?: string;
 }) {
+  const { t } = useLanguage();
   const percent = needed ? Math.round((found / needed) * 100) : 0;
   return (
     <div
       className={`h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800 ${className}`}
       role="progressbar"
-      aria-label="Progress"
+      aria-label={t("common.progress")}
       aria-valuemin={0}
       aria-valuemax={needed}
       aria-valuenow={found}
-      aria-valuetext={`${found} of ${needed} found`}
+      aria-valuetext={t("common.progressValue", { found, needed })}
     >
       <div
         className={`h-full rounded-full transition-[width] motion-reduce:transition-none ${percent === 100 ? "bg-green-600" : "bg-brick"}`}
@@ -67,6 +69,7 @@ export function Header({
   back?: string;
   children?: ReactNode;
 }) {
+  const { t } = useLanguage();
   // A new page moves focus to its heading, so screen readers announce it and
   // keyboard users start at the top. A field that took focus itself (the
   // catalog search) keeps it.
@@ -90,7 +93,7 @@ export function Header({
           <Link
             to={back}
             className="-ml-2 flex size-11 items-center justify-center rounded-full text-2xl"
-            aria-label="Back"
+            aria-label={t("common.back")}
           >
             ‹
           </Link>
@@ -115,6 +118,7 @@ export function ErrorBanner({
   message: string;
   onClose?: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       className="mx-4 my-2 flex items-center gap-2 rounded-xl bg-red-100 px-4 py-2 text-sm text-red-900 dark:bg-red-950 dark:text-red-100"
@@ -125,7 +129,7 @@ export function ErrorBanner({
         <button
           onClick={onClose}
           className="size-8 shrink-0"
-          aria-label="Dismiss"
+          aria-label={t("common.dismiss")}
         >
           ✕
         </button>
@@ -135,6 +139,7 @@ export function ErrorBanner({
 }
 
 export function Spinner({ label }: { label?: string }) {
+  const { t } = useLanguage();
   return (
     <div
       role="status"
@@ -148,7 +153,7 @@ export function Spinner({ label }: { label?: string }) {
       {label ? (
         <p className="text-sm">{label}</p>
       ) : (
-        <span className="sr-only">Loading</span>
+        <span className="sr-only">{t("common.loading")}</span>
       )}
     </div>
   );

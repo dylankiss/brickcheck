@@ -1,3 +1,4 @@
+import { useLanguage } from "../hooks/useLanguage";
 import type { CatalogSet } from "../lib/types";
 import { EnlargeableThumbnail } from "./EnlargedPicture";
 
@@ -20,24 +21,25 @@ export function CatalogSearch({
   onSelect,
   onEnlarge,
 }: Props) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-3">
       <input
         name="catalog-search"
         type="search"
-        aria-label="Search sets by number or name"
+        aria-label={t("sets.search.label")}
         // This page exists to search, so the field takes focus on arrival.
         // oxlint-disable-next-line jsx-a11y/no-autofocus
         autoFocus
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="Set number or name, e.g. 10305 or castle"
+        placeholder={t("sets.search.placeholder")}
         className="min-h-12 rounded-xl bg-white px-4 text-lg ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
       {noResults && (
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          No sets found.
+          {t("sets.search.noResults")}
         </p>
       )}
       <ul className="flex flex-col gap-2">
@@ -57,7 +59,7 @@ export function CatalogSearch({
                 </span>
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
                   {catalogSet.set_num} · {catalogSet.year} ·{" "}
-                  {catalogSet.num_parts} pieces
+                  {t("sets.pieces", { count: catalogSet.num_parts })}
                 </span>
               </span>
             </button>

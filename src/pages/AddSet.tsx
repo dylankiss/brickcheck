@@ -10,10 +10,12 @@ import { Button, ErrorBanner, Header, Select, Spinner } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useCatalogSearch } from "../hooks/useCatalogSearch";
 import { useGroups } from "../hooks/useGroups";
+import { useLanguage } from "../hooks/useLanguage";
 import { createSet, fetchCatalogSet } from "../lib/api";
 import type { CatalogSet } from "../lib/types";
 
 export default function AddSet() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const search = useCatalogSearch();
   const { session } = useAuth();
@@ -65,7 +67,7 @@ export default function AddSet() {
 
   return (
     <>
-      <Header title="Add a set" back="/sets" />
+      <Header title={t("sets.add.title")} back="/sets" />
       {error && <ErrorBanner message={error} onClose={() => setError(null)} />}
       <main className="mx-auto max-w-2xl p-4">
         {!catalogSet ? (
@@ -82,8 +84,8 @@ export default function AddSet() {
           <Spinner
             label={
               catalogSet.parts_fetched_at
-                ? "Adding set…"
-                : "Loading the parts list from Rebrickable…"
+                ? t("sets.add.adding")
+                : t("sets.add.loadingParts")
             }
           />
         ) : (
@@ -99,7 +101,7 @@ export default function AddSet() {
                 <p className="font-semibold">{catalogSet.name}</p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {catalogSet.set_num} · {catalogSet.year} ·{" "}
-                  {catalogSet.num_parts} pieces
+                  {t("sets.pieces", { count: catalogSet.num_parts })}
                 </p>
               </div>
               <button
@@ -107,12 +109,12 @@ export default function AddSet() {
                 onClick={() => setCatalogSet(null)}
                 className="min-h-11 px-2 text-sm text-brick"
               >
-                Change
+                {t("sets.add.change")}
               </button>
             </div>
 
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Name</span>
+              <span className="text-sm font-medium">{t("sets.add.name")}</span>
               <input
                 name="title"
                 value={title}
@@ -121,13 +123,15 @@ export default function AddSet() {
                 className="min-h-12 rounded-xl bg-white px-4 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
               />
               <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                Handy if you own several copies, e.g. "Castle – blue box".
+                {t("sets.add.nameHint")}
               </span>
             </label>
 
             {targets.length > 0 && (
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Group</span>
+                <span className="text-sm font-medium">
+                  {t("sets.add.group")}
+                </span>
                 <Select
                   name="group"
                   tall
@@ -135,7 +139,7 @@ export default function AddSet() {
                   onChange={(e) => setGroupId(e.target.value)}
                   className="w-full"
                 >
-                  <option value="">None (only people you invite)</option>
+                  <option value="">{t("sets.add.noGroup")}</option>
                   {targets.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name}
@@ -143,16 +147,16 @@ export default function AddSet() {
                   ))}
                 </Select>
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Everyone in the group gets access to this set.
+                  {t("sets.add.groupHint")}
                 </span>
               </label>
             )}
 
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>
-                Include minifigure parts
+                {t("sets.add.minifigs")}
                 <span className="block text-xs text-neutral-500 dark:text-neutral-400">
-                  Heads, torsos, legs and accessories
+                  {t("sets.add.minifigsHint")}
                 </span>
               </span>
               <input
@@ -165,9 +169,9 @@ export default function AddSet() {
             </label>
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>
-                Include spare parts
+                {t("sets.add.spares")}
                 <span className="block text-xs text-neutral-500 dark:text-neutral-400">
-                  Pieces LEGO adds on top of what the set needs
+                  {t("sets.add.sparesHint")}
                 </span>
               </span>
               <input
@@ -179,10 +183,10 @@ export default function AddSet() {
               />
             </label>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              These two options can't be changed later.
+              {t("sets.add.fixedOptions")}
             </p>
 
-            <Button type="submit">Start checking</Button>
+            <Button type="submit">{t("sets.add.start")}</Button>
           </form>
         )}
       </main>

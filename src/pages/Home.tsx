@@ -4,14 +4,13 @@ import { ThemeButton } from "../components/ThemeButton";
 import { Header } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useGroups } from "../hooks/useGroups";
+import { useLanguage } from "../hooks/useLanguage";
 import { useMySets } from "../hooks/useMySets";
 import { isComplete } from "../lib/parts";
 
-const plural = (n: number, one: string, many: string) =>
-  `${n} ${n === 1 ? one : many}`;
-
 /** The start screen: three ways in, each with a one-line status. */
 export default function Home() {
+  const { t } = useLanguage();
   const { session, profile } = useAuth();
   const { sets } = useMySets();
   const { groups } = useGroups(session?.user.id ?? "");
@@ -22,20 +21,28 @@ export default function Home() {
   const setsStatus = !sets
     ? ""
     : sets.length === 0
-      ? "No sets yet"
+      ? t("sets.home.noSets")
       : incomplete.length === 0
-        ? `${plural(sets.length, "set", "sets")}, all complete`
-        : `${plural(sets.length, "set", "sets")}, ${incomplete.length} not complete`;
+        ? t("sets.home.allComplete", {
+            sets: t("sets.count", { count: sets.length }),
+          })
+        : t("sets.home.someIncomplete", {
+            sets: t("sets.count", { count: sets.length }),
+            count: incomplete.length,
+          });
   const groupsStatus = !groups
     ? ""
     : groups.length === 0
-      ? "No groups yet"
-      : plural(groups.length, "group", "groups");
+      ? t("sets.home.noGroups")
+      : t("sets.groupCount", { count: groups.length });
   const piecesStatus = !sets
     ? ""
     : missing === 0
-      ? "Nothing missing"
-      : `${plural(missing, "piece", "pieces")} missing in ${plural(incomplete.length, "set", "sets")}`;
+      ? t("sets.home.nothingMissing")
+      : t("sets.home.missing", {
+          count: missing,
+          sets: t("sets.count", { count: incomplete.length }),
+        });
 
   return (
     <>
@@ -45,7 +52,7 @@ export default function Home() {
           <Link
             to="/account"
             className="flex min-h-11 min-w-11 items-center justify-center"
-            aria-label="Account"
+            aria-label={t("account.title")}
           >
             <Avatar
               name={profile?.display_name ?? null}
@@ -56,11 +63,19 @@ export default function Home() {
         </div>
       </Header>
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4">
-        <HomeCard to="/sets" title="My sets" status={setsStatus} />
-        <HomeCard to="/groups" title="Groups" status={groupsStatus} />
+        <HomeCard
+          to="/sets"
+          title={t("sets.home.mySets")}
+          status={setsStatus}
+        />
+        <HomeCard
+          to="/groups"
+          title={t("sets.home.groups")}
+          status={groupsStatus}
+        />
         <HomeCard
           to="/missing"
-          title="Found a piece? See where it goes"
+          title={t("sets.home.missingCard")}
           status={piecesStatus}
         />
       </main>

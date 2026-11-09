@@ -6,11 +6,11 @@ import {
 } from "../components/EnlargedPicture";
 import { setPicture } from "../components/pictures";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
+import { useLanguage } from "../hooks/useLanguage";
 import { useInvite } from "../hooks/useInvite";
 
-const roleText = { helper: "tick off parts", viewer: "follow along" } as const;
-
 export default function Join() {
+  const { t } = useLanguage();
   const { token = "" } = useParams();
   const navigate = useNavigate();
   const { preview, error, accept } = useInvite(token);
@@ -37,7 +37,7 @@ export default function Join() {
 
   return (
     <>
-      <Header title="Join a set" back="/" />
+      <Header title={t("sets.join.title")} back="/" />
       {(error || joinError) && <ErrorBanner message={(error || joinError)!} />}
       <main className="mx-auto flex max-w-sm flex-col gap-4 p-4">
         {preview ? (
@@ -54,17 +54,19 @@ export default function Join() {
                 {preview.set_num} · {preview.catalog_name}
               </p>
               <p>
-                {preview.invited_by || "Someone"} invited you to{" "}
-                {roleText[preview.role]}.
+                {t("sets.join.invited", {
+                  name: preview.invited_by || t("sets.join.someone"),
+                  role: t(`sets.join.role.${preview.role}`),
+                })}
               </p>
             </div>
             <Button onClick={join} disabled={joining}>
-              {joining ? "Joining…" : "Join"}
+              {joining ? t("sets.join.joining") : t("sets.join.button")}
             </Button>
           </>
         ) : (
           <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
-            This invite link is invalid or has expired. Ask for a new one.
+            {t("sets.join.invalid")}
           </p>
         )}
       </main>

@@ -1,3 +1,5 @@
+import { useLanguage } from "../hooks/useLanguage";
+
 const PALETTE = [
   // Dark enough for white initials (WCAG 2.2 AA, 4.5:1).
   "bg-red-600",
@@ -39,6 +41,7 @@ export function Avatar({
   online?: boolean;
   size?: string;
 }) {
+  const { t } = useLanguage();
   return (
     <span
       className={`relative inline-flex shrink-0 ${size}`}
@@ -61,7 +64,7 @@ export function Avatar({
       {online && (
         <span
           className="absolute right-0 bottom-0 size-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-neutral-900"
-          aria-label="online"
+          aria-label={t("common.online")}
         />
       )}
     </span>
@@ -78,11 +81,15 @@ export function OnlineAvatars({
     avatar_url: string | null;
   }[];
 }) {
+  const { t } = useLanguage();
   if (people.length === 0) {
     return null;
   }
   return (
-    <div className="flex -space-x-2" aria-label={`${people.length} online`}>
+    <div
+      className="flex -space-x-2"
+      aria-label={t("common.onlineCount", { count: people.length })}
+    >
       {people.slice(0, 4).map((p) => (
         <span
           key={p.user_id}
