@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "./useLanguage";
 import { useOnVisible } from "./useOnVisible";
 import { adjustPart, getLinesOfSets, listMySets } from "../lib/api";
 import {
@@ -18,6 +19,7 @@ const busyKey = (setId: string, part: Part) => `${setId}|${part.key}`;
  * again; not live like a Set's own page.
  */
 export function useMissingAcrossSets() {
+  const { t, date } = useLanguage();
   const [data, setData] = useState<{
     sets: SetSummary[];
     lines: InventoryLine[];
@@ -90,8 +92,15 @@ export function useMissingAcrossSets() {
     [busy],
   );
   const missing = useMemo<MissingAcross[] | null>(
-    () => data && missingAcrossSets(data.sets, data.lines),
-    [data],
+    () =>
+      data &&
+      missingAcrossSets(data.sets, data.lines, (title, createdAt) =>
+        t("set.missing.started", {
+          title,
+          date: date(createdAt, { day: "numeric", month: "short" }),
+        }),
+      ),
+    [data, t, date],
   );
   return { missing, error, clearError: () => setError(null), isBusy, tickOff };
 }

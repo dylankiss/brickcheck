@@ -6,6 +6,7 @@ import {
 } from "../components/EnlargedPicture";
 import { ColorChips } from "../components/ColorChips";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
+import { useLanguage } from "../hooks/useLanguage";
 import { useMissingAcrossSets } from "../hooks/useMissingAcrossSets";
 import {
   partColors,
@@ -17,6 +18,7 @@ import {
 
 /** Every Part still missing in your Sets: find a piece, see where it goes, tick it off there. */
 export default function MissingAcrossSets() {
+  const { t } = useLanguage();
   const { missing, error, clearError, isBusy, tickOff } =
     useMissingAcrossSets();
   const [query, setQuery] = useState("");
@@ -43,15 +45,15 @@ export default function MissingAcrossSets() {
 
   return (
     <>
-      <Header title="Missing in all sets" back="/">
+      <Header title={t("set.missingAll.title")} back="/">
         <div className="flex flex-col gap-2 pb-3">
           <input
             name="part-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search parts"
-            aria-label="Search parts by name, number or color"
+            placeholder={t("set.filter.search")}
+            aria-label={t("set.filter.searchLabel")}
             className="min-h-11 w-full rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
           {colors.length > 0 && (
@@ -68,19 +70,21 @@ export default function MissingAcrossSets() {
         {!missing && !error && <Spinner />}
         {missing?.length === 0 && (
           <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
-            Nothing is missing in any of your sets. 🎉
+            {t("set.missingAll.none")}
           </p>
         )}
         {all && all.parts.length > 0 && (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            {all.pieces} {all.pieces === 1 ? "piece" : "pieces"} in{" "}
-            {all.parts.length} {all.parts.length === 1 ? "part" : "parts"} still
-            to find, across {all.sets} {all.sets === 1 ? "set" : "sets"}.
+            {t("set.missingAll.summary", {
+              pieces: t("set.count.pieces", { count: all.pieces }),
+              parts: t("set.count.parts", { count: all.parts.length }),
+              sets: t("set.count.sets", { count: all.sets }),
+            })}
           </p>
         )}
         {missing && missing.length > 0 && shown.length === 0 && (
           <p className="py-8 text-center text-neutral-500 dark:text-neutral-400">
-            No missing parts match.
+            {t("set.missingAll.noMatch")}
           </p>
         )}
         <ul className="flex flex-col gap-2">
@@ -114,6 +118,7 @@ function MissingAcrossItem({
   onTickOff: (setId: string, part: Part) => void;
   onEnlarge: (key: string) => void;
 }) {
+  const { t } = useLanguage();
   const { part } = entry;
   return (
     <li className="rounded-2xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
@@ -147,7 +152,7 @@ function MissingAcrossItem({
             >
               <span className="truncate">{c.label}</span>
               <span className="shrink-0 text-neutral-500 tabular-nums dark:text-neutral-400">
-                needs {c.missing}
+                {t("set.missingAll.needs", { count: c.missing })}
               </span>
             </Link>
             {c.canTickOff && (
@@ -156,9 +161,12 @@ function MissingAcrossItem({
                 onClick={() => onTickOff(c.setId, part)}
                 disabled={isBusy(c.setId, part)}
                 className="min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold text-brick ring-1 ring-brick disabled:opacity-50"
-                aria-label={`Found one ${partLabel(part)} for ${c.label}`}
+                aria-label={t("set.missingAll.foundOneLabel", {
+                  part: partLabel(part),
+                  set: c.label,
+                })}
               >
-                Found one
+                {t("set.missingAll.foundOne")}
               </button>
             )}
           </li>

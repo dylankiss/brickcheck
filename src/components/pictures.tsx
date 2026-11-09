@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { partLabel, type Part } from "../lib/parts";
+import type { Translate } from "../lib/i18n";
 import type { CatalogSet, SetSummary } from "../lib/types";
 import { ColorSwatch } from "./ui";
 
@@ -13,7 +14,7 @@ export interface Picture {
   detail?: ReactNode;
 }
 
-export const partPicture = (part: Part): Picture => ({
+export const partPicture = (part: Part, t: Translate): Picture => ({
   key: `part:${part.key}`,
   src: part.img_url,
   label: partLabel(part),
@@ -26,8 +27,12 @@ export const partPicture = (part: Part): Picture => ({
         className="size-3"
       />
       <span className="truncate">
-        {part.color_name} · {part.part_num} · {part.found} of {part.needed}{" "}
-        found
+        {t("set.picture.partDetail", {
+          color: part.color_name,
+          number: part.part_num,
+          found: part.found,
+          needed: part.needed,
+        })}
       </span>
     </>
   ),

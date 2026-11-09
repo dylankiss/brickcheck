@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { useLanguage } from "../hooks/useLanguage";
 import { isAllFound, partLabel, type Part } from "../lib/parts";
 import { EnlargeButton } from "./EnlargedPicture";
 import { ColorSwatch, PartImage } from "./ui";
@@ -13,6 +14,7 @@ interface Props {
 /** Tap the card to count one found piece; the "−" button undoes one, the magnifier enlarges the picture. */
 export const PartCard = memo(
   function PartCard({ part, canEdit, onTap, onEnlarge }: Props) {
+    const { t } = useLanguage();
     const allFound = isAllFound(part);
     const [noPicture, setNoPicture] = useState(!part.img_url);
     return (
@@ -27,7 +29,11 @@ export const PartCard = memo(
           onClick={() => onTap(part, 1)}
           // A fully found part dims its content only: "−" and the magnifier still work and look it.
           className={`flex flex-1 flex-col items-stretch p-2 text-left transition active:scale-[0.97] disabled:active:scale-100 ${allFound ? "opacity-50" : ""}`}
-          aria-label={`${partLabel(part)}: ${part.found} of ${part.needed} found. Tap to add one.`}
+          aria-label={t("set.part.tapLabel", {
+            label: partLabel(part),
+            found: part.found,
+            needed: part.needed,
+          })}
         >
           {/* Pictures come with a white background, so their frame is white in both themes. */}
           <PartImage
@@ -51,12 +57,12 @@ export const PartCard = memo(
             <span className="truncate">{part.color_name}</span>
             {part.has_minifig_lines && (
               <span className="shrink-0 rounded bg-yellow-300 px-1 text-[10px] font-semibold text-yellow-950 uppercase">
-                minifig
+                {t("set.part.minifig")}
               </span>
             )}
             {part.has_spare_lines && (
               <span className="shrink-0 rounded bg-sky-200 px-1 text-[10px] font-semibold text-sky-950 uppercase">
-                spare
+                {t("set.part.spare")}
               </span>
             )}
           </div>
@@ -84,7 +90,7 @@ export const PartCard = memo(
             type="button"
             onClick={() => onTap(part, -1)}
             className="absolute right-2 bottom-2 flex size-11 items-center justify-center rounded-full bg-neutral-100 text-xl font-bold ring-1 ring-neutral-300 active:bg-neutral-200 dark:bg-neutral-800 dark:ring-neutral-600 dark:active:bg-neutral-700"
-            aria-label={`Remove one ${part.part_name}`}
+            aria-label={t("set.part.removeOne", { name: part.part_name })}
           >
             −
           </button>

@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
+import { useLanguage } from "../hooks/useLanguage";
 import type { Part } from "../lib/parts";
 import { partPicture, type Picture } from "./pictures";
 import { PartImage } from "./ui";
@@ -26,6 +27,7 @@ export function EnlargedPicture({
   picture: Picture | null;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const dialog = useRef<HTMLDialogElement>(null);
   const open = picture !== null;
 
@@ -65,7 +67,7 @@ export function EnlargedPicture({
               type="button"
               onClick={onClose}
               className="flex size-11 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-lg dark:bg-neutral-800"
-              aria-label="Close"
+              aria-label={t("set.picture.close")}
               autoFocus
             >
               ✕
@@ -90,8 +92,9 @@ export function EnlargedPart({
   part: Part | null;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <EnlargedPicture picture={part && partPicture(part)} onClose={onClose} />
+    <EnlargedPicture picture={part && partPicture(part, t)} onClose={onClose} />
   );
 }
 
@@ -103,6 +106,7 @@ function ZoomablePicture({
   src: string | null;
   label: string;
 }) {
+  const { t } = useLanguage();
   const area = useRef<HTMLDivElement>(null);
   const [zoomedAt, setZoomedAt] = useState<{ x: number; y: number } | null>(
     null,
@@ -144,7 +148,9 @@ function ZoomablePicture({
       className="min-h-0 flex-1 overflow-auto bg-white"
       role="button"
       tabIndex={0}
-      aria-label={`${zoomedAt ? "Zoom out" : "Zoom in"}: ${label}`}
+      aria-label={t(zoomedAt ? "set.picture.zoomOut" : "set.picture.zoomIn", {
+        label,
+      })}
       onClick={toggle}
       onKeyDown={toggleWithKey}
     >
@@ -176,12 +182,13 @@ export function EnlargeButton({
   onEnlarge: () => void;
   className?: string;
 }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       onClick={onEnlarge}
       className={`flex size-11 items-center justify-center ${className}`}
-      aria-label={`Enlarge picture of ${label}`}
+      aria-label={t("set.picture.enlarge", { label })}
     >
       <MagnifierBadge />
     </button>
@@ -201,6 +208,7 @@ export function EnlargeableThumbnail({
   /** Size and look of the picture. Position it with a wrapper: the button itself is `relative`. */
   className?: string;
 }) {
+  const { t } = useLanguage();
   const [noPicture, setNoPicture] = useState(!src);
   return (
     <button
@@ -210,7 +218,7 @@ export function EnlargeableThumbnail({
       // Disabled (no picture): taps go through to whatever is underneath, also
       // when a pointer-events-none wrapper positions it on top of a card.
       className="pointer-events-auto relative shrink-0 rounded-lg disabled:pointer-events-none"
-      aria-label={`Enlarge picture of ${label}`}
+      aria-label={t("set.picture.enlarge", { label })}
     >
       <PartImage
         src={src}

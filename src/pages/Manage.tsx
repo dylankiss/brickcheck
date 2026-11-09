@@ -11,15 +11,19 @@ import { inviteUrl } from "../lib/api";
 import { shareLink } from "../lib/share";
 import type { Invite } from "../lib/types";
 
-const roleLabel = {
-  owner: "Owner",
-  helper: "Helper",
-  viewer: "Viewer",
+const roleKey = {
+  owner: "set.role.owner",
+  helper: "set.role.helper",
+  viewer: "set.role.viewer",
+} as const;
+const inviteLinkKey = {
+  helper: "set.invite.linkHelper",
+  viewer: "set.invite.linkViewer",
 } as const;
 
 export default function Manage() {
   const navigate = useNavigate();
-  const { date } = useLanguage();
+  const { t, date } = useLanguage();
   const { session } = useAuth();
   const { setId, summary, version, online, members, reloadMembers } =
     useSetContext();
@@ -64,21 +68,21 @@ export default function Manage() {
         (await shareLink(
           inviteUrl(token),
           set.title,
-          `Help me check "${set.title}" in BrickCheck`,
+          t("set.manage.shareText", { title: set.title }),
         )) === "copied"
       ) {
         setCopied(token);
         setTimeout(() => setCopied(null), 2000);
       }
     } catch {
-      setActionError("Could not copy the link");
+      setActionError(t("set.manage.copyError"));
     }
   }
 
   async function leaveOrDelete() {
     const question = isOwner
-      ? `Delete "${set.title}" for everyone? Progress is lost.`
-      : `Leave "${set.title}"? You can rejoin with an invite link.`;
+      ? t("set.manage.deleteConfirm", { title: set.title })
+      : t("set.manage.leaveConfirm", { title: set.title });
     if (!window.confirm(question)) {
       return;
     }
@@ -88,7 +92,10 @@ export default function Manage() {
   }
 
   async function moveOut() {
-    const question = `Move "${set.title}" out of ${set.group_name ? `"${set.group_name}"` : "its group"}? People who have access only through the group lose it. Members added to this set keep their roles.`;
+    const question = t("set.group.moveOutConfirm", {
+      title: set.title,
+      group: set.group_name ? `"${set.group_name}"` : t("set.group.itsGroup"),
+    });
     if (window.confirm(question)) {
       await moveToGroup(null);
     }
@@ -101,7 +108,7 @@ export default function Manage() {
   }
 
   async function confirmReset() {
-    const question = `Reset all counts in "${set.title}" to zero for everyone? This can't be undone.`;
+    const question = t("set.manage.resetConfirm", { title: set.title });
     if (window.confirm(question) && (await resetCounts())) {
       navigate(`/sets/${setId}`);
     }
@@ -109,7 +116,10 @@ export default function Manage() {
 
   return (
     <>
-      <Header title={`Manage · ${set.title}`} back={`/sets/${setId}`} />
+      <Header
+        title={t("set.manage.title", { title: set.title })}
+        back={`/sets/${setId}`}
+      />
       {(error || actionError) && (
         <ErrorBanner
           message={(error || actionError)!}
@@ -122,20 +132,19 @@ export default function Manage() {
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4">
         {isOwner && (
           <section className="flex flex-col gap-3">
-            <h2 className="font-semibold">Invite people</h2>
+            <h2 className="font-semibold">{t("set.invite.title")}</h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Send a link. Anyone who opens it and logs in joins this set. Links
-              expire after 7 days.
+              {t("set.invite.hint")}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Button onClick={() => createAndShare("helper")}>
-                Invite helpers
+                {t("set.invite.helpers")}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => createAndShare("viewer")}
               >
-                Invite viewers
+                {t("set.invite.viewers")}
               </Button>
             </div>
             {invites.length > 0 && (
@@ -146,19 +155,21 @@ export default function Manage() {
                     className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800"
                   >
                     <span className="flex-1">
-                      {roleLabel[i.role]} link · expires {date(i.expires_at)}
+                      {t(inviteLinkKey[i.role], { date: date(i.expires_at) })}
                     </span>
                     <button
                       className="min-h-11 px-2 font-semibold text-brick"
                       onClick={() => send(i.token)}
                     >
-                      {copied === i.token ? "Copied!" : "Share"}
+                      {copied === i.token
+                        ? t("set.invite.copied")
+                        : t("set.invite.share")}
                     </button>
                     <button
                       className="min-h-11 px-2 text-neutral-500 dark:text-neutral-400"
                       onClick={() => revokeInvite(i.token)}
                     >
-                      Revoke
+                      {t("set.invite.revoke")}
                     </button>
                   </li>
                 ))}
@@ -169,31 +180,31 @@ export default function Manage() {
 
         {isOwner && (set.group_id || targets.length > 0) && (
           <section className="flex flex-col gap-3">
-            <h2 className="font-semibold">Group</h2>
+            <h2 className="font-semibold">{t("set.group.title")}</h2>
             {set.group_id ? (
               <>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  This set is in{" "}
-                  {set.group_name ? `"${set.group_name}"` : "a group"}. Everyone
-                  in the group has access to it.
+                  {set.group_name
+                    ? t("set.group.inNamed", { name: set.group_name })
+                    : t("set.group.inUnnamed")}
                 </p>
                 <Button variant="secondary" onClick={moveOut}>
-                  Move out of group
+                  {t("set.group.moveOut")}
                 </Button>
               </>
             ) : (
               <>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Put this set in a group to share it with everyone in it.
+                  {t("set.group.moveInHint")}
                 </p>
                 <div className="flex gap-2">
                   <Select
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
-                    aria-label="Group to move this set into"
+                    aria-label={t("set.group.pickLabel")}
                     className="min-w-0 flex-1"
                   >
-                    <option value="">Choose a group</option>
+                    <option value="">{t("set.group.pick")}</option>
                     {targets.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.name}
@@ -201,7 +212,7 @@ export default function Manage() {
                     ))}
                   </Select>
                   <Button onClick={moveIn} disabled={!target}>
-                    Move in
+                    {t("set.group.moveIn")}
                   </Button>
                 </div>
               </>
@@ -210,7 +221,7 @@ export default function Manage() {
         )}
 
         <section className="flex flex-col gap-3">
-          <h2 className="font-semibold">Members</h2>
+          <h2 className="font-semibold">{t("set.members.title")}</h2>
           {!members ? (
             <Spinner />
           ) : (
@@ -226,11 +237,11 @@ export default function Manage() {
                     online={onlineIds.has(m.user_id)}
                   />
                   <span className="min-w-0 flex-1 truncate">
-                    {m.display_name || "Unnamed builder"}
+                    {m.display_name || t("set.members.unnamed")}
                     {m.user_id === me && (
                       <span className="text-neutral-500 dark:text-neutral-400">
                         {" "}
-                        (you)
+                        {t("set.members.you")}
                       </span>
                     )}
                   </span>
@@ -242,25 +253,30 @@ export default function Manage() {
                           setRole(m.user_id, e.target.value as Invite["role"])
                         }
                         className="min-h-11 rounded-lg bg-transparent px-1 text-sm"
-                        aria-label={`Role of ${m.display_name ?? "member"}`}
+                        aria-label={t("set.members.roleOf", {
+                          name: m.display_name ?? t("set.members.member"),
+                        })}
                       >
-                        <option value="helper">{roleLabel.helper}</option>
-                        <option value="viewer">{roleLabel.viewer}</option>
+                        <option value="helper">{t(roleKey.helper)}</option>
+                        <option value="viewer">{t(roleKey.viewer)}</option>
                       </select>
                       <button
                         className="min-h-11 px-2 text-sm text-neutral-500 dark:text-neutral-400"
                         onClick={() =>
                           window.confirm(
-                            `Remove ${m.display_name || "this member"}? Links you sent before won't let them back in.`,
+                            t("set.members.removeConfirm", {
+                              name:
+                                m.display_name || t("set.members.thisMember"),
+                            }),
                           ) && remove(m.user_id)
                         }
                       >
-                        Remove
+                        {t("set.members.remove")}
                       </button>
                     </>
                   ) : (
                     <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {roleLabel[m.role]}
+                      {t(roleKey[m.role])}
                     </span>
                   )}
                 </li>
@@ -272,11 +288,12 @@ export default function Manage() {
         {set.group_id && groupMembers.length > 0 && (
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">
-              Through the group{set.group_name ? ` "${set.group_name}"` : ""}
+              {set.group_name
+                ? t("set.group.viaTitleNamed", { name: set.group_name })
+                : t("set.group.viaTitle")}
             </h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              These people have access to this set because they are in the
-              group, with their role in it. Manage them on the Groups page.
+              {t("set.group.viaHint")}
             </p>
             <ul className="flex flex-col gap-2">
               {groupMembers.map((m) => (
@@ -286,16 +303,16 @@ export default function Manage() {
                 >
                   <Avatar name={m.display_name} url={m.avatar_url} />
                   <span className="min-w-0 flex-1 truncate">
-                    {m.display_name || "Unnamed builder"}
+                    {m.display_name || t("set.members.unnamed")}
                     {m.user_id === me && (
                       <span className="text-neutral-500 dark:text-neutral-400">
                         {" "}
-                        (you)
+                        {t("set.members.you")}
                       </span>
                     )}
                   </span>
                   <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {roleLabel[m.role]} · group
+                    {t("set.role.viaGroup", { role: t(roleKey[m.role]) })}
                   </span>
                 </li>
               ))}
@@ -309,7 +326,7 @@ export default function Manage() {
             onClick={confirmReset}
             className="text-red-700 dark:text-red-400"
           >
-            Reset counts
+            {t("set.manage.reset")}
           </Button>
         )}
         {isOwner || hasOwnRow ? (
@@ -318,15 +335,14 @@ export default function Manage() {
             onClick={leaveOrDelete}
             className="text-red-700 dark:text-red-400"
           >
-            {isOwner ? "Delete set" : "Leave set"}
+            {isOwner ? t("set.manage.delete") : t("set.manage.leave")}
           </Button>
         ) : (
           members && (
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              You have access to this set through its group. To lose it, leave
-              the group on the{" "}
+              {t("set.manage.viaGroupOnly")}
               <Link to="/groups" className="font-semibold text-brick underline">
-                Groups page
+                {t("set.manage.groupsPage")}
               </Link>
               .
             </p>

@@ -211,9 +211,17 @@ function aSet(id: string, overrides: Partial<SetSummary> = {}): SetSummary {
   };
 }
 
+// The label is the component's job (it is translated); here it shows what the helper passes in.
+const across = (sets: SetSummary[], lines: InventoryLine[]) =>
+  missingAcrossSets(
+    sets,
+    lines,
+    (title, at) => `${title} @ ${at.slice(0, 10)}`,
+  );
+
 describe("missingAcrossSets", () => {
   it("lists every Set a missing part goes to, with what each still needs", () => {
-    const missing = missingAcrossSets(
+    const missing = across(
       [aSet("a", { title: "House" }), aSet("b", { title: "Castle" })],
       [
         line({ set_id: "a", quantity: 4, found_qty: 1 }),
@@ -230,7 +238,7 @@ describe("missingAcrossSets", () => {
   });
 
   it("lists Sets you only view without letting you tick off, and skips fully found ones", () => {
-    const missing = missingAcrossSets(
+    const missing = across(
       [aSet("a", { my_role: "viewer" }), aSet("b", { my_role: "helper" })],
       [
         line({ set_id: "a", quantity: 2, found_qty: 0 }),
@@ -243,7 +251,7 @@ describe("missingAcrossSets", () => {
   });
 
   it("orders parts by color and, per part, the Set needing the most first", () => {
-    const missing = missingAcrossSets(
+    const missing = across(
       [aSet("a"), aSet("b")],
       [
         line({ set_id: "a", color_id: 4, color_name: "Red", quantity: 1 }),
@@ -256,7 +264,7 @@ describe("missingAcrossSets", () => {
   });
 
   it("tells apart Sets with the same title (two copies of one Catalog set) by start date", () => {
-    const missing = missingAcrossSets(
+    const missing = across(
       [
         aSet("a", { title: "House", created_at: "2026-11-01T09:00:00Z" }),
         aSet("b", { title: "House", created_at: "2026-11-03T09:00:00Z" }),
@@ -264,13 +272,13 @@ describe("missingAcrossSets", () => {
       [line({ set_id: "a", quantity: 1 }), line({ set_id: "b", quantity: 2 })],
     );
     expect(missing[0]?.sets.map((c) => c.label)).toEqual([
-      "House (started 3 Nov)",
-      "House (started 1 Nov)",
+      "House @ 2026-11-03",
+      "House @ 2026-11-01",
     ]);
   });
 
   it("searches by name, number or color and totals what is shown", () => {
-    const missing = missingAcrossSets(
+    const missing = across(
       [aSet("a"), aSet("b")],
       [
         line({ set_id: "a", quantity: 2 }),
