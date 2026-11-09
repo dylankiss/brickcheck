@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
+import { TickToast } from "../components/TickToast";
 import { EnlargedPart } from "../components/EnlargedPicture";
 import {
   ErrorBanner,
@@ -19,8 +20,12 @@ import {
   totals,
   type SortMode,
   type Part,
+  partNumber,
   type PartFilter,
 } from "../lib/parts";
+
+// How long the Undo bar stays after a tick.
+const TICKED_BAR_MS = 4000;
 
 export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
@@ -34,6 +39,30 @@ export default function SetPage() {
   const [sort, setSort] = useState<SortMode>("color");
   // The Part whose picture is enlarged, by key, so its counts stay live.
   const [enlarged, setEnlarged] = useState<string | null>(null);
+
+  // The Part last ticked off, for the Undo bar. A new tick replaces it, and it
+  // goes away after a few seconds or when anything is un-ticked.
+  const [ticked, setTicked] = useState<{ key: string; id: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!ticked) {
+      return;
+    }
+    const timer = setTimeout(() => setTicked(null), TICKED_BAR_MS);
+    return () => clearTimeout(timer);
+  }, [ticked]);
+  const tapPart = useCallback(
+    (part: Part, delta: 1 | -1) => {
+      tap(part, delta);
+      if (delta === 1 && part.found < part.needed) {
+        setTicked((last) => ({ key: part.key, id: (last?.id ?? 0) + 1 }));
+      } else {
+        setTicked(null);
+      }
+    },
+    [tap],
+  );
 
   // The parts the current layout was computed from. Cards never move on their
   // own, so a tap lands where you aimed: the layout is refreshed only when the
@@ -64,6 +93,7 @@ export default function SetPage() {
     );
   }, [parts, filter, sort, order]);
   const byKey = useMemo(() => new Map(parts.map((p) => [p.key, p])), [parts]);
+  const tickedPart = ticked ? byKey.get(ticked.key) : undefined;
   const colors = useMemo(() => partColors(parts), [parts]);
   const { found, needed } = totals(parts);
 
@@ -113,7 +143,7 @@ export default function SetPage() {
             key={key}
             part={byKey.get(key)!}
             canEdit={canEdit}
-            onTap={tap}
+            onTap={tapPart}
             onEnlarge={setEnlarged}
           />
         ))}
@@ -123,6 +153,25 @@ export default function SetPage() {
           </p>
         )}
       </main>
+      <TickToast
+        part={tickedPart ?? null}
+        message={
+          tickedPart
+            ? t("set.tick.added", {
+                number: partNumber(tickedPart),
+                color: tickedPart.color_name,
+                found: tickedPart.found,
+                needed: tickedPart.needed,
+              })
+            : ""
+        }
+        onUndo={() => {
+          if (tickedPart) {
+            tap(tickedPart, -1);
+          }
+          setTicked(null);
+        }}
+      />
       {stale && (
         <button
           type="button"
