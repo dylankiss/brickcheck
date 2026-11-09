@@ -475,10 +475,17 @@ src/
   (`common.showFilters`); the next scroll down hides it again. It moves with a
   transform, so the layout never shifts, and it is `inert` while hidden. Other
   pages keep a plain sticky header.
-- **Color filter** (`ColorFilter`): one button showing the chosen color, which
-  opens a full-screen native `<dialog>` with a swatch grid and a search by
-  name; a ✕ next to the button clears it. The Set page and Missing in all sets
-  share it. Colors in the picker, like the "Color" sort, are ordered by name.
+- **Filter bar** (`FilterBar`): the search field, then three 44px icon-only
+  controls (`filterButtonClass`): sort (a native `<select>` laid transparently
+  over the sort icon, so the system picker opens), color and hide found (a toggle
+  with `aria-pressed`). Each has an `aria-label`. The fields keep the browser's
+  16px text: iOS Safari zooms the page when a field with smaller text takes
+  focus, so they must not shrink.
+- **Color filter** (`ColorFilter`): an icon-only button, a palette or, once a
+  color is chosen, its swatch with a heavier outline. It opens a full-screen
+  native `<dialog>` with a swatch grid and a search by name; "All colors" in it
+  clears the choice. The Set page and Missing in all sets share it. Colors in the
+  picker, like the "Color" sort, are ordered by name.
 
 ### Login and account
 

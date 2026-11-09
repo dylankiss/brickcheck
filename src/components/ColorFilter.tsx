@@ -1,62 +1,48 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../hooks/useLanguage";
 import type { PartColor } from "../lib/parts";
-import { ColorSwatch } from "./ui";
+import { filterButtonClass } from "./filterButton";
+import { ColorSwatch, PaletteIcon } from "./ui";
 
 /**
- * The color filter: one button that shows the chosen color (or "Color") and
- * opens a picker, plus a clear button once a color is chosen.
+ * The color filter: an icon-only button, a palette or, once a color is chosen,
+ * its swatch. It opens the picker, where "All colors" clears the choice.
  */
 export function ColorFilter({
   colors,
   colorId,
   onColorChange,
-  className = "",
 }: {
   colors: PartColor[];
   colorId: number | null;
   onColorChange: (colorId: number | null) => void;
-  /** Layout of the filter in its row. */
-  className?: string;
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const chosen = colors.find((c) => c.id === colorId) ?? null;
   return (
     <>
-      <div className={`flex min-w-0 ${className}`}>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3 text-sm ring-1 ${
-            chosen
-              ? "rounded-l-xl bg-neutral-900 text-white ring-neutral-900 dark:bg-white dark:text-neutral-900"
-              : "rounded-xl ring-neutral-300 dark:ring-neutral-700"
-          }`}
-          aria-haspopup="dialog"
-        >
-          {chosen && (
-            <ColorSwatch
-              rgb={chosen.rgb}
-              trans={chosen.is_trans}
-              className="size-4"
-            />
-          )}
-          <span className="truncate">
-            {chosen ? chosen.name : t("set.filter.color")}
-          </span>
-        </button>
-        {chosen && (
-          <button
-            type="button"
-            onClick={() => onColorChange(null)}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-r-xl bg-neutral-900 text-white ring-1 ring-neutral-900 dark:bg-white dark:text-neutral-900"
-            aria-label={t("set.color.clear", { name: chosen.name })}
-          >
-            ✕
-          </button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={filterButtonClass(chosen ? "marked" : "off")}
+        aria-haspopup="dialog"
+        aria-label={
+          chosen
+            ? t("set.filter.colorActive", { name: chosen.name })
+            : t("set.filter.color")
+        }
+      >
+        {chosen ? (
+          <ColorSwatch
+            rgb={chosen.rgb}
+            trans={chosen.is_trans}
+            className="size-6"
+          />
+        ) : (
+          <PaletteIcon />
         )}
-      </div>
+      </button>
       <ColorPicker
         open={open}
         colors={colors}
@@ -193,30 +179,5 @@ function ColorPicker({
         </div>
       )}
     </dialog>
-  );
-}
-
-export function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm ring-1 ${
-        active
-          ? "bg-neutral-900 text-white ring-neutral-900 dark:bg-white dark:text-neutral-900"
-          : "ring-neutral-300 dark:ring-neutral-700"
-      }`}
-      aria-pressed={active}
-    >
-      {children}
-    </button>
   );
 }
