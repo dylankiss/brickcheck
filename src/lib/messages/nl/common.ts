@@ -4,6 +4,7 @@ export const common = {
   "common.back": "Terug",
   "common.loading": "Laden",
   "common.dismiss": "Sluiten",
+  "common.showFilters": "Zoeken en filters tonen",
   "common.save": "Opslaan",
   "common.tryAgain": "Probeer het opnieuw",
   "common.progress": "Voortgang",

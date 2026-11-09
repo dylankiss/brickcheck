@@ -460,6 +460,14 @@ src/
   compact text. The count sits on the picture's bottom-left corner and the "−"
   button on its bottom-right, both marks 28px in a 44px touch target, so a card is just the picture, the number
   and the color. The "minifig" and "spare" labels sit on the picture's top-left corner.
+- **Header on the Set page** (`Header` with `hideOnScroll`, `useHideOnScroll`): it
+  slides out of view on a short scroll down and then stays out however you
+  scroll, because looking for a piece means scrolling up and down for a while and
+  a header that comes and goes is distracting. It returns near the top of the
+  page, while a field has focus, or from a round button at the bottom right
+  (`common.showFilters`); the next scroll down hides it again. It moves with a
+  transform, so the layout never shifts, and it is `inert` while hidden. Other
+  pages keep a plain sticky header.
 - **Color filter** (`ColorFilter`): one button showing the chosen color, which
   opens a full-screen native `<dialog>` with a swatch grid and a search by
   name; a ✕ next to the button clears it. The Set page and Missing in all sets
