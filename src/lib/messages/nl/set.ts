@@ -28,6 +28,14 @@ export const set = {
   "set.filter.sortPart": "Onderdeel",
   "set.filter.sortMissing": "Meest ontbrekend",
   "set.filter.hideFound": "Gevonden onderdelen verbergen",
+  "set.filter.color": "Kleur",
+
+  "set.color.title": "Kies een kleur",
+  "set.color.search": "Kleuren zoeken",
+  "set.color.all": "Alle kleuren",
+  "set.color.none": "Geen kleuren gevonden.",
+  "set.color.close": "Sluiten",
+  "set.color.clear": "Kleurfilter wissen: {name}",
 
   "set.part.tapLabel":
     "{label}: {found} van {needed} gevonden. Tik om er één toe te voegen.",

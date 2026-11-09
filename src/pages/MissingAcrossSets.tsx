@@ -4,7 +4,7 @@ import {
   EnlargeableThumbnail,
   EnlargedPart,
 } from "../components/EnlargedPicture";
-import { ColorChips } from "../components/ColorChips";
+import { ColorFilter } from "../components/ColorFilter";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMissingAcrossSets } from "../hooks/useMissingAcrossSets";
@@ -33,7 +33,7 @@ export default function MissingAcrossSets() {
     () => partColors(missing?.map((m) => m.part) ?? []),
     [missing],
   );
-  // Ticking off the last part of the chosen color removes its chip: stop filtering on it.
+  // Ticking off the last part of the chosen color removes it from the picker: stop filtering on it.
   const activeColor = colors.some((c) => c.id === colorId) ? colorId : null;
   const shown = useMemo(
     () =>
@@ -57,7 +57,7 @@ export default function MissingAcrossSets() {
             className="min-h-11 w-full rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
           />
           {colors.length > 0 && (
-            <ColorChips
+            <ColorFilter
               colors={colors}
               colorId={activeColor}
               onColorChange={setColorId}

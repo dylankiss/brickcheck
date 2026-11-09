@@ -32,6 +32,15 @@ export const set = {
   "set.filter.sortPart": "Part",
   "set.filter.sortMissing": "Most missing",
   "set.filter.hideFound": "Hide found",
+  "set.filter.color": "Color",
+
+  // Color picker
+  "set.color.title": "Choose a color",
+  "set.color.search": "Search colors",
+  "set.color.all": "All colors",
+  "set.color.none": "No colors match.",
+  "set.color.close": "Close",
+  "set.color.clear": "Clear color filter: {name}",
 
   // Part card and pictures
   "set.part.tapLabel": "{label}: {found} of {needed} found. Tap to add one.",

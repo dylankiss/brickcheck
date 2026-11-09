@@ -453,6 +453,11 @@ src/
   changes. Cards don't jump under your thumb while you tap. `PartCard`
   re-renders only when its counts change.
 
+- **Color filter** (`ColorFilter`): one button showing the chosen color, which
+  opens a full-screen native `<dialog>` with a swatch grid and a search by
+  name; a ✕ next to the button clears it. The Set page and Missing in all sets
+  share it. Colors in the picker, like the "Color" sort, are ordered by name.
+
 ### Login and account
 
 - **Name first**: `RequireAuth` asks users without a display name for one

@@ -178,14 +178,15 @@ export function sortParts(parts: Part[], mode: SortMode): Part[] {
   );
 }
 
-/** A color as the filter chips show it. */
+/** A color as the color picker shows it. */
 export interface PartColor {
   id: number;
   name: string;
   rgb: string | null;
+  is_trans: boolean;
 }
 
-/** Distinct colors present in the parts, for the color filter. */
+/** Distinct colors present in the parts, by name, for the color picker. */
 export function partColors(parts: Part[]): PartColor[] {
   const colors = new Map<number, PartColor>();
   for (const p of parts) {
@@ -193,6 +194,7 @@ export function partColors(parts: Part[]): PartColor[] {
       id: p.color_id,
       name: p.color_name,
       rgb: p.color_rgb,
+      is_trans: p.is_trans,
     });
   }
   return [...colors.values()].sort((a, b) => collator.compare(a.name, b.name));
