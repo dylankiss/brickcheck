@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLanguage } from "../hooks/useLanguage";
 import { turnstileSiteKey } from "../lib/captcha";
 
 // Cloudflare Turnstile CAPTCHA (ARCHITECTURE.md, "Login"). Without a site key
@@ -58,9 +59,12 @@ export function Turnstile({
   resetKey?: number;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
   const onTokenRef = useRef(onToken);
+  const tRef = useRef(t);
   useEffect(() => {
     onTokenRef.current = onToken;
+    tRef.current = t;
   });
 
   useEffect(() => {
@@ -82,15 +86,12 @@ export function Turnstile({
           callback: (token) => onTokenRef.current(token),
           "expired-callback": () => onTokenRef.current(null),
           "error-callback": () =>
-            onTokenRef.current(
-              null,
-              "The security check failed. Reload the page and try again.",
-            ),
+            onTokenRef.current(null, tRef.current("login.captcha.failed")),
         });
       },
-      (err: Error) => {
+      () => {
         if (!unmounted.signal.aborted) {
-          onTokenRef.current(null, err.message);
+          onTokenRef.current(null, tRef.current("login.captcha.loadFailed"));
         }
       },
     );

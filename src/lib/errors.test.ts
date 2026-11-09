@@ -77,7 +77,8 @@ describe("translateError", () => {
     expect(translateError("Something new broke", "nl")).toBe(
       "Something new broke",
     );
-    expect(translateError("", "nl")).not.toBe("");
+    expect(translateError("", "nl")).toBe(dutch("errors.generic"));
+    expect(translateError("", "en")).toBe(plain("errors.generic"));
   });
 
   it("matches a message with or without a final full stop", () => {

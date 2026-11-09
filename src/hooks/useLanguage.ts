@@ -3,6 +3,7 @@ import {
   createTranslator,
   DEFAULT_LANGUAGE,
   formatDate,
+  formatDayMonth,
   formatNumber,
   type Language,
   type Translate,
@@ -15,6 +16,8 @@ export interface LanguageState {
   setLanguage: (language: Language) => Promise<void>;
   t: Translate;
   date: (date: string | Date, options?: Intl.DateTimeFormatOptions) => string;
+  /** Day and short month, always day-first ("3 Nov"). */
+  dayMonth: (date: string | Date) => string;
   number: (value: number, options?: Intl.NumberFormatOptions) => string;
 }
 
@@ -23,6 +26,7 @@ export const LanguageContext = createContext<LanguageState>({
   setLanguage: async () => {},
   t: createTranslator(DEFAULT_LANGUAGE, en),
   date: (d, o) => formatDate(DEFAULT_LANGUAGE, d, o),
+  dayMonth: (d) => formatDayMonth(DEFAULT_LANGUAGE, d),
   number: (v, o) => formatNumber(DEFAULT_LANGUAGE, v, o),
 });
 

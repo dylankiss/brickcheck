@@ -68,7 +68,16 @@ export default function Account() {
   const [name, setName] = useState(current);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // An error is kept with the language it was written in and only shown in
+  // that language: after a language change it is gone, never in the old one.
+  const [failure, setFailure] = useState<{
+    message: string;
+    language: Language;
+  } | null>(null);
+  const error = failure?.language === language ? failure.message : null;
+  const setError = (message: string | null) =>
+    setFailure(message === null ? null : { message, language });
+  const [languageFailed, setLanguageFailed] = useState(false);
 
   const trimmed = name.trim();
   const changed = trimmed !== current && trimmed !== "";
@@ -85,6 +94,16 @@ export default function Account() {
       setError((err as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function changeLanguage(next: Language) {
+    setLanguageFailed(false);
+    try {
+      await setLanguage(next);
+    } catch {
+      // The texts did not load (offline): the language stays as it was.
+      setLanguageFailed(true);
     }
   }
 
@@ -163,7 +182,7 @@ export default function Account() {
             name="language"
             value={language}
             className="w-full"
-            onChange={(e) => setLanguage(e.target.value as Language)}
+            onChange={(e) => changeLanguage(e.target.value as Language)}
           >
             {Object.entries(LANGUAGES).map(([code, name]) => (
               <option key={code} value={code} lang={code}>
@@ -171,9 +190,15 @@ export default function Account() {
               </option>
             ))}
           </Select>
+          {languageFailed && (
+            <p role="alert" className="text-sm text-red-600">
+              {t("account.language.failed")}
+            </p>
+          )}
         </section>
 
-        {passkeysSupported() && <Passkeys />}
+        {/* Keyed by language: its own error is dropped on a change, not shown in the old language. */}
+        {passkeysSupported() && <Passkeys key={language} />}
 
         <Button variant="secondary" onClick={() => signOut()}>
           {t("account.signOut")}

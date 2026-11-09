@@ -358,8 +358,13 @@ src/
   `Intl.PluralRules` needs for the language) that needs a `count` param. Components
   call `const { t, date, number } = useLanguage()` and write `t("account.save")`,
   `t("sets.count", { count })`; never build "1 set" / "2 sets" by hand, and never
-  translate Rebrickable names (set, part, color, minifigure). `date()` and `number()`
-  format for the language (`en-GB` and `nl-NL` locales); no `toLocaleDateString()`.
+  translate Rebrickable names (set, part, color, minifigure). Numbers follow
+  the language (1,234 in English, 1.234 in Dutch): `t()` formats every numeric param
+  itself (strings are left alone, so pass a part number or id as a string), and
+  `number()` formats a number printed outside `t()` (the found/needed counts). `date()`
+  formats a date: English uses the browser's locale (so a US reader gets 11/3/2026),
+  Dutch `nl-NL`; `dayMonth()` is the always day-first "3 Nov" of the "started" label.
+  No `toLocaleDateString()`.
   **Punctuation**: a text that is a sentence (a hint, a message, a question)
   ends with a full stop, `?` or `!`, in every language. Titles, labels, buttons,
   placeholders, short status lines and fragments (a list such as "Heads, torsos,
@@ -370,8 +375,13 @@ src/
   A key missing in a language shows the English text. Each language is one lazily
   loaded chunk (`import("./messages/nl")`), precached by the service worker (the
   `js` glob). `LanguageProvider` (in `main.tsx`, around the app) loads the chunk of
-  the language before the first render, keeps `<html lang>` in step and updates every
-  screen on a change without reload; code outside React reads `getActiveLanguage()`,
+  the language before the first render (until then a neutral "Loading / Laden"
+  spinner; after 4 seconds it gives up and shows English, keeping the saved choice
+  for the next visit), keeps `<html lang>` in step and updates every
+  screen on a change without reload. `setLanguage()` keeps the last choice: a slower, earlier
+  load never overrides a later one. When the chunk cannot load (offline, not cached) it
+  rejects and the language stays; the Account page shows `account.language.failed` in
+  a `role="alert"`. Code outside React reads `getActiveLanguage()`,
   but pure helpers in `lib/parts.ts` take the text they need from the caller (the
   start-date label of `missingAcrossSets`), so it follows the language. The language is the saved choice (`localStorage` key
   `language`, set by the picker on the Account page, per device) or else the browser's
@@ -391,14 +401,19 @@ src/
   `{placeholders}` match a value in the message (the database's `%`). `ApiError`'s
   constructor (so `fail()` too) runs the message through `translateError()` with
   `getActiveLanguage()`, so every screen that shows `error.message` shows it in the
-  language in use, with no change at the call sites; the language cannot change while
-  an error is on screen. A message that matches nothing, or has no Dutch text, shows
+  language in use, with no change at the call sites. The language can only change on
+  the Account page, so that page is the one place an error can outlive a change: it
+  keeps its own error with the language it was written in and shows it only in that
+  language, and its passkeys section is keyed by language, so its error is dropped.
+  An empty message becomes the generic text of the language in use. A message that matches nothing, or has no Dutch text, shows
   as it came (English), never blank. The Dutch error texts are imported statically
   (a few lines) because `fail()` is synchronous and cannot wait for the language
   chunk. A new `raise exception` or `HttpError` needs an `errors.*` key in both
   languages; `lib/errors.test.ts` reads the migrations and Edge Functions and fails
   when a message has no Dutch text or a key matches nothing any more. Auth
-  messages from Supabase and the CAPTCHA error stay in English.
+  messages from Supabase and the WebAuthn (passkey) errors stay as they are sent
+  (English or the browser's own language); the CAPTCHA component's own two messages
+  are translated (`login.captcha.*`).
 - **Errors**: routes have an error page with a Reload button, and a failed
   lazy chunk load (after a deploy) reloads the page into the new version.
 - Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview

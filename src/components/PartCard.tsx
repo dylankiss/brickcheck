@@ -14,7 +14,7 @@ interface Props {
 /** Tap the card to count one found piece; the "−" button undoes one, the magnifier enlarges the picture. */
 export const PartCard = memo(
   function PartCard({ part, canEdit, onTap, onEnlarge }: Props) {
-    const { t } = useLanguage();
+    const { t, number } = useLanguage();
     const allFound = isAllFound(part);
     const [noPicture, setNoPicture] = useState(!part.img_url);
     return (
@@ -70,10 +70,10 @@ export const PartCard = memo(
           <span className="mt-1 flex min-h-11 items-center pr-12">
             <span className="text-xl font-bold tabular-nums">
               {allFound ? "✓ " : ""}
-              {part.found}
+              {number(part.found)}
               <span className="text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 {" "}
-                / {part.needed}
+                / {number(part.needed)}
               </span>
             </span>
           </span>

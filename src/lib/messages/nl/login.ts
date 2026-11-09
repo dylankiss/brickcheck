@@ -17,4 +17,7 @@ export const login = {
   "login.passkey": "Inloggen met een passkey",
   "login.or": "of",
   "login.google": "Doorgaan met Google",
+  "login.captcha.loadFailed": "De CAPTCHA kon niet worden geladen.",
+  "login.captcha.failed":
+    "De beveiligingscontrole is mislukt. Laad de pagina opnieuw en probeer het nog eens.",
 };

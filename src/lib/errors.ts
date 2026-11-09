@@ -71,13 +71,14 @@ export function translateError(
       });
     }
   }
-  return message || enErrors["errors.generic"];
+  return message;
 }
 
 /**
  * What data access throws, so the UI can show `message` as is. The message is
- * translated here, when it is thrown, into the language in use (the UI cannot
- * change language while an error is on screen).
+ * translated here, when it is thrown, into the language in use. A screen that
+ * keeps the message in state while the language can change (the Account page)
+ * drops it on a change, so it is never shown in the old language.
  */
 export class ApiError extends Error {
   constructor(message: string) {

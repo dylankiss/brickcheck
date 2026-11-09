@@ -13,6 +13,8 @@ export const account = {
     "Dit is het adres waarmee je inlogt. Je kunt het hier niet aanpassen.",
   "account.language.label": "Taal",
   "account.language.hint": "Geldt voor dit toestel.",
+  "account.language.failed":
+    "De taal kon niet worden gewijzigd. Controleer je verbinding en probeer het opnieuw.",
   "account.passkeys.title": "Passkeys",
   "account.passkeys.hint":
     "Log in met Face ID, Touch ID of je wachtwoordmanager, zonder te wachten op een e-mail.",
