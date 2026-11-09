@@ -132,7 +132,8 @@ function ColorPicker({
               className="min-h-11 w-full rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
             />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {/* The top padding keeps the cards' outlines inside the scroll area, which clips them. */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {!needle && colorId !== null && (
               <button
                 type="button"
