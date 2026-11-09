@@ -5,6 +5,7 @@ import {
   groupInviteUrl,
   listGroupInvites,
 } from "../lib/api";
+import { useLanguage } from "../hooks/useLanguage";
 import { shareLink } from "../lib/share";
 import type { Invite } from "../lib/types";
 import { Button } from "./ui";
@@ -19,6 +20,7 @@ export function GroupInvites({
   groupId: string;
   groupName: string;
 }) {
+  const { date } = useLanguage();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -102,8 +104,7 @@ export function GroupInvites({
               className="flex items-center gap-2 rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 dark:bg-neutral-800 dark:ring-neutral-700"
             >
               <span className="flex-1">
-                {roleLabel[i.role]} link · expires{" "}
-                {new Date(i.expires_at).toLocaleDateString()}
+                {roleLabel[i.role]} link · expires {date(i.expires_at)}
               </span>
               <button
                 className="min-h-11 px-2 font-semibold text-brick"

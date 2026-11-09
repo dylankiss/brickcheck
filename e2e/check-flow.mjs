@@ -89,6 +89,8 @@ await admin.rpc("import_set", {
 
 async function newPage(browser) {
   const ctx = await browser.newContext({
+    // The flow's selectors are English, whatever the language of this machine.
+    locale: "en",
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     isMobile: true,
@@ -147,6 +149,7 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
   // Login screen
   const anonCtx = await browser.newContext({
+    locale: "en",
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
   });
