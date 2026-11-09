@@ -4,6 +4,7 @@ import {
   useState,
   type ButtonHTMLAttributes,
   type ReactNode,
+  type SelectHTMLAttributes,
 } from "react";
 import { Link } from "react-router";
 import { OfflineBanner } from "./OfflineBanner";
@@ -244,5 +245,40 @@ export function SettingsIcon({ className = "size-6" }: { className?: string }) {
       <circle cx="8" cy="12" r="2" />
       <circle cx="16" cy="18" r="2" />
     </svg>
+  );
+}
+
+/**
+ * A native select with a fixed 44px (or 48px) height. iOS Safari ignores
+ * `min-height` on a styled select and draws it short, so it is sized with
+ * `height`, and the system arrow is replaced by one of ours.
+ */
+export function Select({
+  tall = false,
+  className = "",
+  children,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement> & { tall?: boolean }) {
+  return (
+    <span className={`relative inline-flex ${className}`}>
+      <select
+        {...props}
+        className={`w-full appearance-none rounded-xl bg-white pr-9 pl-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700 ${tall ? "h-12 pl-4" : "h-11"}`}
+      >
+        {children}
+      </select>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-neutral-500 dark:text-neutral-400"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </span>
   );
 }

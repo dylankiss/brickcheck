@@ -20,7 +20,7 @@ function SetLayout({ setId }: { setId: string }) {
   if (set.status === "not-found") {
     return (
       <>
-        <Header title="Set not found" back="/" />
+        <Header title="Set not found" back="/sets" />
         <p className="p-8 text-center text-neutral-500 dark:text-neutral-400">
           This set doesn't exist or isn't shared with you.
         </p>
@@ -30,7 +30,7 @@ function SetLayout({ setId }: { setId: string }) {
   if (set.status === "error" || !set.summary) {
     return (
       <>
-        <Header title="BrickCheck" back="/" />
+        <Header title="BrickCheck" back="/sets" />
         <ErrorBanner message={set.error ?? "Could not load this set"} />
       </>
     );
