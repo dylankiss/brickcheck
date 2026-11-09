@@ -75,3 +75,23 @@ _Avoid_: Lacking, lost, remaining
 **Complete**:
 A Set with nothing missing. It's a fact, not something anyone declares.
 _Avoid_: Done, finished, closed
+
+## Translations
+
+The words above are the English source. Each language keeps the same meanings and the same "avoid" rule: one word per concept. Set, part and color names that come from Rebrickable are shown in English in every language.
+
+### Dutch (informal "je")
+
+| English  | Dutch       |
+| -------- | ----------- |
+| Set      | set         |
+| Part     | onderdeel   |
+| Piece    | stukje      |
+| Found    | gevonden    |
+| Missing  | ontbreekt   |
+| Complete | compleet    |
+| Owner    | eigenaar    |
+| Helper   | helper      |
+| Viewer   | kijker      |
+| Invite   | uitnodiging |
+| Group    | groep       |
