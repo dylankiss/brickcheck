@@ -53,12 +53,12 @@ export const set = {
   },
   "set.missing.started": "{title} (gestart op {date})",
 
-  "set.missingAll.title": "Ontbreekt in alle sets",
+  "set.missingAll.title": "Ontbrekende onderdelen",
   "set.missingAll.none": "Er ontbreekt niets in je sets. 🎉",
   "set.missingAll.summary":
     "{pieces} in {parts} nog te vinden, verspreid over {sets}.",
   "set.missingAll.noMatch": "Geen ontbrekende onderdelen passen erbij.",
-  "set.missingAll.needs": "heeft er {count} nodig",
+  "set.missingAll.needs": "× {count}",
   "set.missingAll.foundOne": "Eén gevonden",
   "set.missingAll.foundOneLabel": "Eén {part} gevonden voor {set}",
 

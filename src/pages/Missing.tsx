@@ -124,7 +124,7 @@ function MissingItem({
           {part.color_name} · {part.part_num}
         </p>
       </div>
-      <span className="text-lg font-bold tabular-nums">×{missing}</span>
+      <span className="text-lg font-bold tabular-nums">× {missing}</span>
     </li>
   );
 }
