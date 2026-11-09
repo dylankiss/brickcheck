@@ -63,7 +63,7 @@ export const set = {
   "set.missingAll.none": "Nothing is missing in any of your sets. 🎉",
   "set.missingAll.summary": "{pieces} in {parts} still to find, across {sets}.",
   "set.missingAll.noMatch": "No missing parts match.",
-  "set.missingAll.needs": "needs {count}",
+  "set.missingAll.needs": "× {count}",
   "set.missingAll.foundOne": "Found one",
   "set.missingAll.foundOneLabel": "Found one {part} for {set}",
 

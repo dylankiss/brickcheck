@@ -141,32 +141,49 @@ function MissingAcrossItem({
             </span>
           </p>
         </div>
-        <span className="text-lg font-bold tabular-nums">×{entry.missing}</span>
+        <span className="text-lg font-bold tabular-nums">
+          × {entry.missing}
+        </span>
       </div>
       <ul className="mt-2 flex flex-col divide-y divide-neutral-100 border-t border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
         {entry.sets.map((c) => (
-          <li key={c.setId} className="flex items-center gap-2 pt-1 pl-1">
+          <li key={c.setId} className="flex items-center gap-3 pt-1 pl-1">
+            {/* The set name gets the room (two lines); the count sits by the button. */}
             <Link
               to={`/sets/${c.setId}`}
-              className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-sm"
+              className="flex min-h-11 min-w-0 flex-1 items-center py-1"
             >
-              <span className="truncate">{c.label}</span>
-              <span className="shrink-0 text-neutral-500 tabular-nums dark:text-neutral-400">
-                {t("set.missingAll.needs", { count: c.missing })}
+              <span className="line-clamp-2 text-sm font-medium wrap-break-word">
+                {c.label}
               </span>
             </Link>
+            <span className="shrink-0 text-sm text-neutral-500 tabular-nums dark:text-neutral-400">
+              {t("set.missingAll.needs", { count: c.missing })}
+            </span>
             {c.canTickOff && (
               <button
                 type="button"
                 onClick={() => onTickOff(c.setId, part)}
                 disabled={isBusy(c.setId, part)}
-                className="min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold text-brick ring-1 ring-brick disabled:opacity-50"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full text-brick ring-1 ring-brick disabled:opacity-50"
                 aria-label={t("set.missingAll.foundOneLabel", {
                   part: partLabel(part),
                   set: c.label,
                 })}
+                title={t("set.missingAll.foundOne")}
               >
-                {t("set.missingAll.foundOne")}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                  className="size-5"
+                >
+                  <path d="m5 12.5 4.5 4.5L19 7.5" />
+                </svg>
               </button>
             )}
           </li>
