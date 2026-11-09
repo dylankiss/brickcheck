@@ -381,6 +381,24 @@ src/
   and key and placeholder parity of English and Dutch. To add a language: a
   `messages/<lang>/` folder, a `LANGUAGES` and `loadMessages` entry in `lib/i18n.ts`,
   a locale in `LOCALES`, and its parity test case.
+  **Server errors** are translated in `lib/errors.ts`, not in the screens. The
+  English text of every `errors.*` key (`messages/en/errors.ts`) is a message the
+  database (`raise exception`), an Edge Function or `lib/api.ts` raises, word for
+  word except for the final full stop a sentence text has and the server leaves off
+  (a final full stop is ignored when matching). A known message shows the text of
+  its key, English included, so the texts decide the punctuation; any other message,
+  such as a Supabase auth error, shows as it came;
+  `{placeholders}` match a value in the message (the database's `%`). `ApiError`'s
+  constructor (so `fail()` too) runs the message through `translateError()` with
+  `getActiveLanguage()`, so every screen that shows `error.message` shows it in the
+  language in use, with no change at the call sites; the language cannot change while
+  an error is on screen. A message that matches nothing, or has no Dutch text, shows
+  as it came (English), never blank. The Dutch error texts are imported statically
+  (a few lines) because `fail()` is synchronous and cannot wait for the language
+  chunk. A new `raise exception` or `HttpError` needs an `errors.*` key in both
+  languages; `lib/errors.test.ts` reads the migrations and Edge Functions and fails
+  when a message has no Dutch text or a key matches nothing any more. Auth
+  messages from Supabase and the CAPTCHA error stay in English.
 - **Errors**: routes have an error page with a Reload button, and a failed
   lazy chunk load (after a deploy) reloads the page into the new version.
 - Invite links use `VITE_PUBLIC_URL` when it is set, so links made on a preview
