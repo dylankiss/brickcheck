@@ -107,7 +107,7 @@ export default function SetPage() {
           {t("set.viewOnly")}
         </p>
       )}
-      <main className="grid grid-cols-2 gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      <main className="grid grid-cols-3 gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:grid-cols-4 sm:gap-3 sm:p-4 md:grid-cols-5 lg:grid-cols-6">
         {order.map((key) => (
           <PartCard
             key={key}

@@ -28,7 +28,7 @@ export const set = {
   "set.filter.sortColor": "Kleur",
   "set.filter.sortPart": "Onderdeel",
   "set.filter.sortMissing": "Meest ontbrekend",
-  "set.filter.hideFound": "Gevonden onderdelen verbergen",
+  "set.filter.hideFound": "Verberg gevonden",
   "set.filter.color": "Kleur",
 
   "set.color.title": "Kies een kleur",
