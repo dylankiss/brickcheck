@@ -201,26 +201,33 @@ export function ColorSwatch({
 
 export function PartImage({
   src,
+  fallbackSrc = null,
   alt,
   className = "",
   onError,
 }: {
   src: string | null;
+  /** Tried when `src` fails to load, such as the original of a resized copy. */
+  fallbackSrc?: string | null;
   alt: string;
   className?: string;
-  /** Called when the picture fails to load and the placeholder takes its place. */
+  /** Called when no picture loads and the placeholder takes its place. */
   onError?: () => void;
 }) {
   // Rebrickable has no render for some parts; show the placeholder instead of a broken image.
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  return src && src !== failedSrc ? (
+  const [failed, setFailed] = useState<readonly string[]>([]);
+  const shown = [src, fallbackSrc].find((s) => s && !failed.includes(s));
+  return shown ? (
     <img
-      src={src}
+      src={shown}
       alt={alt}
       loading="lazy"
+      decoding="async"
       onError={() => {
-        setFailedSrc(src);
-        onError?.();
+        setFailed((prev) => [...prev, shown]);
+        if (shown === (fallbackSrc ?? src)) {
+          onError?.();
+        }
       }}
       className={`object-contain ${className}`}
     />

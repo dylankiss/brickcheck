@@ -96,6 +96,7 @@ export default function AddSet() {
                 label={catalogSet.name}
                 onEnlarge={() => setEnlarged(catalogSetPicture(catalogSet))}
                 className="size-20 rounded-lg bg-white"
+                resizeTo={80}
               />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{catalogSet.name}</p>

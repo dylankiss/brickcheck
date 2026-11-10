@@ -120,6 +120,7 @@ export default function MySets() {
                 label={set.title}
                 onEnlarge={() => setEnlarged(setPicture(set))}
                 className="size-16 rounded-lg bg-white"
+                resizeTo={64}
               />
             </div>
           </div>
