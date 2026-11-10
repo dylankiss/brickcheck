@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { Avatar } from "../components/Avatar";
 import { Button, ErrorBanner, Header, Select, Spinner } from "../components/ui";
@@ -7,7 +7,7 @@ import { useSetContext } from "../hooks/useSetContext";
 import { useGroups } from "../hooks/useGroups";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMembers } from "../hooks/useMembers";
-import { inviteUrl } from "../lib/api";
+import { inviteUrl, updateSet } from "../lib/api";
 import { shareLink } from "../lib/share";
 import type { Invite } from "../lib/types";
 
@@ -29,6 +29,8 @@ export default function Manage() {
     useSetContext();
   const set = summary!;
   const isOwner = set.my_role === "owner";
+  // Owners and Helpers can rename; Viewers cannot (the database refuses too).
+  const canRename = set.my_role === "owner" || set.my_role === "helper";
   const me = session!.user.id;
   const {
     invites,
@@ -53,7 +55,27 @@ export default function Manage() {
   const [target, setTarget] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [title, setTitle] = useState(set.title);
+  const [renaming, setRenaming] = useState(false);
+  const [renamed, setRenamed] = useState(false);
+  const trimmedTitle = title.trim();
+  const titleChanged = trimmedTitle !== set.title && trimmedTitle !== "";
   const onlineIds = new Set(online.map((o) => o.user_id));
+
+  async function rename(e: SubmitEvent) {
+    e.preventDefault();
+    setRenaming(true);
+    setActionError(null);
+    try {
+      await updateSet(setId, { title: trimmedTitle });
+      setTitle(trimmedTitle);
+      setRenamed(true);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setRenaming(false);
+    }
+  }
 
   async function createAndShare(role: Invite["role"]) {
     const created = await invite(role);
@@ -130,6 +152,39 @@ export default function Manage() {
         />
       )}
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4">
+        {canRename && (
+          <form onSubmit={rename} className="flex flex-col gap-2">
+            <label htmlFor="set-title" className="font-semibold">
+              {t("set.rename.label")}
+            </label>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {t("set.rename.hint")}
+            </p>
+            <div className="flex gap-2">
+              <input
+                id="set-title"
+                name="set-title"
+                required
+                maxLength={200}
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setRenamed(false);
+                }}
+                className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 ring-1 ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+              />
+              <Button type="submit" disabled={renaming || !titleChanged}>
+                {renaming ? t("set.rename.saving") : t("set.rename.save")}
+              </Button>
+            </div>
+            <p
+              className="min-h-5 text-sm text-green-700 dark:text-green-400"
+              role="status"
+            >
+              {renamed ? t("set.rename.saved") : ""}
+            </p>
+          </form>
+        )}
         {isOwner && (
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">{t("set.invite.title")}</h2>
@@ -234,6 +289,7 @@ export default function Manage() {
                   <Avatar
                     name={m.display_name}
                     url={m.avatar_url}
+                    avatar={m.avatar}
                     online={onlineIds.has(m.user_id)}
                   />
                   <span className="min-w-0 flex-1 truncate">
@@ -301,7 +357,11 @@ export default function Manage() {
                   key={m.user_id}
                   className="flex items-center gap-3 rounded-xl bg-white p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800"
                 >
-                  <Avatar name={m.display_name} url={m.avatar_url} />
+                  <Avatar
+                    name={m.display_name}
+                    url={m.avatar_url}
+                    avatar={m.avatar}
+                  />
                   <span className="min-w-0 flex-1 truncate">
                     {m.display_name || t("set.members.unnamed")}
                     {m.user_id === me && (
