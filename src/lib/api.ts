@@ -27,26 +27,36 @@ const PAGE_SIZE = 1000;
 // Mobile connections stall; a tap that hangs longer fails and is refetched.
 const TAP_TIMEOUT_MS = 10_000;
 
-/** Fetches every row, page by page, until a page comes back empty. */
+/**
+ * Fetches every row, page by page. Each request asks for the total
+ * (`count: "exact"`), so the last page is known when it arrives and no empty
+ * page is fetched to confirm it. This holds whatever the server's `max_rows`:
+ * a capped page is shorter than PAGE_SIZE but still short of the total.
+ */
 async function fetchAll<T>(
   page: (
     from: number,
     to: number,
-  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  ) => PromiseLike<{
+    data: T[] | null;
+    error: { message: string } | null;
+    count: number | null;
+  }>,
 ): Promise<T[]> {
   const rows: T[] = [];
   for (;;) {
-    const { data, error } = await page(
+    const { data, error, count } = await page(
       rows.length,
       rows.length + PAGE_SIZE - 1,
     );
     if (error || !data) {
       fail(error);
     }
-    if (data.length === 0) {
+    rows.push(...data);
+    // An empty page ends it too, in case the total is missing or stale.
+    if (data.length === 0 || (count !== null && rows.length >= count)) {
       return rows;
     }
-    rows.push(...data);
   }
 }
 
@@ -102,7 +112,7 @@ export function listMySets(): Promise<SetSummary[]> {
   return fetchAll((from, to) =>
     supabase
       .from("set_summaries")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .order("id")
       .range(from, to),
@@ -183,7 +193,7 @@ export function getSetLines(setId: string): Promise<InventoryLine[]> {
   return fetchAll((from, to) =>
     supabase
       .from("set_lines")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("set_id", setId)
       .order("line_id")
       .range(from, to),
@@ -198,7 +208,7 @@ export function getLinesOfSets(setIds: string[]): Promise<InventoryLine[]> {
   return fetchAll((from, to) =>
     supabase
       .from("set_lines")
-      .select("*")
+      .select("*", { count: "exact" })
       .in("set_id", setIds)
       .order("set_id")
       .order("line_id")
@@ -211,7 +221,7 @@ export function getSetProgress(setId: string): Promise<LineProgress[]> {
   return fetchAll((from, to) =>
     supabase
       .from("set_progress")
-      .select("line_id, found_qty, updated_at")
+      .select("line_id, found_qty, updated_at", { count: "exact" })
       .eq("set_id", setId)
       .order("line_id")
       .range(from, to),
@@ -255,7 +265,7 @@ export async function listGroups(me: string): Promise<Group[]> {
   const data = await fetchAll((from, to) =>
     supabase
       .from("groups")
-      .select("id, name, group_members!inner(role)")
+      .select("id, name, group_members!inner(role)", { count: "exact" })
       .eq("group_members.user_id", me)
       .order("name")
       .order("id")
@@ -399,7 +409,9 @@ export async function listGroupMembers(
   const data = await fetchAll((from, to) =>
     supabase
       .from("group_members")
-      .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
+      .select("user_id, role, joined_at, profiles(display_name, avatar_url)", {
+        count: "exact",
+      })
       .eq("group_id", groupId)
       .order("joined_at")
       .order("user_id")
@@ -427,7 +439,9 @@ export async function listMembers(setId: string): Promise<Member[]> {
   const data = await fetchAll((from, to) =>
     supabase
       .from("set_members")
-      .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
+      .select("user_id, role, joined_at, profiles(display_name, avatar_url)", {
+        count: "exact",
+      })
       .eq("set_id", setId)
       .order("joined_at")
       .order("user_id")
@@ -481,7 +495,7 @@ export function listInvites(setId: string): Promise<Invite[]> {
   return fetchAll((from, to) =>
     supabase
       .from("set_invites")
-      .select("token, role, expires_at")
+      .select("token, role, expires_at", { count: "exact" })
       .eq("set_id", setId)
       .gt("expires_at", new Date().toISOString())
       .order("created_at")
@@ -551,7 +565,7 @@ export function listGroupInvites(groupId: string): Promise<Invite[]> {
   return fetchAll((from, to) =>
     supabase
       .from("group_invites")
-      .select("token, role, expires_at")
+      .select("token, role, expires_at", { count: "exact" })
       .eq("group_id", groupId)
       .gt("expires_at", new Date().toISOString())
       .order("created_at")

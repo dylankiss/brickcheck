@@ -299,8 +299,10 @@ src/
   exception is `AuthProvider`, which holds app-level session state.
 - Database row types are written by hand in `lib/types.ts`.
   `supabase gen types` could generate them now that the project is linked.
-- Every list read is paginated until a page comes back empty, whatever the
-  server's `max_rows`.
+- Every list read is paginated, whatever the server's `max_rows`. Each page asks
+  for the total (`count: "exact"`), so the last page is known when it arrives
+  and no empty page is fetched to confirm it (that cost a round trip on every
+  set open).
 - **Groups in the UI**: My sets is one list of every Set I can see, whatever
   the access path. A Set in a Group shows a "Group: name" chip, and a Group
   select (shown when some Set has a Group) filters by All, Not in a group, or
