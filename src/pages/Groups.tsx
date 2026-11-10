@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Avatar } from "../components/Avatar";
 import { GroupInvites } from "../components/GroupInvites";
 import { Button, ErrorBanner, Header, Spinner } from "../components/ui";
@@ -30,7 +30,7 @@ export default function Groups() {
   );
   const [name, setName] = useState("");
 
-  async function submit(e: FormEvent) {
+  async function submit(e: SubmitEvent) {
     e.preventDefault();
     if (name.trim() && (await create(name))) {
       setName("");
@@ -178,7 +178,7 @@ function GroupCard({
     }
   }
 
-  async function save(e: FormEvent) {
+  async function save(e: SubmitEvent) {
     e.preventDefault();
     if (name.trim() && (await rename(group.id, name))) {
       setEditing(false);

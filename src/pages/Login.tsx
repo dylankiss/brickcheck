@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Navigate, useLocation } from "react-router";
 import { Button, ErrorBanner } from "../components/ui";
 import { OfflineBanner } from "../components/OfflineBanner";
@@ -49,7 +49,7 @@ export default function Login() {
 
   const shownError = error ?? captcha.error;
 
-  async function submit(e: FormEvent) {
+  async function submit(e: SubmitEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
@@ -65,7 +65,7 @@ export default function Login() {
     }
   }
 
-  async function submitCode(e: FormEvent) {
+  async function submitCode(e: SubmitEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);

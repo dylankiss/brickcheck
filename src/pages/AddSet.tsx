@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { useNavigate } from "react-router";
 import { CatalogSearch } from "../components/CatalogSearch";
 import {
@@ -41,7 +41,7 @@ export default function AddSet() {
     setError(null);
   }
 
-  async function submit(e: FormEvent) {
+  async function submit(e: SubmitEvent) {
     e.preventDefault();
     if (!catalogSet) {
       return;

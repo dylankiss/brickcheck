@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { Button } from "./ui";
@@ -10,7 +10,7 @@ export function NamePrompt() {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function save(e: FormEvent) {
+  async function save(e: SubmitEvent) {
     e.preventDefault();
     try {
       await updateName(name.trim());
