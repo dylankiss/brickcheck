@@ -454,12 +454,14 @@ src/
   changes, when the number of parts changes (first load), or when the user
   presses "Update order", a floating button that appears only while a fresh
   layout would differ. `PartCard` re-renders only when its counts change.
-- **Card size**: a card shows the element id (the number in the manual's parts list,
-  `partNumber()`; the part number when Rebrickable has none), not the name (the
-  name stays in search, labels and the enlarged picture); three cards per row on a phone (four from `sm`, up to six), with
-  compact text. The count sits on the picture's bottom-left corner and the "−"
-  button on its bottom-right, both marks 28px in a 44px touch target, so a card is just the picture, the number
-  and the color. The "minifig" and "spare" labels sit on the picture's top-left corner.
+- **Card size**: a card shows the element id (the number in the manual's parts
+  list, `partNumber()`; the part number when Rebrickable has none), not the name
+  (the name stays in search, labels and the enlarged picture). The grid fits as
+  many cards per row as have room at 6.5rem or wider (`auto-fill`): three on a
+  phone, more on bigger screens. Text is compact. The count sits on the picture's
+  bottom-left corner and the "−" button on its bottom-right, both marks 28px in a
+  44px touch target, so a card is just the picture, the number and the color. The
+  "minifig" and "spare" labels sit on the picture's top-left corner.
 - **Tick feedback** (`TickToast`, `useRecentTick`): each tick shows a bar at the
   bottom with the part's picture, a short summary and Undo, for 4 seconds or
   until the next tick, because a finger resting on a card hides the card itself.
