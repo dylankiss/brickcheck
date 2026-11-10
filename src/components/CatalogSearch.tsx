@@ -69,6 +69,7 @@ export function CatalogSearch({
                 label={catalogSet.name}
                 onEnlarge={() => onEnlarge(catalogSet)}
                 className="size-16 rounded-lg bg-white"
+                resizeTo={64}
               />
             </div>
           </li>

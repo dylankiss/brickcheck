@@ -17,7 +17,7 @@ deliberately departs from it, update this document in the same commit.
 | Hosting   | Cloudflare Pages (static, SPA fallback is built in)           |
 | Backend   | Supabase: Postgres, Auth, Realtime, Edge Functions (Deno)     |
 | LEGO data | Rebrickable: CSV dump for the catalog, API v3 for inventories |
-| Images    | Hot-linked from Rebrickable's CDN (`cdn.rebrickable.com`)     |
+| Images    | Hot-linked from Rebrickable's CDN; set thumbnails via wsrv.nl |
 
 There is no custom server. The browser talks to Supabase only.
 
@@ -239,8 +239,8 @@ and groups them by part and color.
   a strict referrer policy, a minimal `Permissions-Policy`, `X-Frame-Options`,
   HSTS, `Cross-Origin-Opener-Policy: same-origin` and a
   Content-Security-Policy that allows only our own files, Supabase
-  (`https` and `wss`), Cloudflare Turnstile, Rebrickable images and Google
-  avatars. No inline scripts exist, so the CSP needs no `unsafe-inline` for
+  (`https` and `wss`), Cloudflare Turnstile, Rebrickable images, the wsrv.nl
+  image proxy (resized set pictures) and Google avatars. No inline scripts exist, so the CSP needs no `unsafe-inline` for
   scripts; styles keep it because React sets `style` attributes. A new third-party
   origin (script, frame, image, API) must be added to the CSP in the same commit.
 - Edge Functions run with `verify_jwt = false` and verify the caller in code
@@ -331,6 +331,16 @@ src/
   to the page shows it at once and refreshes it in the background, so there is no
   spinner on a revisit. Pictures are never cached by the app: the browser's HTTP
   cache serves them (see `vite.config.ts`).
+- **Set thumbnails** (`lib/images.ts`): Rebrickable's set pictures are 1600px
+  JPEGs of 200 to 330 KB. Shown at 60 to 200px, decoding them was what made My
+  sets slow on every return, since a phone drops the decoded bitmaps. Lists show
+  a copy from the free wsrv.nl image proxy instead (WebP at twice the box, never
+  enlarged, about 3 KB), through `EnlargeableThumbnail`'s `resizeTo` (My sets,
+  catalog search, Add a set, Join). `PartImage` falls back to the original when
+  the copy fails, and decodes asynchronously (`decoding="async"`). The enlarged
+  picture and part pictures (about 2 KB, 36 KB for the rare LDraw render) use the
+  original. wsrv.nl has no uptime guarantee: if it is down, pictures load at full
+  size, slowly, and nothing breaks.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - **Accessibility** (WCAG 2.2 AA): `Header` moves focus to the page's `<h1>`
   when a page opens (unless a field already has focus, like the catalog
@@ -701,9 +711,9 @@ Gaps, highest impact first:
    Fix: a weekly `supabase db dump` workflow, or the Pro plan, and a dump
    before every `db push`. Roll back with a new corrective migration.
 2. **Privacy**: no privacy policy page, although email, name and avatar are
-   stored and IP addresses reach Cloudflare and Rebrickable. Fix: a static
-   `/privacy` page linked from Login, naming Supabase, Cloudflare, Rebrickable
-   and Google.
+   stored and IP addresses reach Cloudflare, Rebrickable and wsrv.nl (which also
+   sees the set picture addresses). Fix: a static `/privacy` page linked from
+   Login, naming Supabase, Cloudflare, Rebrickable, wsrv.nl and Google.
 3. **Account deletion and export**: no "delete my account" (GDPR Art. 17 and 20).
    Deleting an owner deletes their sets for everyone. Fix for now: a manual
    procedure in `DEPLOY.md`; later a `delete-account` Edge Function.

@@ -48,6 +48,7 @@ export default function Join() {
                 label={preview.set_title}
                 onEnlarge={() => setEnlarged(true)}
                 className="h-32 w-48 rounded-lg bg-white"
+                resizeTo={192}
               />
               <p className="text-lg font-semibold">{preview.set_title}</p>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">

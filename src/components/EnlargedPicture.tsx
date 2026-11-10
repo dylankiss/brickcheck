@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useLanguage } from "../hooks/useLanguage";
 import type { Part } from "../lib/parts";
+import { setThumbnailUrl } from "../lib/images";
 import { partPicture, type Picture } from "./pictures";
 import { PartImage } from "./ui";
 
@@ -201,10 +202,13 @@ export function EnlargeableThumbnail({
   label,
   onEnlarge,
   className = "size-14 rounded-lg bg-white",
+  resizeTo,
 }: {
   src: string | null;
   label: string;
   onEnlarge: () => void;
+  /** For a set picture: the picture's box in CSS pixels. A small copy is shown (see `lib/images.ts`), the original if that fails. */
+  resizeTo?: number;
   /** Size and look of the picture. Position it with a wrapper: the button itself is `relative`. */
   className?: string;
 }) {
@@ -221,7 +225,8 @@ export function EnlargeableThumbnail({
       aria-label={t("set.picture.enlarge", { label })}
     >
       <PartImage
-        src={src}
+        src={resizeTo ? setThumbnailUrl(src, resizeTo) : src}
+        fallbackSrc={resizeTo ? src : null}
         alt=""
         onError={() => setNoPicture(true)}
         className={className}
