@@ -409,9 +409,12 @@ export async function listGroupMembers(
   const data = await fetchAll((from, to) =>
     supabase
       .from("group_members")
-      .select("user_id, role, joined_at, profiles(display_name, avatar_url)", {
-        count: "exact",
-      })
+      .select(
+        "user_id, role, joined_at, profiles(display_name, avatar_url, avatar)",
+        {
+          count: "exact",
+        },
+      )
       .eq("group_id", groupId)
       .order("joined_at")
       .order("user_id")
@@ -420,13 +423,14 @@ export async function listGroupMembers(
   return data.map(({ profiles, ...member }) => {
     const profile = (Array.isArray(profiles) ? profiles[0] : profiles) as Pick<
       Profile,
-      "display_name" | "avatar_url"
+      "display_name" | "avatar_url" | "avatar"
     > | null;
     return {
       ...member,
       role: member.role as SetRole,
       display_name: profile?.display_name ?? null,
       avatar_url: profile?.avatar_url ?? null,
+      avatar: profile?.avatar ?? null,
     };
   });
 }
@@ -439,9 +443,12 @@ export async function listMembers(setId: string): Promise<Member[]> {
   const data = await fetchAll((from, to) =>
     supabase
       .from("set_members")
-      .select("user_id, role, joined_at, profiles(display_name, avatar_url)", {
-        count: "exact",
-      })
+      .select(
+        "user_id, role, joined_at, profiles(display_name, avatar_url, avatar)",
+        {
+          count: "exact",
+        },
+      )
       .eq("set_id", setId)
       .order("joined_at")
       .order("user_id")
@@ -450,13 +457,14 @@ export async function listMembers(setId: string): Promise<Member[]> {
   return data.map(({ profiles, ...member }) => {
     const profile = (Array.isArray(profiles) ? profiles[0] : profiles) as Pick<
       Profile,
-      "display_name" | "avatar_url"
+      "display_name" | "avatar_url" | "avatar"
     > | null;
     return {
       ...member,
       role: member.role as SetRole,
       display_name: profile?.display_name ?? null,
       avatar_url: profile?.avatar_url ?? null,
+      avatar: profile?.avatar ?? null,
     };
   });
 }

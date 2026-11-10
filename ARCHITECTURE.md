@@ -94,23 +94,23 @@ scripts/import-catalog.mjs ──(service role)──► lego_sets   (Rebrickabl
 
 ## Data model
 
-| Table / view           | Purpose                                                               | Written by                                                                                             |
-| ---------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `profiles`             | display name and avatar per auth user (the email is never exposed)    | trigger on `auth.users`, the user themselves                                                           |
-| `lego_sets`            | set catalog and metadata                                              | catalog script, `import_set` (service role)                                                            |
-| `inventory_lines`      | cached inventory lines                                                | `import_set` (service role)                                                                            |
-| `set_import_log`       | Rebrickable fetches per user, for rate limiting                       | `fetch-set` (service role)                                                                             |
-| `sets`                 | one physical set being checked: a copy of a catalog set (GLOSSARY.md) | owner insert; `title` by helpers                                                                       |
-| `set_members`          | who can see or edit a set (`owner`, `helper`, `viewer`)               | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member    |
-| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0          | `adjust_part` and `reset_set_progress` RPCs only                                                       |
-| `set_invites`          | invite tokens                                                         | the owner                                                                                              |
-| `set_removals`         | who the owner removed, and when                                       | trigger on `set_members` delete                                                                        |
-| `groups`               | a named set of people sharing access to its Sets (GLOSSARY.md)        | `create_group` RPC; `name` by the Group's Owners                                                       |
-| `group_members`        | who is in a Group (`owner`, `helper`, `viewer`)                       | trigger (creator as Owner), `accept_group_invite` RPC; role changes and removals by the Group's Owners |
-| `group_invites`        | Group invite tokens                                                   | the Group's Owners                                                                                     |
-| `group_removals`       | who an Owner removed from a Group, and when                           | trigger on `group_members` delete                                                                      |
-| `set_lines` (view)     | every line that counts for a set, with `found_qty`                    | —                                                                                                      |
-| `set_summaries` (view) | per set: catalog set info, my effective role, needed, found, Group    | —                                                                                                      |
+| Table / view           | Purpose                                                                                           | Written by                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `profiles`             | display name, sign-in photo and chosen built-in avatar per auth user (the email is never exposed) | trigger on `auth.users`, the user themselves                                                           |
+| `lego_sets`            | set catalog and metadata                                                                          | catalog script, `import_set` (service role)                                                            |
+| `inventory_lines`      | cached inventory lines                                                                            | `import_set` (service role)                                                                            |
+| `set_import_log`       | Rebrickable fetches per user, for rate limiting                                                   | `fetch-set` (service role)                                                                             |
+| `sets`                 | one physical set being checked: a copy of a catalog set (GLOSSARY.md)                             | owner insert; `title` by helpers                                                                       |
+| `set_members`          | who can see or edit a set (`owner`, `helper`, `viewer`)                                           | trigger (owner), `accept_invite` RPC; role changes and removals by the owner; leaving by the member    |
+| `set_progress`         | `found_qty` per (set, inventory line); a missing row means 0                                      | `adjust_part` and `reset_set_progress` RPCs only                                                       |
+| `set_invites`          | invite tokens                                                                                     | the owner                                                                                              |
+| `set_removals`         | who the owner removed, and when                                                                   | trigger on `set_members` delete                                                                        |
+| `groups`               | a named set of people sharing access to its Sets (GLOSSARY.md)                                    | `create_group` RPC; `name` by the Group's Owners                                                       |
+| `group_members`        | who is in a Group (`owner`, `helper`, `viewer`)                                                   | trigger (creator as Owner), `accept_group_invite` RPC; role changes and removals by the Group's Owners |
+| `group_invites`        | Group invite tokens                                                                               | the Group's Owners                                                                                     |
+| `group_removals`       | who an Owner removed from a Group, and when                                                       | trigger on `group_members` delete                                                                      |
+| `set_lines` (view)     | every line that counts for a set, with `found_qty`                                                | —                                                                                                      |
+| `set_summaries` (view) | per set: catalog set info, my effective role, needed, found, Group                                | —                                                                                                      |
 
 **Groups** (ADR 0001): `sets.group_id` is an optional reference to a Group (a Set
 is in at most one; `on delete restrict`, so a Group with Sets can't be deleted).
@@ -232,7 +232,20 @@ and groups them by part and color.
   broadcasts until the token expires (`jwt_expiry`, 1 h). Our client leaves
   the channel as soon as it notices.
 - `avatar_url` is set only from the OAuth provider at signup; users cannot
-  change it (no tracking pixels for co-members).
+  change it (no tracking pixels for co-members). What a user can choose is
+  `avatar`, the id of a built-in avatar: one of three minifigure-head icons (a
+  plain head, a man, a woman) on one of eight LEGO colours (a black-lined head
+  with a light tint of the colour as its face, so the contrast does not depend on the colour), saved as
+  the two ids joined by a hyphen (`woman-blue`, `lib/avatars.ts`). The database
+  only checks the shape (two lowercase words), so it can never be a URL. The
+  icons are inline SVG paths (`components/AvatarIcon.tsx`; no requests to
+  third parties). The app shows `avatar` first, then `avatar_url`, then
+  initials, and ignores ids it does not know.
+- The three avatar icons are "lego" by Musket from the Noun Project, under CC BY
+  3.0, which requires the credit line at the bottom of the Account page. Keep it
+  while the icons are used, and extend it when icons are added (check each
+  icon's licence first; some are paid-only). The icons are recoloured in the app,
+  which the credit says.
 - Migrations grant what the app needs to `authenticated` explicitly instead of
   relying on platform default privileges.
 - **Browser headers** (`public/_headers`, served by Cloudflare Pages): `nosniff`,
@@ -260,7 +273,7 @@ and groups them by part and color.
 | `/`                  | Home              | the start screen: cards for My sets, Groups and "Where does this piece go?", each with a status line; the avatar (Account) and theme button; asks email users for a display name once                                                                                                                               |
 | `/sets`              | MySets            | my sets, with a Group label and a Group filter                                                                                                                                                                                                                                                                      |
 | `/groups`            | Groups            | create, list and rename (Owners) your Groups, show their members and roles, change roles, promote and remove members (Owners), create and revoke Group invites (Owners), leave (with a warning listing the Sets you added and a Move out button for each) and delete (Owners, only when empty); linked from My sets |
-| `/account`           | Account           | your display name (editable), login email (read-only), passkeys, sign out; opened from the avatar on the start screen                                                                                                                                                                                               |
+| `/account`           | Account           | your display name and avatar (both editable; you pick one of three built-in icons and a colour, no uploads), login email (read-only), passkeys, sign out; opened from the avatar on the start screen                                                                                                                |
 | `/missing`           | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)                                                                                                                                                                                                                  |
 | `/new`               | AddSet            | catalog search → `fetch-set` → create set, with an optional Group (where you are Owner or Helper)                                                                                                                                                                                                                   |
 | `/join/:token`       | Join              | invite preview → `accept_invite`                                                                                                                                                                                                                                                                                    |

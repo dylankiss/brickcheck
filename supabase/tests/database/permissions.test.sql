@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(40);
 
 ------------------------------------------------------------------------------
 -- Fixtures: Alice owns a set on 1-1 (with include_minifigs = false),
@@ -228,6 +228,28 @@ select throws_ok(
   '42501',
   null,
   'users cannot change their profile id'
+);
+
+select lives_ok(
+  $$ update public.profiles set avatar = 'red-brick' where id = '00000000-0000-0000-0000-00000000000b' $$,
+  'users can choose a built-in avatar'
+);
+select is(
+  (select avatar from public.profiles where id = '00000000-0000-0000-0000-00000000000b'),
+  'red-brick',
+  'the chosen avatar is saved'
+);
+select throws_ok(
+  $$ update public.profiles set avatar = 'https://example.com/x.png' where id = '00000000-0000-0000-0000-00000000000b' $$,
+  '23514',
+  null,
+  'an avatar must be a built-in id, not a URL'
+);
+select throws_ok(
+  $$ update public.profiles set avatar_url = 'https://example.com/x.png' where id = '00000000-0000-0000-0000-00000000000b' $$,
+  '42501',
+  null,
+  'avatar_url still cannot be set by users'
 );
 
 ------------------------------------------------------------------------------

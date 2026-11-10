@@ -1,4 +1,6 @@
 import { useLanguage } from "../hooks/useLanguage";
+import { AvatarIcon } from "./AvatarIcon";
+import { avatarChoice } from "../lib/avatars";
 
 const PALETTE = [
   // Dark enough for white initials (WCAG 2.2 AA, 4.5:1).
@@ -30,24 +32,44 @@ function colorFor(name: string | null): string {
   return PALETTE[Math.abs(hash) % PALETTE.length]!;
 }
 
+/**
+ * A person's picture: the built-in avatar they chose, else their sign-in
+ * photo, else their initials on a colour.
+ */
 export function Avatar({
   name,
   url,
+  avatar,
   online,
   size = "size-9",
 }: {
   name: string | null;
   url?: string | null;
+  /** The saved id of a built-in avatar; wins over `url`. */
+  avatar?: string | null;
   online?: boolean;
   size?: string;
 }) {
   const { t } = useLanguage();
+  const chosen = avatarChoice(avatar);
   return (
     <span
       className={`relative inline-flex shrink-0 ${size}`}
       title={name ?? undefined}
     >
-      {url ? (
+      {chosen ? (
+        <span
+          // The background is one of LEGO's own colours, the same in light and dark mode.
+          style={{ backgroundColor: chosen.hex }}
+          className="flex size-full items-center justify-center overflow-hidden rounded-full ring-1 ring-black/10 dark:ring-white/30"
+        >
+          <AvatarIcon
+            icon={chosen.icon}
+            face={chosen.face}
+            className="size-[80%]"
+          />
+        </span>
+      ) : url ? (
         <img
           src={url}
           alt=""
@@ -79,6 +101,7 @@ export function OnlineAvatars({
     user_id: string;
     display_name: string | null;
     avatar_url: string | null;
+    avatar: string | null;
   }[];
 }) {
   const { t } = useLanguage();
@@ -95,7 +118,12 @@ export function OnlineAvatars({
           key={p.user_id}
           className="rounded-full ring-2 ring-neutral-50 dark:ring-neutral-950"
         >
-          <Avatar name={p.display_name} url={p.avatar_url} size="size-8" />
+          <Avatar
+            name={p.display_name}
+            url={p.avatar_url}
+            avatar={p.avatar}
+            size="size-8"
+          />
         </span>
       ))}
       {people.length > 4 && (

@@ -10,6 +10,7 @@ export interface AuthState {
   loading: boolean;
   refreshProfile: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
+  updateAvatar: (avatar: string | null) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -20,6 +21,7 @@ export const AuthContext = createContext<AuthState>({
   loading: true,
   refreshProfile: async () => {},
   updateName: async () => {},
+  updateAvatar: async () => {},
   signOut: async () => {},
 });
 
