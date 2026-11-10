@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { useLanguage } from "../hooks/useLanguage";
 import { PartImage } from "./ui";
 
@@ -21,9 +21,12 @@ export interface Tick {
 export function TickToast({
   tick,
   onUndo,
+  hold,
 }: {
   tick: Tick | null;
   onUndo: () => void;
+  /** Pointer and focus handlers that pause the bar's countdown (`useRecentTick`). */
+  hold?: HTMLAttributes<HTMLDivElement>;
 }) {
   const { t } = useLanguage();
   return (
@@ -32,7 +35,10 @@ export function TickToast({
       className="pointer-events-none fixed inset-x-3 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)] z-20 flex justify-center"
     >
       {tick && (
-        <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-2xl bg-neutral-900 p-1 text-white shadow-lg dark:bg-white dark:text-neutral-900">
+        <div
+          {...hold}
+          className="pointer-events-auto flex max-w-full items-center gap-3 rounded-2xl bg-neutral-900 p-1 text-white shadow-lg dark:bg-white dark:text-neutral-900"
+        >
           <span className="sr-only">{tick.label}</span>
           {/* Pictures come with a white background, so their frame is white in both themes. */}
           <PartImage
