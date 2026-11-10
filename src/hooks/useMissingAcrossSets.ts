@@ -15,7 +15,7 @@ const busyKey = (setId: string, part: Part) => `${setId}|${part.key}`;
 
 /**
  * Every Part still missing in the user's incomplete Sets, and a way to tick
- * one off in a given Set. Loaded on open and when the page becomes visible
+ * one off in a given Set, and to take it back. Loaded on open and when the page becomes visible
  * again; not live like a Set's own page.
  */
 export function useMissingAcrossSets() {
@@ -53,8 +53,9 @@ export function useMissingAcrossSets() {
   }, [load]);
   useOnVisible(() => void load());
 
-  const tickOff = useCallback(
-    async (setId: string, part: Part) => {
+  /** Adds `delta` found pieces of a Part in one Set; −1 takes a tick back. Says whether it was saved. */
+  const adjust = useCallback(
+    async (setId: string, part: Part, delta: 1 | -1) => {
       const id = busyKey(setId, part);
       version.current++;
       setBusy((prev) => new Set(prev).add(id));
@@ -63,7 +64,7 @@ export function useMissingAcrossSets() {
           setId,
           part.part_num,
           part.color_id,
-          1,
+          delta,
         );
         setData(
           (prev) =>
@@ -72,10 +73,12 @@ export function useMissingAcrossSets() {
               lines: applySetProgress(prev.lines, setId, progress),
             },
         );
+        return true;
       } catch (e) {
         // The tap may or may not have been saved: show the error and reload the truth.
         setError((e as Error).message);
         load();
+        return false;
       } finally {
         setBusy((prev) => {
           const next = new Set(prev);
@@ -85,6 +88,15 @@ export function useMissingAcrossSets() {
       }
     },
     [load],
+  );
+
+  const tickOff = useCallback(
+    (setId: string, part: Part) => adjust(setId, part, 1),
+    [adjust],
+  );
+  const untick = useCallback(
+    (setId: string, part: Part) => adjust(setId, part, -1),
+    [adjust],
   );
 
   const isBusy = useCallback(
@@ -102,5 +114,12 @@ export function useMissingAcrossSets() {
       ),
     [data, t, dayMonth],
   );
-  return { missing, error, clearError: () => setError(null), isBusy, tickOff };
+  return {
+    missing,
+    error,
+    clearError: () => setError(null),
+    isBusy,
+    tickOff,
+    untick,
+  };
 }

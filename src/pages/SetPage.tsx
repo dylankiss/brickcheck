@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
@@ -12,6 +12,7 @@ import {
   SettingsIcon,
 } from "../components/ui";
 import { useLanguage } from "../hooks/useLanguage";
+import { useRecentTick } from "../hooks/useRecentTick";
 import { useSetContext } from "../hooks/useSetContext";
 import {
   filterParts,
@@ -23,9 +24,6 @@ import {
   partNumber,
   type PartFilter,
 } from "../lib/parts";
-
-// How long the Undo bar stays after a tick.
-const TICKED_BAR_MS = 4000;
 
 export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
@@ -42,16 +40,7 @@ export default function SetPage() {
 
   // The Part last ticked off, for the Undo bar. A new tick replaces it, and it
   // goes away after a few seconds or when anything is un-ticked.
-  const [ticked, setTicked] = useState<{ key: string; id: number } | null>(
-    null,
-  );
-  useEffect(() => {
-    if (!ticked) {
-      return;
-    }
-    const timer = setTimeout(() => setTicked(null), TICKED_BAR_MS);
-    return () => clearTimeout(timer);
-  }, [ticked]);
+  const [ticked, setTicked] = useRecentTick<{ key: string; id: number }>();
   const tapPart = useCallback(
     (part: Part, delta: 1 | -1) => {
       tap(part, delta);
@@ -61,7 +50,7 @@ export default function SetPage() {
         setTicked(null);
       }
     },
-    [tap],
+    [tap, setTicked],
   );
 
   // The parts the current layout was computed from. Cards never move on their
@@ -154,16 +143,26 @@ export default function SetPage() {
         )}
       </main>
       <TickToast
-        part={tickedPart ?? null}
-        message={
+        tick={
           tickedPart
-            ? t("set.tick.added", {
-                number: partNumber(tickedPart),
-                color: tickedPart.color_name,
-                found: tickedPart.found,
-                needed: tickedPart.needed,
-              })
-            : ""
+            ? {
+                picture: tickedPart.img_url,
+                label: t("set.tick.added", {
+                  number: partNumber(tickedPart),
+                  color: tickedPart.color_name,
+                  found: tickedPart.found,
+                  needed: tickedPart.needed,
+                }),
+                summary: (
+                  <span className="text-xl font-bold tabular-nums">
+                    {number(tickedPart.found)}
+                    <span className="text-sm font-normal opacity-70">
+                      /{number(tickedPart.needed)}
+                    </span>
+                  </span>
+                ),
+              }
+            : null
         }
         onUndo={() => {
           if (tickedPart) {
