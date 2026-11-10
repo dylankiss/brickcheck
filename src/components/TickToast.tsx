@@ -1,43 +1,47 @@
+import type { ReactNode } from "react";
 import { useLanguage } from "../hooks/useLanguage";
-import type { Part } from "../lib/parts";
 import { PartImage } from "./ui";
 
+/** What the Undo bar shows for one tick. */
+export interface Tick {
+  /** The part's picture, so you recognise it at a glance. */
+  picture: string | null;
+  /** The full sentence for screen readers. */
+  label: string;
+  /** What the bar shows next to the picture: the new count, or where the piece went. */
+  summary: ReactNode;
+}
+
 /**
- * What you just ticked off: the part's picture and its new count, with Undo.
+ * What you just ticked off: the part's picture and a short summary, with Undo.
  * It sits at the bottom of the screen, where a finger resting on a card does not
- * cover it. The live region stays in the page, and `message` is the full
- * sentence for screen readers, so the bar itself can be just a picture and a
- * number.
+ * cover it. The live region stays in the page, and `tick.label` is the full
+ * sentence for screen readers, so the bar itself can stay small.
  */
 export function TickToast({
-  part,
-  message,
+  tick,
   onUndo,
 }: {
-  part: Part | null;
-  message: string;
+  tick: Tick | null;
   onUndo: () => void;
 }) {
-  const { t, number } = useLanguage();
+  const { t } = useLanguage();
   return (
     <div
       role="status"
       className="pointer-events-none fixed inset-x-3 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)] z-20 flex justify-center"
     >
-      {part && (
-        <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-neutral-900 p-1 text-white shadow-lg dark:bg-white dark:text-neutral-900">
-          <span className="sr-only">{message}</span>
+      {tick && (
+        <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-2xl bg-neutral-900 p-1 text-white shadow-lg dark:bg-white dark:text-neutral-900">
+          <span className="sr-only">{tick.label}</span>
           {/* Pictures come with a white background, so their frame is white in both themes. */}
           <PartImage
-            src={part.img_url}
+            src={tick.picture}
             alt=""
             className="size-11 shrink-0 rounded-xl bg-white p-0.5"
           />
-          <span className="text-xl font-bold tabular-nums" aria-hidden>
-            {number(part.found)}
-            <span className="text-sm font-normal opacity-70">
-              /{number(part.needed)}
-            </span>
+          <span className="min-w-0" aria-hidden>
+            {tick.summary}
           </span>
           <button
             type="button"

@@ -6,8 +6,10 @@ import {
 } from "../components/EnlargedPicture";
 import { ColorFilter } from "../components/ColorFilter";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
+import { TickToast } from "../components/TickToast";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMissingAcrossSets } from "../hooks/useMissingAcrossSets";
+import { useRecentTick } from "../hooks/useRecentTick";
 import {
   partColors,
   partLabel,
@@ -19,8 +21,15 @@ import {
 /** Every Part still missing in your Sets: find a piece, see where it goes, tick it off there. */
 export default function MissingAcrossSets() {
   const { t } = useLanguage();
-  const { missing, error, clearError, isBusy, tickOff } =
+  const { missing, error, clearError, isBusy, tickOff, untick } =
     useMissingAcrossSets();
+  // The last piece added, for the Undo bar. It keeps the Part itself: ticking
+  // off the last missing piece takes the Part off the list.
+  const [ticked, setTicked] = useRecentTick<{
+    setId: string;
+    label: string;
+    part: Part;
+  }>();
   const [query, setQuery] = useState("");
   const [colorId, setColorId] = useState<number | null>(null);
   const [enlarged, setEnlarged] = useState<string | null>(null);
@@ -93,12 +102,41 @@ export default function MissingAcrossSets() {
               key={entry.part.key}
               entry={entry}
               isBusy={isBusy}
-              onTickOff={tickOff}
+              onTickOff={async (setId, part) => {
+                if (await tickOff(setId, part)) {
+                  const label = entry.sets.find(
+                    (c) => c.setId === setId,
+                  )!.label;
+                  setTicked({ setId, label, part });
+                }
+              }}
               onEnlarge={setEnlarged}
             />
           ))}
         </ul>
       </main>
+      <TickToast
+        tick={
+          ticked && {
+            picture: ticked.part.img_url,
+            label: t("set.missingAll.foundOneLabel", {
+              part: partLabel(ticked.part),
+              set: ticked.label,
+            }),
+            summary: (
+              <span className="line-clamp-2 text-sm font-medium wrap-break-word">
+                {ticked.label}
+              </span>
+            ),
+          }
+        }
+        onUndo={() => {
+          if (ticked) {
+            untick(ticked.setId, ticked.part);
+          }
+          setTicked(null);
+        }}
+      />
       <EnlargedPart
         part={missing?.find((m) => m.part.key === enlarged)?.part ?? null}
         onClose={() => setEnlarged(null)}
@@ -115,7 +153,7 @@ function MissingAcrossItem({
 }: {
   entry: MissingAcross;
   isBusy: (setId: string, part: Part) => boolean;
-  onTickOff: (setId: string, part: Part) => void;
+  onTickOff: (setId: string, part: Part) => void | Promise<void>;
   onEnlarge: (key: string) => void;
 }) {
   const { t } = useLanguage();
