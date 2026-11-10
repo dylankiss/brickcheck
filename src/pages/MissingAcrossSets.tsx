@@ -147,7 +147,7 @@ function MissingAcrossItem({
       </div>
       <ul className="mt-2 flex flex-col divide-y divide-neutral-100 border-t border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
         {entry.sets.map((c) => (
-          <li key={c.setId} className="flex items-center gap-3 pt-1 pl-1">
+          <li key={c.setId} className="flex items-center gap-3 py-1 pl-1">
             {/* The set name gets the room (two lines); the count sits by the button. */}
             <Link
               to={`/sets/${c.setId}`}
@@ -182,7 +182,7 @@ function MissingAcrossItem({
                   aria-hidden
                   className="size-5"
                 >
-                  <path d="m5 12.5 4.5 4.5L19 7.5" />
+                  <path d="M12 5v14M5 12h14" />
                 </svg>
               </button>
             )}
