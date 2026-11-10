@@ -96,6 +96,13 @@ export const set = {
     "You have access to this set through its group. To lose it, leave the group on the ",
   "set.manage.groupsPage": "Groups page",
 
+  "set.rename.label": "Name",
+  "set.rename.hint":
+    "What everyone on this set sees. Owners and helpers can change it.",
+  "set.rename.save": "Save",
+  "set.rename.saving": "Saving…",
+  "set.rename.saved": "Saved",
+
   "set.invite.title": "Invite people",
   "set.invite.hint":
     "Send a link. Anyone who opens it and logs in joins this set. Links expire after 7 days.",

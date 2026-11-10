@@ -89,6 +89,13 @@ export const set = {
     "Je hebt toegang tot deze set via de groep. Om die toegang kwijt te raken, verlaat je de groep op de ",
   "set.manage.groupsPage": "Groepenpagina",
 
+  "set.rename.label": "Naam",
+  "set.rename.hint":
+    "Wat iedereen op deze set ziet. Eigenaars en helpers kunnen hem wijzigen.",
+  "set.rename.save": "Opslaan",
+  "set.rename.saving": "Opslaan…",
+  "set.rename.saved": "Opgeslagen",
+
   "set.invite.title": "Mensen uitnodigen",
   "set.invite.hint":
     "Stuur een link. Iedereen die de link opent en inlogt, doet mee met deze set. Links verlopen na 7 dagen.",
