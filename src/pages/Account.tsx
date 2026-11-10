@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Avatar } from "../components/Avatar";
 import { Button, ErrorBanner, Header, Select } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -82,7 +82,7 @@ export default function Account() {
   const trimmed = name.trim();
   const changed = trimmed !== current && trimmed !== "";
 
-  async function save(e: FormEvent) {
+  async function save(e: SubmitEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
