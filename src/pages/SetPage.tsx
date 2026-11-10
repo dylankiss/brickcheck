@@ -40,7 +40,10 @@ export default function SetPage() {
 
   // The Part last ticked off, for the Undo bar. A new tick replaces it, and it
   // goes away after a few seconds or when anything is un-ticked.
-  const [ticked, setTicked] = useRecentTick<{ key: string; id: number }>();
+  const [ticked, setTicked, hold] = useRecentTick<{
+    key: string;
+    id: number;
+  }>();
   const tapPart = useCallback(
     (part: Part, delta: 1 | -1) => {
       tap(part, delta);
@@ -143,6 +146,7 @@ export default function SetPage() {
         )}
       </main>
       <TickToast
+        hold={hold}
         tick={
           tickedPart
             ? {

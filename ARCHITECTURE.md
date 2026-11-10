@@ -475,8 +475,9 @@ src/
   44px touch target, so a card is just the picture, the number and the color. The
   "minifig" and "spare" labels sit on the picture's top-left corner.
 - **Tick feedback** (`TickToast`, `useRecentTick`): each tick shows a bar at the
-  bottom with the part's picture, a short summary and Undo, for 4 seconds or
-  until the next tick, because a finger resting on a card hides the card itself.
+  bottom with the part's picture, a short summary and Undo, for 8 seconds or
+  until the next tick (the countdown pauses while a pointer or focus is on the
+  bar, WCAG 2.2.1), because a finger resting on a card hides the card itself.
   On the Set page the summary is the new count ("4/5"); on Missing in all sets it
   is the Set the piece went to, shown only once the tick is saved. Screen readers
   get the full sentence from a hidden text in the `role="status"` region. Undo

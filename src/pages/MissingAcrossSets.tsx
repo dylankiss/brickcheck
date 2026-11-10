@@ -25,7 +25,7 @@ export default function MissingAcrossSets() {
     useMissingAcrossSets();
   // The last piece added, for the Undo bar. It keeps the Part itself: ticking
   // off the last missing piece takes the Part off the list.
-  const [ticked, setTicked] = useRecentTick<{
+  const [ticked, setTicked, hold] = useRecentTick<{
     setId: string;
     label: string;
     part: Part;
@@ -116,6 +116,7 @@ export default function MissingAcrossSets() {
         </ul>
       </main>
       <TickToast
+        hold={hold}
         tick={
           ticked && {
             picture: ticked.part.img_url,
