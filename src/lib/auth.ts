@@ -138,7 +138,7 @@ export async function signOut(): Promise<void> {
 export async function getMyProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name, avatar_url, avatar")
     .eq("id", userId)
     .maybeSingle();
   if (error) {
@@ -154,6 +154,20 @@ export async function updateMyName(
   const { error } = await supabase
     .from("profiles")
     .update({ display_name: displayName })
+    .eq("id", userId);
+  if (error) {
+    fail(error);
+  }
+}
+
+/** Chooses one of the built-in avatars, or with `null` goes back to the default. */
+export async function updateMyAvatar(
+  userId: string,
+  avatar: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ avatar })
     .eq("id", userId);
   if (error) {
     fail(error);

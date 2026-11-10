@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 import { Avatar } from "../components/Avatar";
+import { AvatarPicker } from "../components/AvatarPicker";
 import { Button, ErrorBanner, Header, Select } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
@@ -63,7 +64,7 @@ function Passkeys() {
 /** Your own details: the name other people see, your login email, and signing out. */
 export default function Account() {
   const { t, language, setLanguage } = useLanguage();
-  const { session, profile, updateName, signOut } = useAuth();
+  const { session, profile, updateName, updateAvatar, signOut } = useAuth();
   const current = profile?.display_name ?? "";
   const [name, setName] = useState(current);
   const [busy, setBusy] = useState(false);
@@ -97,6 +98,21 @@ export default function Account() {
     }
   }
 
+  async function chooseAvatar(avatar: string | null) {
+    if (avatar === (profile?.avatar ?? null)) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await updateAvatar(avatar);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeLanguage(next: Language) {
     setLanguageFailed(false);
     try {
@@ -116,6 +132,7 @@ export default function Account() {
           <Avatar
             name={profile?.display_name ?? null}
             url={profile?.avatar_url}
+            avatar={profile?.avatar}
             size="size-16"
           />
           <div className="min-w-0">
@@ -160,6 +177,12 @@ export default function Account() {
           </p>
         </form>
 
+        <AvatarPicker
+          value={profile?.avatar ?? null}
+          onChange={chooseAvatar}
+          busy={busy}
+        />
+
         <section className="flex flex-col gap-2">
           <h2 className="font-semibold">{t("account.email.title")}</h2>
           <p className="text-neutral-600 dark:text-neutral-300">
@@ -203,6 +226,49 @@ export default function Account() {
         <Button variant="secondary" onClick={() => signOut()}>
           {t("account.signOut")}
         </Button>
+        {/* The avatar icons' licence (CC BY 3.0) asks for this credit; they are recoloured here. */}
+        <p lang="en" className="text-xs text-neutral-500 dark:text-neutral-400">
+          Avatar icons: “lego” (
+          <a
+            className="underline"
+            href="https://thenounproject.com/icon/lego-106255/"
+          >
+            1
+          </a>
+          ,{" "}
+          <a
+            className="underline"
+            href="https://thenounproject.com/icon/lego-106256/"
+          >
+            2
+          </a>
+          ,{" "}
+          <a
+            className="underline"
+            href="https://thenounproject.com/icon/lego-106257/"
+          >
+            3
+          </a>
+          ) by{" "}
+          <a
+            className="underline"
+            href="https://thenounproject.com/creator/musket/"
+          >
+            Musket
+          </a>{" "}
+          from{" "}
+          <a className="underline" href="https://thenounproject.com/">
+            Noun Project
+          </a>
+          ,{" "}
+          <a
+            className="underline"
+            href="https://creativecommons.org/licenses/by/3.0/"
+          >
+            CC BY 3.0
+          </a>
+          ; recoloured.
+        </p>
       </main>
     </>
   );

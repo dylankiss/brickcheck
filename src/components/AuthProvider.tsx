@@ -12,6 +12,7 @@ import {
   getSession,
   onAuthChange,
   signOut,
+  updateMyAvatar,
   updateMyName,
 } from "../lib/api";
 import type { Profile } from "../lib/types";
@@ -71,6 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [userId, refreshProfile],
   );
 
+  const updateAvatar = useCallback(
+    async (avatar: string | null) => {
+      if (!userId) {
+        return;
+      }
+      await updateMyAvatar(userId, avatar);
+      await refreshProfile();
+    },
+    [userId, refreshProfile],
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -80,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         refreshProfile,
         updateName,
+        updateAvatar,
         signOut,
       }}
     >

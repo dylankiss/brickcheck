@@ -316,7 +316,11 @@ function GroupCard({
         <ul className="flex flex-col gap-2">
           {members.map((m) => (
             <li key={m.user_id} className="flex items-center gap-3">
-              <Avatar name={m.display_name} url={m.avatar_url} />
+              <Avatar
+                name={m.display_name}
+                url={m.avatar_url}
+                avatar={m.avatar}
+              />
               <span className="min-w-0 flex-1 truncate">
                 {m.display_name || t("groups.member.unnamed")}
                 {m.user_id === me && (

@@ -77,6 +77,8 @@ export interface Profile {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+  /** A built-in avatar chosen in the app (see lib/avatars.ts); wins over avatar_url. */
+  avatar: string | null;
 }
 
 /** A passkey registered for the signed-in user (Supabase Auth, beta). */
@@ -93,6 +95,7 @@ export interface Member {
   joined_at: string;
   display_name: string | null;
   avatar_url: string | null;
+  avatar: string | null;
 }
 
 /** A Group I am in, with my role. */
@@ -108,6 +111,7 @@ export interface GroupMember {
   joined_at: string;
   display_name: string | null;
   avatar_url: string | null;
+  avatar: string | null;
 }
 
 export interface Invite {

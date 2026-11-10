@@ -57,6 +57,7 @@ export default function Home() {
             <Avatar
               name={profile?.display_name ?? null}
               url={profile?.avatar_url}
+              avatar={profile?.avatar}
               size="size-8"
             />
           </Link>
