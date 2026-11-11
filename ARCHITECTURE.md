@@ -481,7 +481,8 @@ src/
   layout would differ. `PartCard` re-renders only when its counts change.
 - **Card size**: a card shows the element id (the number in the manual's parts
   list, `partNumber()`; the part number when Rebrickable has none), not the name
-  (the name stays in search, labels and the enlarged picture). The grid fits as
+  (the name stays in search, labels and the enlarged picture). The size in the
+  name ("Brick 2 x 4") shows next to it as "2×4" (`partSize()`). The grid fits as
   many cards per row as have room at 6.5rem or wider (`auto-fill`): three on a
   phone, more on bigger screens. Text is compact. The count sits on the picture's
   bottom-left corner and the "−" button on its bottom-right, both marks 28px in a

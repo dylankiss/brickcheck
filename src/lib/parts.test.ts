@@ -11,6 +11,7 @@ import {
   sortParts,
   partKey,
   partNumber,
+  partSize,
   partLabel,
   toBrickLinkXml,
   toLineMap,
@@ -354,5 +355,20 @@ describe("element ids", () => {
         hideFound: false,
       }),
     ).toHaveLength(1);
+  });
+});
+
+describe("partSize", () => {
+  it("reads the size in a part name", () => {
+    expect(partSize({ part_name: "Brick 2 x 4" })).toBe("2×4");
+    expect(partSize({ part_name: "Plate 1 x 2 with Handle" })).toBe("1×2");
+    expect(partSize({ part_name: "Brick 1 x 1 x 5" })).toBe("1×1×5");
+    expect(partSize({ part_name: "Panel 1 x 2 x 2/3" })).toBe("1×2×2/3");
+  });
+
+  it("leaves out a number that is not part of a size", () => {
+    expect(partSize({ part_name: "Slope 45 2 x 2" })).toBe("2×2");
+    expect(partSize({ part_name: "Minifigure, Head" })).toBeNull();
+    expect(partSize({ part_name: "Technic, Pin 3L" })).toBeNull();
   });
 });
