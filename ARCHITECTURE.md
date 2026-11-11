@@ -477,7 +477,7 @@ src/
   where it is (green, dimmed) so a tap always lands on the card you aimed at,
   also after a pause. The snapshot is refreshed when the filter or sort
   changes, when the number of parts changes (first load), or when the user
-  presses "Update order", a floating button that appears only while a fresh
+  presses "Refresh list", a floating button that appears only while a fresh
   layout would differ. `PartCard` re-renders only when its counts change.
 - **Card size**: a card shows the element id (the number in the manual's parts
   list, `partNumber()`; the part number when Rebrickable has none), not the name

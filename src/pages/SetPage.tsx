@@ -59,7 +59,7 @@ export default function SetPage() {
   // The parts the current layout was computed from. Cards never move on their
   // own, so a tap lands where you aimed: the layout is refreshed only when the
   // filter or sort changes, when the parts themselves change (first load), or
-  // when you press "Update order".
+  // when you press "Refresh list".
   const [basis, setBasis] = useState<Part[]>(parts);
   if (basis.length !== parts.length) {
     setBasis(parts);
@@ -183,7 +183,7 @@ export default function SetPage() {
           onClick={() => setBasis(parts)}
           className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-20 min-h-11 -translate-x-1/2 rounded-full bg-neutral-900 px-5 text-sm font-semibold text-white shadow-lg dark:bg-white dark:text-neutral-900"
         >
-          {t("set.updateOrder")}
+          {t("set.refreshList")}
         </button>
       )}
       <EnlargedPart
