@@ -14,6 +14,9 @@ import { PartImage } from "./ui";
 
 const ZOOM = 2.5;
 
+/** How many CSS pixels one picture pixel may take: more than that turns blurry. */
+const MAX_UPSCALE = 2;
+
 /**
  * A picture enlarged to fill the screen, to see its details. Tap the picture to
  * zoom in on that spot (drag to look around), tap again to fit. A native modal
@@ -99,7 +102,15 @@ export function EnlargedPart({
   );
 }
 
-/** Fits the picture to the space; a tap zooms in on that spot, the next tap fits again. */
+/** Room around the picture inside its area (`p-4`), both sides, in CSS pixels. */
+const PADDING = 32;
+
+/**
+ * Fits the picture to the space, never larger than `MAX_UPSCALE` times its real
+ * size, so it does not blur. A tap zooms in on that spot, up to that size or
+ * `ZOOM` times, whichever is less; the next tap fits again. A picture that
+ * already shows at its largest does not zoom.
+ */
 function ZoomablePicture({
   src,
   label,
@@ -112,11 +123,45 @@ function ZoomablePicture({
   const [zoomedAt, setZoomedAt] = useState<{ x: number; y: number } | null>(
     null,
   );
+  // The largest size the picture may show at, and the room it has, in CSS pixels.
+  const [real, setReal] = useState<{ width: number; height: number } | null>(
+    null,
+  );
+  const [room, setRoom] = useState<{ width: number; height: number } | null>(
+    null,
+  );
+
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el) {
+      return;
+    }
+    const measure = () =>
+      setRoom({
+        width: el.clientWidth - PADDING,
+        height: el.clientHeight - PADDING,
+      });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // How far the picture can zoom in: from its fitted size to its largest.
+  const fitted =
+    real && room
+      ? Math.min(room.width / real.width, room.height / real.height, 1)
+      : 1;
+  const zoom = Math.min(ZOOM, 1 / fitted);
+  const canZoom = zoom > 1.05;
 
   // A tap zooms in on that spot; the keyboard zooms in on the middle.
   const toggle = (e: MouseEvent<HTMLDivElement>) => {
     if (zoomedAt) {
       return setZoomedAt(null);
+    }
+    if (!canZoom) {
+      return;
     }
     const box = e.currentTarget.getBoundingClientRect();
     setZoomedAt({
@@ -129,7 +174,9 @@ function ZoomablePicture({
       return;
     }
     e.preventDefault();
-    setZoomedAt(zoomedAt ? null : { x: 0.5, y: 0.5 });
+    if (zoomedAt || canZoom) {
+      setZoomedAt(zoomedAt ? null : { x: 0.5, y: 0.5 });
+    }
   };
 
   // Scroll the zoomed picture so the tapped spot stays under the finger.
@@ -152,6 +199,7 @@ function ZoomablePicture({
       aria-label={t(zoomedAt ? "set.picture.zoomOut" : "set.picture.zoomIn", {
         label,
       })}
+      aria-disabled={!zoomedAt && !canZoom ? true : undefined}
       onClick={toggle}
       onKeyDown={toggleWithKey}
     >
@@ -159,15 +207,33 @@ function ZoomablePicture({
         className={
           zoomedAt
             ? "cursor-zoom-out"
-            : "flex size-full cursor-zoom-in items-center justify-center"
+            : `flex size-full items-center justify-center ${canZoom ? "cursor-zoom-in" : ""}`
         }
         style={
           zoomedAt
-            ? { width: `${ZOOM * 100}%`, height: `${ZOOM * 100}%` }
+            ? { width: `${zoom * 100}%`, height: `${zoom * 100}%` }
             : undefined
         }
       >
-        <PartImage src={src} alt={label} className="size-full p-4" />
+        <PartImage
+          src={src}
+          alt={label}
+          onLoad={(e) =>
+            setReal({
+              width: e.currentTarget.naturalWidth * MAX_UPSCALE,
+              height: e.currentTarget.naturalHeight * MAX_UPSCALE,
+            })
+          }
+          className="size-full p-4"
+          style={
+            real && !zoomedAt
+              ? {
+                  maxWidth: real.width + PADDING,
+                  maxHeight: real.height + PADDING,
+                }
+              : undefined
+          }
+        />
       </div>
     </div>
   );
