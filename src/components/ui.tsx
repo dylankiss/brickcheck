@@ -9,8 +9,10 @@ import {
   type SyntheticEvent,
 } from "react";
 import { Link } from "react-router";
+import { useAuth } from "../hooks/useAuth";
 import { useHideOnScroll } from "../hooks/useHideOnScroll";
 import { useLanguage } from "../hooks/useLanguage";
+import { Avatar } from "./Avatar";
 import { OfflineBanner } from "./OfflineBanner";
 
 export function ProgressBar({
@@ -67,16 +69,23 @@ export function Header({
   title,
   back,
   hideOnScroll = false,
+  actions,
+  account = true,
   children,
 }: {
   title: ReactNode;
   back?: string;
+  /** Extra controls at the right, before the account avatar. */
+  actions?: ReactNode;
+  /** Show your avatar, the way to the Account page. Off on the Account page itself. */
+  account?: boolean;
   /** Slide the header out of view while scrolling down. A button brings it back; so does the top of the page. */
   hideOnScroll?: boolean;
   children?: ReactNode;
 }) {
   const { t } = useLanguage();
   const { hidden, show } = useHideOnScroll(hideOnScroll);
+  const { session, profile } = useAuth();
   // A new page moves focus to its heading, so screen readers announce it and
   // keyboard users start at the top. A field that took focus itself (the
   // catalog search) keeps it.
@@ -119,6 +128,21 @@ export function Header({
           >
             {title}
           </h1>
+          {actions}
+          {account && session && (
+            <Link
+              to="/account"
+              className="-mr-2 flex min-h-11 min-w-11 shrink-0 items-center justify-center"
+              aria-label={t("account.title")}
+            >
+              <Avatar
+                name={profile?.display_name ?? null}
+                url={profile?.avatar_url}
+                avatar={profile?.avatar}
+                size="size-8"
+              />
+            </Link>
+          )}
         </div>
         {children}
       </header>

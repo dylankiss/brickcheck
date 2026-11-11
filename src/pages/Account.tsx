@@ -125,7 +125,7 @@ export default function Account() {
 
   return (
     <>
-      <Header title={t("account.title")} back="/" />
+      <Header title={t("account.title")} back="/" account={false} />
       {error && <ErrorBanner message={error} onClose={() => setError(null)} />}
       <main className="mx-auto flex max-w-2xl flex-col gap-8 p-4">
         <div className="flex items-center gap-4">

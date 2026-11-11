@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import { Avatar } from "../components/Avatar";
 import { ThemeButton } from "../components/ThemeButton";
 import { Header } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -11,7 +10,7 @@ import { isComplete } from "../lib/parts";
 /** The start screen: three ways in, each with a one-line status. */
 export default function Home() {
   const { t } = useLanguage();
-  const { session, profile } = useAuth();
+  const { session } = useAuth();
   const { sets } = useMySets();
   const { groups } = useGroups(session?.user.id ?? "");
 
@@ -46,23 +45,7 @@ export default function Home() {
 
   return (
     <>
-      <Header title="BrickCheck">
-        <div className="absolute top-[calc(env(safe-area-inset-top)+0.375rem)] right-2 flex items-center">
-          <ThemeButton />
-          <Link
-            to="/account"
-            className="flex min-h-11 min-w-11 items-center justify-center"
-            aria-label={t("account.title")}
-          >
-            <Avatar
-              name={profile?.display_name ?? null}
-              url={profile?.avatar_url}
-              avatar={profile?.avatar}
-              size="size-8"
-            />
-          </Link>
-        </div>
-      </Header>
+      <Header title="BrickCheck" actions={<ThemeButton />} />
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4">
         <HomeCard
           to="/sets"
