@@ -6,7 +6,7 @@ import {
 } from "../components/EnlargedPicture";
 import { ColorFilter } from "../components/ColorFilter";
 import { ColorSwatch, ErrorBanner, Header, Spinner } from "../components/ui";
-import { TickToast } from "../components/TickToast";
+import { TICK_TOAST_CLEARANCE, TickToast } from "../components/TickToast";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMissingAcrossSets } from "../hooks/useMissingAcrossSets";
 import { useRecentTick } from "../hooks/useRecentTick";
@@ -75,7 +75,9 @@ export default function MissingAcrossSets() {
         </div>
       </Header>
       {error && <ErrorBanner message={error} onClose={clearError} />}
-      <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <main
+        className={`mx-auto flex max-w-2xl flex-col gap-3 p-4 ${TICK_TOAST_CLEARANCE}`}
+      >
         {!missing && !error && <Spinner />}
         {missing?.length === 0 && (
           <p className="py-12 text-center text-neutral-500 dark:text-neutral-400">
