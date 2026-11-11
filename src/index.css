@@ -6,6 +6,13 @@
 @theme {
   --color-brick: #d01012;
   --color-brick-dark: #a00d0e;
+  --animate-count-pop: count-pop 350ms ease-out;
+  @keyframes count-pop {
+    from {
+      background-color: var(--color-green-600);
+      transform: scale(1.4);
+    }
+  }
 }
 
 html {

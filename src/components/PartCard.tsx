@@ -17,6 +17,15 @@ export const PartCard = memo(
     const { t, number } = useLanguage();
     const allFound = isAllFound(part);
     const [noPicture, setNoPicture] = useState(!part.img_url);
+    // The count pops when it goes up, whoever ticked: a new key restarts the animation.
+    const [shownFound, setShownFound] = useState(part.found);
+    const [pops, setPops] = useState(0);
+    if (part.found !== shownFound) {
+      setShownFound(part.found);
+      if (part.found > shownFound) {
+        setPops(pops + 1);
+      }
+    }
     return (
       <div
         className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_10rem] [content-visibility:auto] dark:bg-neutral-900 ${
@@ -59,7 +68,10 @@ export const PartCard = memo(
               </span>
             )}
             {/* The count sits on the picture's corner, so the card needs no row of its own. */}
-            <span className="absolute bottom-1 left-1 rounded-lg bg-neutral-900/85 px-1.5 py-0.5 text-sm leading-tight font-bold text-white tabular-nums">
+            <span
+              key={pops}
+              className={`absolute bottom-1 left-1 origin-bottom-left rounded-lg bg-neutral-900/85 px-1.5 py-0.5 text-sm leading-tight font-bold text-white tabular-nums ${pops > 0 ? "animate-count-pop motion-reduce:animate-none" : ""}`}
+            >
               {allFound ? "✓ " : ""}
               {number(part.found)}
               <span className="text-[11px] font-normal text-neutral-300">
