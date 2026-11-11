@@ -22,7 +22,7 @@ export function ThemeButton() {
     <button
       type="button"
       onClick={() => setTheme(NEXT[theme])}
-      className="flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm text-neutral-500 dark:text-neutral-400"
+      className="flex size-11 items-center justify-center rounded-full text-neutral-500 dark:text-neutral-400"
       aria-label={t("common.theme.label", {
         current: t(LABEL[theme]),
         next: t(LABEL[NEXT[theme]]),
@@ -53,7 +53,6 @@ export function ThemeButton() {
           </>
         )}
       </svg>
-      {t(LABEL[theme])}
     </button>
   );
 }
