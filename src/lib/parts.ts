@@ -38,6 +38,18 @@ export const partKey = (partNum: string, colorId: number) =>
 export const partNumber = (part: Pick<Part, "element_id" | "part_num">) =>
   part.element_id ?? part.part_num;
 
+const SIZE = /\b\d+(?:[./]\d+)?(?: x \d+(?:[./]\d+)?){1,2}\b/;
+
+/**
+ * The size in a Part's name, if it has one, written like on a brick: "Brick 2 x 4"
+ * gives "2×4". The first run of numbers joined by "x" counts; an angle or a
+ * count that is not joined to one ("Slope 45 2 x 2") is left out.
+ */
+export function partSize(part: Pick<Part, "part_name">): string | null {
+  const match = SIZE.exec(part.part_name);
+  return match ? match[0].replaceAll(" x ", "×") : null;
+}
+
 /** How a Part is named to people and screen readers: "Brick 2 x 4, Red". */
 export const partLabel = (part: Pick<Part, "part_name" | "color_name">) =>
   `${part.part_name}, ${part.color_name}`;

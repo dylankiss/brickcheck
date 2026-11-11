@@ -1,6 +1,12 @@
 import { memo, useState } from "react";
 import { useLanguage } from "../hooks/useLanguage";
-import { isAllFound, partLabel, partNumber, type Part } from "../lib/parts";
+import {
+  isAllFound,
+  partLabel,
+  partNumber,
+  partSize,
+  type Part,
+} from "../lib/parts";
 import { EnlargeButton } from "./EnlargedPicture";
 import { ColorSwatch, PartImage } from "./ui";
 
@@ -16,6 +22,7 @@ export const PartCard = memo(
   function PartCard({ part, canEdit, onTap, onEnlarge }: Props) {
     const { t, number } = useLanguage();
     const allFound = isAllFound(part);
+    const size = partSize(part);
     const [noPicture, setNoPicture] = useState(!part.img_url);
     // The count pops when it goes up, whoever ticked: a new key restarts the animation.
     const [shownFound, setShownFound] = useState(part.found);
@@ -79,8 +86,9 @@ export const PartCard = memo(
               </span>
             </span>
           </span>
-          <span className="mt-1 truncate text-xs font-medium tabular-nums sm:text-sm">
-            {partNumber(part)}
+          <span className="mt-1 flex items-baseline justify-between gap-1 text-xs font-medium tabular-nums sm:text-sm">
+            <span className="truncate">{partNumber(part)}</span>
+            {size && <span className="shrink-0 font-bold">{size}</span>}
           </span>
           <div className="mt-0.5 flex min-w-0 items-center text-[11px] text-neutral-500 sm:text-xs dark:text-neutral-400">
             {/* Swatch and name stay together, the name cut short, so a long one never drops below its swatch. */}
