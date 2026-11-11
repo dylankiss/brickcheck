@@ -587,7 +587,9 @@ src/
   (inside `Header`, and on Login) says "You're offline" while
   `navigator.onLine` is false (`hooks/useOnline`). Data calls still fail with
   their usual error.
-- The installed app checks for a new version every hour. Updates use
+- The installed app checks for a new version every hour and whenever it comes
+  back to the front (at most once a minute): iOS freezes timers in the
+  background, so the hourly check alone never ran on reopening. Updates use
   `registerType: 'prompt'`: `UpdatePrompt` asks before reloading, because a
   reload would drop taps in flight.
 - Icons: `scripts/icons.mjs` (`npm run icons`) generates every icon in
