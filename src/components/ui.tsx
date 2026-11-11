@@ -3,8 +3,10 @@ import {
   useRef,
   useState,
   type ButtonHTMLAttributes,
+  type CSSProperties,
   type ReactNode,
   type SelectHTMLAttributes,
+  type SyntheticEvent,
 } from "react";
 import { Link } from "react-router";
 import { useHideOnScroll } from "../hooks/useHideOnScroll";
@@ -204,15 +206,20 @@ export function PartImage({
   fallbackSrc = null,
   alt,
   className = "",
+  style,
   onError,
+  onLoad,
 }: {
   src: string | null;
   /** Tried when `src` fails to load, such as the original of a resized copy. */
   fallbackSrc?: string | null;
   alt: string;
   className?: string;
+  style?: CSSProperties;
   /** Called when no picture loads and the placeholder takes its place. */
   onError?: () => void;
+  /** Called when the picture has loaded, with its real size on the event's target. */
+  onLoad?: (e: SyntheticEvent<HTMLImageElement>) => void;
 }) {
   // Rebrickable has no render for some parts; show the placeholder instead of a broken image.
   const [failed, setFailed] = useState<readonly string[]>([]);
@@ -223,6 +230,8 @@ export function PartImage({
       alt={alt}
       loading="lazy"
       decoding="async"
+      onLoad={onLoad}
+      style={style}
       onError={() => {
         setFailed((prev) => [...prev, shown]);
         if (shown === (fallbackSrc ?? src)) {

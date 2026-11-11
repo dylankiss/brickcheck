@@ -356,6 +356,11 @@ src/
   picture and part pictures (about 2 KB, 36 KB for the rare LDraw render) use the
   original. wsrv.nl has no uptime guarantee: if it is down, pictures load at full
   size, slowly, and nothing breaks.
+- **Enlarged picture** (`EnlargedPicture`): it fits the screen but is shown at
+  most twice its real size in CSS pixels (`MAX_UPSCALE`: a 192px part picture
+  at most 384px), because enlarging further only blurs it. Tapping zooms in up
+  to that size or 2.5 times, whichever is less; a picture already at its largest
+  does not zoom (`aria-disabled`).
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - **Accessibility** (WCAG 2.2 AA): `Header` moves focus to the page's `<h1>`
   when a page opens (unless a field already has focus, like the catalog
