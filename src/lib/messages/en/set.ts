@@ -23,7 +23,7 @@ export const set = {
   "set.viewOnly": "You can view this set but not change it.",
   "set.allFound": "All pieces found! 🎉",
   "set.noMatch": "No parts match the filter.",
-  "set.updateOrder": "Update order",
+  "set.refreshList": "Refresh list",
   "set.tick.added": "{number} · {color}: {found} of {needed} found",
   "set.tick.undo": "Undo",
 
