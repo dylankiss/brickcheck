@@ -487,7 +487,9 @@ src/
   bottom-left corner and the "−" button on its bottom-right, both marks 28px in a
   44px touch target, so a card is just the picture, the number and the color. The
   "minifig" and "spare" labels sit on the picture's top-left corner.
-- **Tick feedback** (`TickToast`, `useRecentTick`): each tick shows a bar at the
+- **Tick feedback** (`TickToast`, `useRecentTick`): the count on the card pops
+  and flashes green when it goes up (not with reduced motion), and a short
+  vibration where the browser supports it. Each tick also shows a bar at the
   bottom with the part's picture, a short summary and Undo, for 8 seconds or
   until the next tick (the countdown pauses while a pointer or focus is on the
   bar, WCAG 2.2.1), because a finger resting on a card hides the card itself.
