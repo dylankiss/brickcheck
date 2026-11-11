@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
-import { TickToast } from "../components/TickToast";
+import { TICK_TOAST_CLEARANCE, TickToast } from "../components/TickToast";
 import { EnlargedPart } from "../components/EnlargedPicture";
 import {
   ErrorBanner,
@@ -129,7 +129,9 @@ export default function SetPage() {
           {t("set.viewOnly")}
         </p>
       )}
-      <main className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:gap-3 sm:p-4">
+      <main
+        className={`grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2 p-3 sm:gap-3 sm:p-4 ${TICK_TOAST_CLEARANCE}`}
+      >
         {order.map((key) => (
           <PartCard
             key={key}

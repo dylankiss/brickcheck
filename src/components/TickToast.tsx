@@ -13,6 +13,14 @@ export interface Tick {
 }
 
 /**
+ * Bottom padding for a page with a TickToast, so its last row can scroll above
+ * the bar (the bar sits 4rem above the edge and is about 3.75rem tall). It
+ * repeats at `sm:` so a page's own `sm:p-*` does not override it.
+ */
+export const TICK_TOAST_CLEARANCE =
+  "pb-[calc(max(1rem,env(safe-area-inset-bottom))+8rem)] sm:pb-[calc(max(1rem,env(safe-area-inset-bottom))+8rem)]";
+
+/**
  * What you just ticked off: the part's picture and a short summary, with Undo.
  * It sits at the bottom of the screen, where a finger resting on a card does not
  * cover it. The live region stays in the page, and `tick.label` is the full
