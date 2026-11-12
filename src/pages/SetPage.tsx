@@ -81,13 +81,16 @@ export default function SetPage() {
   if (basis.length !== parts.length) {
     setBasis(parts);
   }
+  // A new filter or sort makes a new list, so you start again from its top.
   const changeFilter = (next: PartFilter) => {
     setFilter(next);
     setBasis(parts);
+    window.scrollTo({ top: 0 });
   };
   const changeSort = (next: SortMode) => {
     setSort(next);
     setBasis(parts);
+    window.scrollTo({ top: 0 });
   };
   const order = useMemo(
     () => sortParts(filterParts(basis, filter), sort).map((p) => p.key),
