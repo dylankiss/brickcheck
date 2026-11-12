@@ -260,11 +260,17 @@ export function useSet(setId: string, myUserId: string) {
   );
 
   const tap = useCallback(
-    (part: Part, delta: 1 | -1) => {
+    (part: Part, wanted: number) => {
       if (!canEdit) {
         return;
       }
-      if (delta > 0 ? part.found >= part.needed : part.found <= 0) {
+      // Never past 0 or the needed count, so a bulk tick on a part that
+      // someone else just completed adds nothing.
+      const delta =
+        wanted > 0
+          ? Math.min(wanted, part.needed - part.found)
+          : Math.max(wanted, -part.found);
+      if (delta === 0) {
         return;
       }
       navigator.vibrate?.(10);

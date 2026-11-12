@@ -30,22 +30,29 @@ export function TickToast({
   tick,
   onUndo,
   hold,
+  inline = false,
 }: {
   tick: Tick | null;
   onUndo: () => void;
   /** Pointer and focus handlers that pause the bar's countdown (`useRecentTick`). */
   hold?: HTMLAttributes<HTMLDivElement>;
+  /** Not fixed to the bottom of the page: placed where it is rendered (above a panel). */
+  inline?: boolean;
 }) {
   const { t } = useLanguage();
   return (
     <div
       role="status"
-      className="pointer-events-none fixed inset-x-3 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)] z-20 flex justify-center"
+      className={`pointer-events-none flex justify-center ${
+        inline
+          ? "px-3"
+          : "fixed inset-x-3 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)] z-20"
+      }`}
     >
       {tick && (
         <div
           {...hold}
-          className="pointer-events-auto flex max-w-full items-center gap-3 rounded-2xl bg-neutral-900 p-1 text-white shadow-lg dark:bg-white dark:text-neutral-900"
+          className={`pointer-events-auto flex max-w-full items-center gap-3 rounded-2xl bg-neutral-900 p-1 text-white shadow-lg ring-1 ring-white/20 dark:bg-white dark:text-neutral-900 dark:ring-black/10 ${inline ? "mb-2" : ""}`}
         >
           <span className="sr-only">{tick.label}</span>
           {/* Pictures come with a white background, so their frame is white in both themes. */}

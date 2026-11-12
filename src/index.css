@@ -7,6 +7,12 @@
   --color-brick: #d01012;
   --color-brick-dark: #a00d0e;
   --animate-count-pop: count-pop 350ms ease-out;
+  --animate-sheet-up: sheet-up 220ms ease-out;
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
   @keyframes count-pop {
     from {
       background-color: var(--color-green-600);

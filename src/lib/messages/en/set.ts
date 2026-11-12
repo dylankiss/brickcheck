@@ -51,6 +51,12 @@ export const set = {
   "set.part.minifig": "minifig",
   "set.part.spare": "spare",
   "set.picture.partDetail": "{color} · {number} · {found} of {needed} found",
+  "set.part.details": "Details of {label}",
+  "set.part.addOne": "Add one {name}",
+  "set.part.foundAll": "Found all ({count})",
+  "set.hint.longPress":
+    "Press and hold a part to see it larger or tick off several at once.",
+  "set.hint.dismiss": "Got it",
   "set.picture.enlarge": "Enlarge picture of {label}",
   "set.picture.close": "Close",
   "set.picture.zoomIn": "Zoom in: {label}",
