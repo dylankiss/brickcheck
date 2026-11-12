@@ -4,6 +4,8 @@ import { OnlineAvatars } from "../components/Avatar";
 import { FilterBar } from "../components/FilterBar";
 import { PartCard } from "../components/PartCard";
 import { TICK_TOAST_CLEARANCE, TickToast } from "../components/TickToast";
+import { LongPressHint } from "../components/LongPressHint";
+import { PartSheet } from "../components/PartSheet";
 import { EnlargedPart } from "../components/EnlargedPicture";
 import {
   ErrorBanner,
@@ -38,25 +40,28 @@ export default function SetPage() {
     hideFound: false,
   });
   const [sort, setSort] = useState<SortMode>("color");
-  // The Part whose picture is enlarged, by key, so its counts stay live.
+  // The Part whose sheet is open, and the one whose picture is full screen
+  // (opened from the sheet), by key, so their counts stay live.
+  const [sheet, setSheet] = useState<string | null>(null);
   const [enlarged, setEnlarged] = useState<string | null>(null);
 
   // The last few ticks, newest last, for the Undo bar: Undo takes back the
   // newest and then offers the one before it, so a run of wrong ticks can be
   // walked back. The chain goes away after a few seconds without a tick or Undo.
   const [ticks, setTicks, hold] =
-    useRecentTick<{ key: string; id: number }[]>();
+    useRecentTick<{ key: string; id: number; by: number }[]>();
   const tapPart = useCallback(
-    (part: Part, delta: 1 | -1) => {
+    (part: Part, delta: number) => {
       tap(part, delta);
-      if (delta === 1 && part.found < part.needed) {
+      if (delta > 0 && part.found < part.needed) {
+        const by = Math.min(delta, part.needed - part.found);
         setTicks((chain) =>
           [
             ...(chain ?? []),
-            { key: part.key, id: (chain?.at(-1)?.id ?? 0) + 1 },
+            { key: part.key, id: (chain?.at(-1)?.id ?? 0) + 1, by },
           ].slice(-UNDO_STEPS),
         );
-      } else if (delta === -1) {
+      } else if (delta < 0) {
         // Un-ticking a Part by hand takes its newest tick off the chain.
         setTicks((chain) => {
           const at = chain?.findLastIndex((t) => t.key === part.key) ?? -1;
@@ -102,6 +107,43 @@ export default function SetPage() {
   const colors = useMemo(() => partColors(parts), [parts]);
   const { found, needed } = totals(parts);
 
+  // The Undo bar sits at the bottom of the page, or just above the part panel
+  // while that is open (the page behind a modal is out of reach).
+  const undoBar = (inline: boolean) => (
+    <TickToast
+      inline={inline}
+      hold={hold}
+      tick={
+        tickedPart
+          ? {
+              picture: tickedPart.img_url,
+              label: t("set.tick.added", {
+                number: partNumber(tickedPart),
+                color: tickedPart.color_name,
+                found: tickedPart.found,
+                needed: tickedPart.needed,
+              }),
+              summary: (
+                <span className="text-xl font-bold tabular-nums">
+                  {number(tickedPart.found)}
+                  <span className="text-sm font-normal opacity-70">
+                    /{number(tickedPart.needed)}
+                  </span>
+                </span>
+              ),
+            }
+          : null
+      }
+      onUndo={() => {
+        if (tickedPart && tickedPart.found > 0) {
+          tap(tickedPart, -newest!.by);
+        }
+        const rest = ticks?.slice(0, -1) ?? [];
+        setTicks(rest.length ? rest : null);
+      }}
+    />
+  );
+
   return (
     <>
       <Header title={summary!.title} back="/sets" hideOnScroll>
@@ -145,13 +187,14 @@ export default function SetPage() {
       <main
         className={`grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2 p-3 sm:gap-3 sm:p-4 ${TICK_TOAST_CLEARANCE}`}
       >
+        {order.length > 0 && canEdit && <LongPressHint />}
         {order.map((key) => (
           <PartCard
             key={key}
             part={byKey.get(key)!}
             canEdit={canEdit}
             onTap={tapPart}
-            onEnlarge={setEnlarged}
+            onEnlarge={setSheet}
           />
         ))}
         {order.length === 0 && (
@@ -160,37 +203,7 @@ export default function SetPage() {
           </p>
         )}
       </main>
-      <TickToast
-        hold={hold}
-        tick={
-          tickedPart
-            ? {
-                picture: tickedPart.img_url,
-                label: t("set.tick.added", {
-                  number: partNumber(tickedPart),
-                  color: tickedPart.color_name,
-                  found: tickedPart.found,
-                  needed: tickedPart.needed,
-                }),
-                summary: (
-                  <span className="text-xl font-bold tabular-nums">
-                    {number(tickedPart.found)}
-                    <span className="text-sm font-normal opacity-70">
-                      /{number(tickedPart.needed)}
-                    </span>
-                  </span>
-                ),
-              }
-            : null
-        }
-        onUndo={() => {
-          if (tickedPart && tickedPart.found > 0) {
-            tap(tickedPart, -1);
-          }
-          const rest = ticks?.slice(0, -1) ?? [];
-          setTicks(rest.length ? rest : null);
-        }}
-      />
+      {!sheet && undoBar(false)}
       {stale && (
         <button
           type="button"
@@ -200,6 +213,14 @@ export default function SetPage() {
           {t("set.refreshList")}
         </button>
       )}
+      <PartSheet
+        part={sheet ? (byKey.get(sheet) ?? null) : null}
+        canEdit={canEdit}
+        onTap={tapPart}
+        onEnlarge={setEnlarged}
+        onClose={() => setSheet(null)}
+        toast={undoBar(true)}
+      />
       <EnlargedPart
         part={enlarged ? (byKey.get(enlarged) ?? null) : null}
         onClose={() => setEnlarged(null)}

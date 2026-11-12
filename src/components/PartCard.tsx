@@ -1,5 +1,6 @@
 import { memo, useState } from "react";
 import { useLanguage } from "../hooks/useLanguage";
+import { useLongPress } from "../hooks/useLongPress";
 import {
   isAllFound,
   partLabel,
@@ -7,23 +8,23 @@ import {
   partSize,
   type Part,
 } from "../lib/parts";
-import { EnlargeButton } from "./EnlargedPicture";
 import { ColorSwatch, PartImage } from "./ui";
 
 interface Props {
   part: Part;
   canEdit: boolean;
-  onTap: (part: Part, delta: 1 | -1) => void;
+  onTap: (part: Part, delta: number) => void;
+  /** Opens the part's sheet: a long press, or the button keyboard users can focus. */
   onEnlarge: (key: string) => void;
 }
 
-/** Tap the card to count one found piece; the "−" button undoes one, the magnifier enlarges the picture. */
+/** Tap the card to count one found piece; the "−" button undoes one, a long press opens the part's sheet. */
 export const PartCard = memo(
   function PartCard({ part, canEdit, onTap, onEnlarge }: Props) {
     const { t, number } = useLanguage();
     const allFound = isAllFound(part);
+    const press = useLongPress(() => onEnlarge(part.key));
     const size = partSize(part);
-    const [noPicture, setNoPicture] = useState(!part.img_url);
     // The count pops when it goes up, whoever ticked: a new key restarts the animation.
     const [shownFound, setShownFound] = useState(part.found);
     const [pops, setPops] = useState(0);
@@ -35,16 +36,28 @@ export const PartCard = memo(
     }
     return (
       <div
+        // The whole card, so a right-click on "−" or the corner of the picture does not show the browser's menu either.
+        onContextMenu={press.onContextMenu}
         className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition [contain-intrinsic-size:auto_10rem] [content-visibility:auto] dark:bg-neutral-900 ${
           allFound ? "ring-green-600" : "ring-neutral-200 dark:ring-neutral-800"
         }`}
       >
         <button
           type="button"
-          disabled={!canEdit || allFound}
-          onClick={() => onTap(part, 1)}
-          // A fully found part dims its content only: "−" and the magnifier still work and look it.
-          className={`flex flex-1 flex-col items-stretch p-1.5 text-left transition active:scale-[0.97] disabled:active:scale-100 sm:p-2 ${allFound ? "opacity-50" : ""}`}
+          // Not `disabled`: a disabled button swallows the pointer events a long press needs.
+          aria-disabled={!canEdit || allFound}
+          onClick={() => {
+            if (!press.swallowClick() && canEdit && !allFound) {
+              onTap(part, 1);
+            }
+          }}
+          onPointerDown={press.onPointerDown}
+          onPointerMove={press.onPointerMove}
+          onPointerUp={press.onPointerUp}
+          onPointerCancel={press.onPointerCancel}
+          onPointerLeave={press.onPointerLeave}
+          // A fully found part dims its content only: "−" still works and looks it.
+          className={`flex flex-1 flex-col items-stretch p-1.5 text-left transition active:scale-[0.97] aria-disabled:active:scale-100 sm:p-2 ${press.className} ${allFound ? "opacity-50" : ""}`}
           aria-label={t("set.part.tapLabel", {
             label: partLabel(part),
             found: part.found,
@@ -56,8 +69,8 @@ export const PartCard = memo(
             <PartImage
               src={part.img_url}
               alt=""
-              onError={() => setNoPicture(true)}
-              className="aspect-square w-full rounded-xl bg-white p-1"
+              // The picture ignores touch, so iOS has no image to lift out when you hold the card.
+              className="pointer-events-none aspect-square w-full rounded-xl bg-white p-1"
             />
             {/* Minifig and spare labels sit on the top-left corner, so they take no row of their own. */}
             {(part.has_minifig_lines || part.has_spare_lines) && (
@@ -104,13 +117,14 @@ export const PartCard = memo(
             </span>
           </div>
         </button>
-        {!noPicture && (
-          <EnlargeButton
-            label={partLabel(part)}
-            onEnlarge={() => onEnlarge(part.key)}
-            className="absolute top-1 right-1"
-          />
-        )}
+        {/* Keyboard and screen-reader users have no long press: this button, hidden until focused, opens the same sheet. */}
+        <button
+          type="button"
+          onClick={() => onEnlarge(part.key)}
+          className="sr-only absolute top-1 right-1 z-10 min-h-11 rounded-full bg-neutral-900 px-3 text-sm font-semibold text-white focus:not-sr-only dark:bg-white dark:text-neutral-900"
+        >
+          {t("set.part.details", { label: partLabel(part) })}
+        </button>
         {/* Same box as the picture, so "−" sits on its bottom-right corner. */}
         <div className="pointer-events-none absolute inset-x-1.5 top-1.5 aspect-square sm:inset-x-2 sm:top-2">
           {canEdit && part.found > 0 && (
@@ -120,7 +134,7 @@ export const PartCard = memo(
               className="pointer-events-auto absolute right-0 bottom-0 flex size-11 items-center justify-center"
               aria-label={t("set.part.removeOne", { name: part.part_name })}
             >
-              {/* The same 28px mark as the magnifier, inside a 44px touch target. */}
+              {/* A 28px mark inside a 44px touch target. */}
               <span className="flex size-7 items-center justify-center rounded-full bg-white/85 text-neutral-600 shadow-sm ring-1 ring-black/10">
                 <svg
                   viewBox="0 0 24 24"

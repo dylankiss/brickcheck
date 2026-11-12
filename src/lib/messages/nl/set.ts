@@ -47,6 +47,12 @@ export const set = {
   "set.part.spare": "reserve",
   "set.picture.partDetail":
     "{color} · {number} · {found} van {needed} gevonden",
+  "set.part.details": "Details van {label}",
+  "set.part.addOne": "Eén {name} erbij",
+  "set.part.foundAll": "Allemaal gevonden ({count})",
+  "set.hint.longPress":
+    "Houd een onderdeel ingedrukt om het groter te zien of er meerdere tegelijk af te vinken.",
+  "set.hint.dismiss": "Begrepen",
   "set.picture.enlarge": "Afbeelding van {label} vergroten",
   "set.picture.close": "Sluiten",
   "set.picture.zoomIn": "Inzoomen: {label}",

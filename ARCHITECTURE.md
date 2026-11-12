@@ -493,6 +493,30 @@ src/
   bottom-left corner and the "−" button on its bottom-right, both marks 28px in a
   44px touch target, so a card is just the picture, the number and the color. The
   "minifig" and "spare" labels sit on the picture's top-left corner.
+- **Part sheet** (`useLongPress`, `PartSheet`, `PartCountControls`): a long
+  press (400 ms; a drift of more than 8px cancels it so scrolling still works)
+  or a right-click on a card opens a panel from the bottom of the screen with the
+  part's picture, its details and, for those who can tick, the count: "−", the
+  count, "+" and "Found all (N)", which ticks off everything missing at once. The
+  press never also ticks the card. A mouse hold and a right-click open it when
+  the button is let go, not while it is down: a modal opened under a pressed
+  button can leave the browser thinking it is still held. The browser's own
+  long-press menu arrives after the panel is open and lands on it, so the panel
+  cancels it too. It is a native modal `<dialog>` (Escape and the back gesture
+  close it, the page behind is inert) that also closes by a tap on the backdrop,
+  the ✕ or a drag downwards from anywhere on the panel (it follows the pointer
+  after 8px, so taps on its buttons still work; 60px closes it, or 20px when
+  flicked). The `<dialog>` covers the screen and is see-through, so a tap beside
+  the panel closes it, and the Undo bar is rendered inside it, just above the
+  panel's top edge, because the page behind a modal is out of reach (the page's
+  own bar is hidden while the panel is open). Tapping its picture
+  opens `EnlargedPart`, the full-screen zoomable view, on top of it. Keyboard and
+  screen-reader users, who have no long press, get the same sheet from a "Details"
+  button on the card that is hidden until it has focus. Viewers see the picture
+  and details only. The card's own button is `aria-disabled` rather than
+  `disabled`, because a disabled button swallows the pointer events the long
+  press needs. A one-time tip (`LongPressHint`, dismissal kept in localStorage)
+  explains the gesture.
 - **Tick feedback** (`TickToast`, `useRecentTick`): the count on the card pops
   and flashes green when it goes up (not with reduced motion), and a short
   vibration where the browser supports it. Each tick also shows a bar at the
@@ -506,7 +530,8 @@ src/
   keeps the last 10 ticks as a chain: Undo takes back the newest and then offers
   the one before it, so a run of wrong ticks can be walked back (Missing in all
   sets undoes only the last). Un-ticking with "−" takes that part's newest tick
-  off the chain. The 10 ms vibration of `useSet.tap` stays.
+  off the chain. "Found all" is one entry of the chain, and its Undo takes back
+  the whole amount. The 10 ms vibration of `useSet.tap` stays.
 - **Header on the Set page** (`Header` with `hideOnScroll`, `useHideOnScroll`): it
   slides out of view on a short scroll down and then stays out however you
   scroll, because looking for a piece means scrolling up and down for a while and

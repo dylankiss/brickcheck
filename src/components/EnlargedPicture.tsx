@@ -239,29 +239,6 @@ function ZoomablePicture({
   );
 }
 
-/** Magnifier that enlarges a picture; sits over the picture's corner. */
-export function EnlargeButton({
-  label,
-  onEnlarge,
-  className = "",
-}: {
-  label: string;
-  onEnlarge: () => void;
-  className?: string;
-}) {
-  const { t } = useLanguage();
-  return (
-    <button
-      type="button"
-      onClick={onEnlarge}
-      className={`flex size-11 items-center justify-center ${className}`}
-      aria-label={t("set.picture.enlarge", { label })}
-    >
-      <MagnifierBadge />
-    </button>
-  );
-}
-
 /** A small picture that is itself the enlarge button; disabled when there is no picture. */
 export function EnlargeableThumbnail({
   src,
