@@ -496,7 +496,9 @@ src/
   on a phone, bigger pictures and less cut-off text. Text is compact. The count sits on the picture's
   bottom-left corner and the "−" button on its bottom-right, both marks 28px in a
   44px touch target, so a card is just the picture, the number and the color. The
-  "minifig" and "spare" labels sit on the picture's top-left corner.
+  minifig (yellow figure) and spare (blue plus) marks are 20px icons on the
+  picture's top-left corner; their words are in the card button's `aria-label`
+  and in a `title`.
 - **Part sheet** (`useLongPress`, `PartSheet`, `PartCountControls`): a long
   press (400 ms; a drift of more than 8px cancels it so scrolling still works)
   or a right-click on a card opens a panel from the bottom of the screen with the

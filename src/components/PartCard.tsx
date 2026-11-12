@@ -58,11 +58,18 @@ export const PartCard = memo(
           onPointerLeave={press.onPointerLeave}
           // A fully found part dims its content only: "−" still works and looks it.
           className={`flex flex-1 flex-col items-stretch p-1.5 text-left transition active:scale-[0.97] aria-disabled:active:scale-100 sm:p-2 ${press.className} ${allFound ? "opacity-50" : ""}`}
-          aria-label={t("set.part.tapLabel", {
-            label: partLabel(part),
-            found: part.found,
-            needed: part.needed,
-          })}
+          aria-label={[
+            t("set.part.tapLabel", {
+              label: partLabel(part),
+              found: part.found,
+              needed: part.needed,
+            }),
+            // The marks on the picture are icons: their words go here.
+            part.has_minifig_lines && t("set.part.minifig"),
+            part.has_spare_lines && t("set.part.spare"),
+          ]
+            .filter(Boolean)
+            .join(". ")}
         >
           {/* Pictures come with a white background, so their frame is white in both themes. */}
           <span className="relative">
@@ -72,17 +79,41 @@ export const PartCard = memo(
               // The picture ignores touch, so iOS has no image to lift out when you hold the card.
               className="pointer-events-none aspect-square w-full rounded-xl bg-white p-1"
             />
-            {/* Minifig and spare labels sit on the top-left corner, so they take no row of their own. */}
+            {/* Minifig and spare marks sit on the top-left corner, so they take no row of their own. Their words are in the button's label. */}
             {(part.has_minifig_lines || part.has_spare_lines) && (
-              <span className="absolute top-1 left-1 flex flex-col items-start gap-0.5">
+              <span className="absolute top-1 left-1 flex flex-col items-start gap-1">
                 {part.has_minifig_lines && (
-                  <span className="rounded bg-yellow-300 px-1 text-[10px] leading-tight font-semibold text-yellow-950 uppercase">
-                    {t("set.part.minifig")}
+                  <span
+                    title={t("set.part.minifig")}
+                    className="flex size-5 items-center justify-center rounded-full bg-yellow-300 text-yellow-950 ring-1 ring-black/10"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="size-3.5"
+                      aria-hidden
+                    >
+                      <circle cx="12" cy="7" r="4" />
+                      <path d="M4 21c0-5 3.5-8 8-8s8 3 8 8z" />
+                    </svg>
                   </span>
                 )}
                 {part.has_spare_lines && (
-                  <span className="rounded bg-sky-200 px-1 text-[10px] leading-tight font-semibold text-sky-950 uppercase">
-                    {t("set.part.spare")}
+                  <span
+                    title={t("set.part.spare")}
+                    className="flex size-5 items-center justify-center rounded-full bg-sky-200 text-sky-950 ring-1 ring-black/10"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      className="size-3"
+                      aria-hidden
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
                   </span>
                 )}
               </span>
