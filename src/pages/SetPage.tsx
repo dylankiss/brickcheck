@@ -25,6 +25,9 @@ import {
   type PartFilter,
 } from "../lib/parts";
 
+/** How many ticks the Undo bar can walk back. */
+const UNDO_STEPS = 10;
+
 export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
     useSetContext();
@@ -38,22 +41,31 @@ export default function SetPage() {
   // The Part whose picture is enlarged, by key, so its counts stay live.
   const [enlarged, setEnlarged] = useState<string | null>(null);
 
-  // The Part last ticked off, for the Undo bar. A new tick replaces it, and it
-  // goes away after a few seconds or when anything is un-ticked.
-  const [ticked, setTicked, hold] = useRecentTick<{
-    key: string;
-    id: number;
-  }>();
+  // The last few ticks, newest last, for the Undo bar: Undo takes back the
+  // newest and then offers the one before it, so a run of wrong ticks can be
+  // walked back. The chain goes away after a few seconds without a tick or Undo.
+  const [ticks, setTicks, hold] =
+    useRecentTick<{ key: string; id: number }[]>();
   const tapPart = useCallback(
     (part: Part, delta: 1 | -1) => {
       tap(part, delta);
       if (delta === 1 && part.found < part.needed) {
-        setTicked((last) => ({ key: part.key, id: (last?.id ?? 0) + 1 }));
-      } else {
-        setTicked(null);
+        setTicks((chain) =>
+          [
+            ...(chain ?? []),
+            { key: part.key, id: (chain?.at(-1)?.id ?? 0) + 1 },
+          ].slice(-UNDO_STEPS),
+        );
+      } else if (delta === -1) {
+        // Un-ticking a Part by hand takes its newest tick off the chain.
+        setTicks((chain) => {
+          const at = chain?.findLastIndex((t) => t.key === part.key) ?? -1;
+          const rest = chain?.filter((_, i) => i !== at) ?? [];
+          return rest.length ? rest : null;
+        });
       }
     },
-    [tap, setTicked],
+    [tap, setTicks],
   );
 
   // The parts the current layout was computed from. Cards never move on their
@@ -85,7 +97,8 @@ export default function SetPage() {
     );
   }, [parts, filter, sort, order]);
   const byKey = useMemo(() => new Map(parts.map((p) => [p.key, p])), [parts]);
-  const tickedPart = ticked ? byKey.get(ticked.key) : undefined;
+  const newest = ticks?.at(-1);
+  const tickedPart = newest ? byKey.get(newest.key) : undefined;
   const colors = useMemo(() => partColors(parts), [parts]);
   const { found, needed } = totals(parts);
 
@@ -171,10 +184,11 @@ export default function SetPage() {
             : null
         }
         onUndo={() => {
-          if (tickedPart) {
+          if (tickedPart && tickedPart.found > 0) {
             tap(tickedPart, -1);
           }
-          setTicked(null);
+          const rest = ticks?.slice(0, -1) ?? [];
+          setTicks(rest.length ? rest : null);
         }}
       />
       {stale && (

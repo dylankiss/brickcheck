@@ -496,14 +496,17 @@ src/
 - **Tick feedback** (`TickToast`, `useRecentTick`): the count on the card pops
   and flashes green when it goes up (not with reduced motion), and a short
   vibration where the browser supports it. Each tick also shows a bar at the
-  bottom with the part's picture, a short summary and Undo, for 8 seconds or
-  until the next tick (the countdown pauses while a pointer or focus is on the
+  bottom with the part's picture, a short summary and Undo, for 8 seconds
+  after the last tick or Undo (the countdown pauses while a pointer or focus is on the
   bar, WCAG 2.2.1), because a finger resting on a card hides the card itself.
   On the Set page the summary is the new count ("4/5"); on Missing in all sets it
   is the Set the piece went to, shown only once the tick is saved. Screen readers
   get the full sentence from a hidden text in the `role="status"` region. Undo
-  sends a −1 for that part through the normal path. Un-ticking with "−" clears
-  the bar on the Set page. The 10 ms vibration of `useSet.tap` stays.
+  sends a −1 for that part through the normal path. On the Set page the bar
+  keeps the last 10 ticks as a chain: Undo takes back the newest and then offers
+  the one before it, so a run of wrong ticks can be walked back (Missing in all
+  sets undoes only the last). Un-ticking with "−" takes that part's newest tick
+  off the chain. The 10 ms vibration of `useSet.tap` stays.
 - **Header on the Set page** (`Header` with `hideOnScroll`, `useHideOnScroll`): it
   slides out of view on a short scroll down and then stays out however you
   scroll, because looking for a piece means scrolling up and down for a while and
