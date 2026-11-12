@@ -149,11 +149,22 @@ export function Header({
       {hidden && (
         <button
           type="button"
-          onClick={show}
+          onClick={() => {
+            // Search and filters change the list, so you start again from its top.
+            window.scrollTo({
+              top: 0,
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "auto"
+                : "smooth",
+            });
+            show();
+            heading.current?.focus({ preventScroll: true });
+          }}
           className="fixed right-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 flex size-12 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg dark:bg-white dark:text-neutral-900"
-          aria-label={t("common.showFilters")}
+          aria-label={t("common.backToTop")}
         >
-          <SearchIcon />
+          <ArrowUpIcon />
         </button>
       )}
     </>
@@ -335,7 +346,7 @@ export function EyeOffIcon({ className = "size-5" }: { className?: string }) {
   );
 }
 
-export function SearchIcon({ className = "size-6" }: { className?: string }) {
+export function ArrowUpIcon({ className = "size-6" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -343,11 +354,11 @@ export function SearchIcon({ className = "size-6" }: { className?: string }) {
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       aria-hidden
     >
-      <circle cx="10.5" cy="10.5" r="6" />
-      <path d="M15 15l5 5" />
+      <path d="M12 19V5M6 11l6-6 6 6" />
     </svg>
   );
 }
