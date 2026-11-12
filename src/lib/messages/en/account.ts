@@ -32,6 +32,11 @@ export const account = {
   "account.language.hint": "Used on this device.",
   "account.language.failed":
     "Couldn't switch the language. Check your connection and try again.",
+  "account.cardSize.label": "Card size",
+  "account.cardSize.hint":
+    "Used on this device. Large cards show fewer parts at a time, but bigger.",
+  "account.cardSize.compact": "Compact",
+  "account.cardSize.large": "Large",
   "account.passkeys.title": "Passkeys",
   "account.passkeys.hint":
     "Log in with Face ID, Touch ID or your password manager, without waiting for an email.",

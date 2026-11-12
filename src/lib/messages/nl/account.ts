@@ -32,6 +32,11 @@ export const account = {
   "account.language.hint": "Geldt voor dit toestel.",
   "account.language.failed":
     "De taal kon niet worden gewijzigd. Controleer je verbinding en probeer het opnieuw.",
+  "account.cardSize.label": "Kaartgrootte",
+  "account.cardSize.hint":
+    "Geldt voor dit toestel. Grote kaarten tonen minder onderdelen tegelijk, maar groter.",
+  "account.cardSize.compact": "Compact",
+  "account.cardSize.large": "Groot",
   "account.passkeys.title": "Passkeys",
   "account.passkeys.hint":
     "Log in met Face ID, Touch ID of je wachtwoordmanager, zonder te wachten op een e-mail.",

@@ -289,14 +289,23 @@ try {
   }
   await a.getByText("7/11").waitFor();
   await a.screenshot({ path: `${OUT}/3-set.png` });
-  await a.getByRole("button", { name: "Hide found" }).click();
+  const hideFound = a.getByRole("button", { name: "Hide found" });
+  ok(
+    (await hideFound.getAttribute("aria-pressed")) === "true",
+    "Hide found is on by default",
+  );
+  // The completed card stays where it is until the layout is refreshed: off and
+  // on again does that.
+  await hideFound.click();
+  await hideFound.click();
   ok(
     (await a
       .getByRole("button", { name: /Light Bluish Gray: 3 of 3/ })
       .count()) === 0,
     "Hide found hides fully found parts",
   );
-  await a.getByRole("button", { name: "Hide found" }).click();
+  // Off again for the rest of the flow, which looks at every part.
+  await hideFound.click();
 
   // Missing view
   await a.getByText(/^Missing 4$/).click();
