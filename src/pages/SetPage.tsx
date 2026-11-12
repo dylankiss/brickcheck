@@ -14,6 +14,7 @@ import {
   SettingsIcon,
 } from "../components/ui";
 import { useLanguage } from "../hooks/useLanguage";
+import { usePreference } from "../hooks/usePreference";
 import { useRecentTick } from "../hooks/useRecentTick";
 import { useSetContext } from "../hooks/useSetContext";
 import {
@@ -34,10 +35,14 @@ export default function SetPage() {
   const { setId, summary, parts, error, clearError, canEdit, tap, others } =
     useSetContext();
   const { t, number } = useLanguage();
+  const [hideFound, rememberHideFound] = usePreference("hideFound");
+  const [cardSize] = usePreference("cardSize");
+  // Hide found starts as it was left on this device (on at first); the filter
+  // bar's toggle changes it for next time as well.
   const [filter, setFilter] = useState<PartFilter>({
     query: "",
     colorId: null,
-    hideFound: false,
+    hideFound,
   });
   const [sort, setSort] = useState<SortMode>("color");
   // The Part whose sheet is open, and the one whose picture is full screen
@@ -84,6 +89,9 @@ export default function SetPage() {
   // A new filter or sort makes a new list, so you start again from its top.
   const changeFilter = (next: PartFilter) => {
     setFilter(next);
+    if (next.hideFound !== filter.hideFound) {
+      rememberHideFound(next.hideFound);
+    }
     setBasis(parts);
     window.scrollTo({ top: 0 });
   };
@@ -188,7 +196,7 @@ export default function SetPage() {
         </p>
       )}
       <main
-        className={`grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2 p-3 sm:gap-3 sm:p-4 ${TICK_TOAST_CLEARANCE}`}
+        className={`grid ${cardSize === "large" ? "grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))]" : "grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))]"} gap-2 p-3 sm:gap-3 sm:p-4 ${TICK_TOAST_CLEARANCE}`}
       >
         {order.length > 0 && canEdit && <LongPressHint />}
         {order.map((key) => (

@@ -4,6 +4,8 @@ import { AvatarPicker } from "../components/AvatarPicker";
 import { Button, ErrorBanner, Header, Select } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
+import { usePreference } from "../hooks/usePreference";
+import type { CardSize } from "../lib/preferences";
 import { usePasskeys } from "../hooks/usePasskeys";
 import { passkeysSupported } from "../lib/api";
 import { LANGUAGES, type Language } from "../lib/i18n";
@@ -79,6 +81,7 @@ export default function Account() {
   const setError = (message: string | null) =>
     setFailure(message === null ? null : { message, language });
   const [languageFailed, setLanguageFailed] = useState(false);
+  const [cardSize, setCardSize] = usePreference("cardSize");
 
   const trimmed = name.trim();
   const changed = trimmed !== current && trimmed !== "";
@@ -218,6 +221,25 @@ export default function Account() {
               {t("account.language.failed")}
             </p>
           )}
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <label htmlFor="card-size" className="font-semibold">
+            {t("account.cardSize.label")}
+          </label>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            {t("account.cardSize.hint")}
+          </p>
+          <Select
+            id="card-size"
+            name="card-size"
+            value={cardSize}
+            className="w-full"
+            onChange={(e) => setCardSize(e.target.value as CardSize)}
+          >
+            <option value="compact">{t("account.cardSize.compact")}</option>
+            <option value="large">{t("account.cardSize.large")}</option>
+          </Select>
         </section>
 
         {/* Keyed by language: its own error is dropped on a change, not shown in the old language. */}

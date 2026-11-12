@@ -273,7 +273,7 @@ and groups them by part and color.
 | `/`                  | Home              | the start screen: cards for My sets, Groups and "Where does this piece go?", each with a status line; the avatar (Account) and theme button; asks email users for a display name once                                                                                                                               |
 | `/sets`              | MySets            | my sets, with a Group label and a Group filter                                                                                                                                                                                                                                                                      |
 | `/groups`            | Groups            | create, list and rename (Owners) your Groups, show their members and roles, change roles, promote and remove members (Owners), create and revoke Group invites (Owners), leave (with a warning listing the Sets you added and a Move out button for each) and delete (Owners, only when empty); linked from My sets |
-| `/account`           | Account           | your display name and avatar (both editable; you pick one of three built-in icons and a colour, no uploads), login email (read-only), passkeys, sign out; opened from the avatar at the right of every page header                                                                                                  |
+| `/account`           | Account           | your display name and avatar (both editable; you pick one of three built-in icons and a colour, no uploads), login email (read-only), passkeys, card size (a per-device preference), sign out; opened from the avatar at the right of every page header                                                             |
 | `/missing`           | MissingAcrossSets | every Part still missing in your Sets, where it goes, tick it off there (loaded on open, not live)                                                                                                                                                                                                                  |
 | `/new`               | AddSet            | catalog search → `fetch-set` → create set, with an optional Group (where you are Owner or Helper)                                                                                                                                                                                                                   |
 | `/join/:token`       | Join              | invite preview → `accept_invite`                                                                                                                                                                                                                                                                                    |
@@ -299,6 +299,8 @@ src/
   lib/types.ts      domain types shared by api, hooks and UI
   lib/parts.ts      pure logic: grouping lines into parts, missing list, exports (unit-tested)
   lib/theme.ts      light/dark preference (localStorage) and the `dark` class
+  lib/preferences.ts  per-device display preferences (card size, hide found), in localStorage
+                    (unit-tested); usePreference is its hook
   lib/i18n.ts       translations: t(), plurals, language choice, date and number formats (unit-tested)
   lib/messages/     the texts: en/<area>.ts (source), nl/<area>.ts (translation), one index each
   hooks/            React state built on lib/api and lib/theme (useAuth, useSet, useTheme, ...);
@@ -489,7 +491,9 @@ src/
   (the name stays in search, labels and the enlarged picture). The size in the
   name ("Brick 2 x 4") shows next to it as "2×4" (`partSize()`). The grid fits as
   many cards per row as have room at 6.5rem or wider (`auto-fill`): three on a
-  phone, more on bigger screens. Text is compact. The count sits on the picture's
+  phone, more on bigger screens. The "Card size" setting in Account (a per-device
+  preference, `lib/preferences.ts`) switches to Large, which asks for 9.5rem: two
+  on a phone, bigger pictures and less cut-off text. Text is compact. The count sits on the picture's
   bottom-left corner and the "−" button on its bottom-right, both marks 28px in a
   44px touch target, so a card is just the picture, the number and the color. The
   "minifig" and "spare" labels sit on the picture's top-left corner.
@@ -547,7 +551,9 @@ src/
 - **Filter bar** (`FilterBar`): the search field, then three 44px icon-only
   controls (`filterButtonClass`): sort (a native `<select>` laid transparently
   over the sort icon, so the system picker opens), color and hide found (a toggle
-  with `aria-pressed`). Each has an `aria-label`. The fields keep the browser's
+  with `aria-pressed`, on by default and remembered on this device, so a Set
+  opens with what is left to find; ticking the last piece of a card does not
+  hide it until the layout is refreshed, see _Stable layout_). Each has an `aria-label`. The fields keep the browser's
   16px text: iOS Safari zooms the page when a field with smaller text takes
   focus, so they must not shrink.
 - **Color filter** (`ColorFilter`): an icon-only button, a palette or, once a
@@ -760,7 +766,7 @@ Met, so keep it that way:
 - Security headers include an enforced Content-Security-Policy (see Security
   rules). The Cloudflare Turnstile frame logs its own CSP and `eval` errors in
   the console; they come from Cloudflare's page, not from ours.
-- No cookies or tracking. `localStorage` only holds the theme and the language.
+- No cookies or tracking. `localStorage` only holds the theme, the language, the display preferences (card size and hide found) and the dismissal of the long-press tip.
 
 Gaps, highest impact first:
 
