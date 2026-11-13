@@ -204,7 +204,7 @@ try {
   ok(true, "set created with 11 needed pieces (spare excluded)");
 
   // Tap red brick 3 times, then undo once
-  // Anchored: the card's own button, not its "Enlarge picture of …" button.
+  // Anchored: the card's own button, not its hidden "Details of …" button.
   const red = a.getByRole("button", { name: /^Brick 2 x 4, Red:/ });
   for (let i = 0; i < 3; i++) {
     await red.click();
@@ -213,19 +213,33 @@ try {
   await a.getByText("2/11").waitFor();
   ok(true, "taps and undo update the counter optimistically");
 
-  // Enlarge a part's picture, zoom in with a tap, then close it with Escape
-  await a
+  // Open a part's panel (the keyboard route to a long press), enlarge its picture
+  // from there, close the picture with a tap and the panel with Escape
+  // Hidden until focused, so it is reached the way a keyboard user does: focus, Enter.
+  const details = a.getByRole("button", {
+    name: "Details of Brick 2 x 4, Red",
+  });
+  await details.focus();
+  await details.press("Enter");
+  const panel = a.getByRole("dialog", { name: "Brick 2 x 4, Red" });
+  // The count under the picture (the Undo bar above the panel shows it too).
+  await panel.locator("p").filter({ hasText: "2/4" }).waitFor();
+  await a.screenshot({ path: `${OUT}/3b-part-panel.png` });
+  await panel
     .getByRole("button", { name: "Enlarge picture of Brick 2 x 4, Red" })
     .click();
-  const enlarged = a.getByRole("dialog", { name: "Brick 2 x 4, Red" });
-  await enlarged.getByText(/2 of 4 found/).waitFor();
+  const enlarged = a.getByRole("dialog", { name: "Brick 2 x 4, Red" }).last();
   await enlarged.getByRole("img", { name: "Brick 2 x 4, Red" }).click();
-  await a.screenshot({ path: `${OUT}/3b-enlarged-part.png` });
+  await a.waitForFunction(
+    () => document.querySelectorAll("dialog[open]").length === 1,
+  );
   await a.keyboard.press("Escape");
-  await enlarged.waitFor({ state: "hidden" });
+  await a.waitForFunction(
+    () => document.querySelectorAll("dialog[open]").length === 0,
+  );
   ok(
     true,
-    "an enlarged picture shows live counts, zooms on tap and closes with Escape",
+    "a part's panel shows its count, its enlarged picture closes on a tap and the panel on Escape",
   );
 
   // A quick tap + undo burst must end where it started (taps are sent in order).
@@ -317,7 +331,7 @@ try {
     .click();
   await a
     .getByRole("dialog", { name: "Brick 2 x 4, Red" })
-    .getByRole("button", { name: "Close" })
+    .getByRole("button", { name: "Close", exact: true })
     .click();
   await a.getByRole("dialog").waitFor({ state: "hidden" });
   ok(true, "missing view enlarges a picture and the Close button closes it");

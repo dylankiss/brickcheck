@@ -59,8 +59,7 @@ export const set = {
   "set.hint.dismiss": "Got it",
   "set.picture.enlarge": "Enlarge picture of {label}",
   "set.picture.close": "Close",
-  "set.picture.zoomIn": "Zoom in: {label}",
-  "set.picture.zoomOut": "Zoom out: {label}",
+  "set.picture.closePicture": "Close picture of {label}",
 
   // Missing
   "set.missing.title": "Missing · {title}",

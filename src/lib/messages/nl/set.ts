@@ -55,8 +55,7 @@ export const set = {
   "set.hint.dismiss": "Begrepen",
   "set.picture.enlarge": "Afbeelding van {label} vergroten",
   "set.picture.close": "Sluiten",
-  "set.picture.zoomIn": "Inzoomen: {label}",
-  "set.picture.zoomOut": "Uitzoomen: {label}",
+  "set.picture.closePicture": "Afbeelding van {label} sluiten",
 
   "set.missing.title": "Ontbreekt · {title}",
   "set.missing.complete": "Er ontbreekt niets. Deze set is compleet! 🎉",

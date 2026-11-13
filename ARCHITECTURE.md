@@ -360,9 +360,9 @@ src/
   size, slowly, and nothing breaks.
 - **Enlarged picture** (`EnlargedPicture`): it fits the screen but is shown at
   most twice its real size in CSS pixels (`MAX_UPSCALE`: a 192px part picture
-  at most 384px), because enlarging further only blurs it. Tapping zooms in up
-  to that size or 2.5 times, whichever is less; a picture already at its largest
-  does not zoom (`aria-disabled`).
+  at most 384px), because enlarging further only blurs it. A tap anywhere on it
+  closes the view, like the ✕ (Enter and Space close it too, for the keyboard);
+  there is no zoom.
 - Mobile first: touch targets are at least 44px, and the app is usable one-handed.
 - **Accessibility** (WCAG 2.2 AA): `Header` moves focus to the page's `<h1>`
   when a page opens (unless a field already has focus, like the catalog
@@ -370,7 +370,7 @@ src/
   `role="status"` with a hidden "Loading" label; `ProgressBar` has a name and a
   text value. Secondary text is `text-neutral-500 dark:text-neutral-400`.
   Transitions stop with `prefers-reduced-motion`; the spinner only slows down.
-  The picture zoom works with Enter and Space as well as taps.
+  The enlarged picture closes with Enter and Space as well as taps.
 - Environment variables are documented where they are used: `.env.example`
   (frontend), `supabase/.env.example` (local function secrets) and `DEPLOY.md`
   (hosted). The hosted function secrets are `REBRICKABLE_API_KEY`,
@@ -516,7 +516,7 @@ src/
   the panel closes it, and the Undo bar is rendered inside it, just above the
   panel's top edge, because the page behind a modal is out of reach (the page's
   own bar is hidden while the panel is open). Tapping its picture
-  opens `EnlargedPart`, the full-screen zoomable view, on top of it. Keyboard and
+  opens `EnlargedPart`, the full-screen picture, on top of it. Keyboard and
   screen-reader users, who have no long press, get the same sheet from a "Details"
   button on the card that is hidden until it has focus. Viewers see the picture
   and details only. The card's own button is `aria-disabled` rather than
