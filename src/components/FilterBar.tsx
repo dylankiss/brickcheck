@@ -36,6 +36,7 @@ export function FilterBar({
       <span className={filterButtonClass()}>
         <SortIcon />
         <select
+          name="part-sort"
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortMode)}
           aria-label={t("set.filter.sortLabel")}

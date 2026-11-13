@@ -56,6 +56,7 @@ export default function MySets() {
           <label className="flex items-center gap-2 text-sm">
             <span className="font-medium">{t("sets.my.group")}</span>
             <Select
+              name="group-filter"
               value={activeFilter}
               onChange={(e) => setFilter(e.target.value)}
               className="min-w-0 flex-1"

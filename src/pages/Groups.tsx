@@ -44,6 +44,7 @@ export default function Groups() {
       <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
         <form onSubmit={submit} className="flex gap-2">
           <input
+            name="group-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
@@ -190,6 +191,7 @@ function GroupCard({
       {editing ? (
         <form onSubmit={save} className="flex gap-2">
           <input
+            name="group-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
@@ -333,6 +335,7 @@ function GroupCard({
               {isOwner ? (
                 <>
                   <select
+                    name="member-role"
                     value={m.role}
                     onChange={(e) =>
                       void changeMember(() =>
