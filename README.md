@@ -14,6 +14,11 @@ Docker isn't available to it, so run `npx supabase start`,
 `npx supabase db reset`, `npm run test:db`, `npx supabase functions serve` and
 the browser tests yourself.
 
+Short version, once step 1 and 2 are done: `npm run dev:all` starts Docker's Supabase
+stack, checks `.env.local`, and serves the functions and the web app in one terminal
+(`-- --seed you@example.com` adds the demo Sets, `-- --reset` rebuilds the local
+database first). The steps below are what it does for you.
+
 1. `npm install`
 2. Copy `.env.example` → `.env.local` and `supabase/.env.example` → `supabase/.env`,
    fill in a Rebrickable API key (https://rebrickable.com/api/; not needed if you only use `npm run seed-demo`).
