@@ -254,6 +254,7 @@ export default function Manage() {
                 </p>
                 <div className="flex gap-2">
                   <Select
+                    name="group"
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     aria-label={t("set.group.pickLabel")}
@@ -304,6 +305,7 @@ export default function Manage() {
                   {isOwner && m.role !== "owner" ? (
                     <>
                       <select
+                        name="member-role"
                         value={m.role}
                         onChange={(e) =>
                           setRole(m.user_id, e.target.value as Invite["role"])
