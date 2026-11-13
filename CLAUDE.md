@@ -19,6 +19,7 @@ Before committing, run `npm run lint`, `npm run format:check`, `npm test` and `n
 
 - `npm run format` and `npx oxlint --fix`: fix style (run `--fix` twice for nested cases, then format)
 - `npm run dev`: needs `.env.local` (see `.env.example`)
+- `npm run dev:all`: the whole local setup in one terminal (Supabase stack, `.env.local` check, `functions serve`, `vite`); `-- --seed <email>`, `-- --reset`. Runs outside the sandbox (Docker)
 - `npm run test:db`: pgTAP tests in `supabase/tests/database`
 - `npx supabase start`, `db reset` and `functions serve`: the local stack (Docker)
 - `npm run smoke`, `e2e` and `seed-demo -- <email>` run only against the local stack. They read its URL and keys from `npx supabase status` (`scripts/local-stack.mjs`). `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` override that, so unset a production key left in your shell. `smoke` needs `functions serve`; `e2e` needs `functions serve`, `npm run dev` and Google Chrome.
