@@ -244,6 +244,7 @@ export function PartImage({
   style,
   onError,
   onLoad,
+  eager = false,
 }: {
   src: string | null;
   /** Tried when `src` fails to load, such as the original of a resized copy. */
@@ -255,6 +256,8 @@ export function PartImage({
   onError?: () => void;
   /** Called when the picture has loaded, with its real size on the event's target. */
   onLoad?: (e: SyntheticEvent<HTMLImageElement>) => void;
+  /** Loads and decodes at once, for a picture that is already cached and appears in view (no blank frame). */
+  eager?: boolean;
 }) {
   // Rebrickable has no render for some parts; show the placeholder instead of a broken image.
   const [failed, setFailed] = useState<readonly string[]>([]);
@@ -263,8 +266,8 @@ export function PartImage({
     <img
       src={shown}
       alt={alt}
-      loading="lazy"
-      decoding="async"
+      loading={eager ? "eager" : "lazy"}
+      decoding={eager ? "sync" : "async"}
       onLoad={onLoad}
       style={style}
       onError={() => {
