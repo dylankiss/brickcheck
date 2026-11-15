@@ -142,9 +142,9 @@ export function PartSheet({
       onClose={onClose}
       aria-label={picture?.label}
       // No image menu or text selection on iOS when the finger that opened the panel is still down on its picture.
-      className="fixed inset-0 m-0 size-full max-h-none max-w-none flex-col justify-end bg-transparent p-0 text-neutral-900 select-none [-webkit-touch-callout:none] backdrop:bg-black/50 open:flex dark:text-neutral-100"
+      className="fixed inset-0 m-0 size-full max-h-none max-w-none flex-col justify-end overflow-clip bg-transparent p-0 text-neutral-900 select-none [-webkit-touch-callout:none] backdrop:bg-black/50 open:flex dark:text-neutral-100"
     >
-      {/* The dialog covers the screen and is see-through: a tap beside the panel lands on it and closes it. */}
+      {/* The dialog covers the screen and is see-through: a tap beside the panel lands on it and closes it. It clips instead of scrolling: the panel starts below the screen, and focusing ✕ would otherwise scroll the dialog to it (iOS), so the panel shows at the top and then jumps down. */}
       {part && picture && toast}
       {part && picture && (
         <div
