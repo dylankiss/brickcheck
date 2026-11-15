@@ -197,6 +197,8 @@ export function PartSheet({
             <PartImage
               src={part.img_url}
               alt=""
+              // The card behind has loaded it already: show it without a blank frame.
+              eager
               // Ignores touch (the button around it takes the tap): iOS lifts a held picture out of the page.
               className="pointer-events-none size-full object-contain p-2"
             />
